@@ -32,7 +32,7 @@ test('lists become cards on a phone instead of a squeezed table', async ({ page 
   const res = await page.request.post('/api/v1/leads', { data: { fullName: 'Pia Phone', companyName: 'Pocket Co' }, headers: { origin: 'http://localhost:3000' } });
   expect(res.ok()).toBe(true);
   await page.goto('/app/leads');
-  const list = page.getByRole('list', { name: 'Leads' });
+  const list = page.getByRole('list', { name: 'Inbound contacts' });
   await expect(list.getByRole('link', { name: 'Pia Phone' })).toBeVisible();
   await expect(list).toContainText('Pocket Co');
   await expect(page.getByRole('table')).toHaveCount(0);
@@ -73,7 +73,7 @@ test('on a phone the bid studio stacks, with the preview behind a toggle', async
 test('on a phone the record form pickers fit the screen and still work', async ({ page }) => {
   await signUp(page, 'Phone Forms');
   await page.goto('/app/leads');
-  await page.getByRole('button', { name: 'New lead' }).click();
+  await page.getByRole('button', { name: 'New inbound contact' }).click();
   const dialog = page.getByRole('dialog');
   const country = dialog.getByRole('combobox', { name: 'Country' });
   await country.fill('india');

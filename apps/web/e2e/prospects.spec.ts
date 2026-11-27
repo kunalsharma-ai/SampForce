@@ -77,9 +77,9 @@ test('builds a prospect list from a file, a form and Mock Mode search, then adds
   await table.getByLabel('Select Ben Ode').check();
   await table.getByRole('row').filter({ hasText: 'northwind.example' }).first().getByRole('checkbox').check();
   await expect(page.getByRole('status').filter({ hasText: '2 selected' })).toBeVisible();
-  await page.getByRole('button', { name: 'Add to CRM as leads' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Added 1 as leads. 1 skipped.' })).toBeVisible();
-  await expect(table.getByRole('row', { name: /Ben Ode/ }).getByRole('link', { name: 'Lead' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add to CRM as inbound contacts' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Added 1 as inbound contacts. 1 skipped.' })).toBeVisible();
+  await expect(table.getByRole('row', { name: /Ben Ode/ }).getByRole('link', { name: 'Inbound contact' })).toBeVisible();
   await noAxeViolations(page);
 
   await page.getByRole('button', { name: 'Remove duplicates' }).click();

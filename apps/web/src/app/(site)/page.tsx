@@ -7,7 +7,7 @@ import { Tr } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'SampForce by Sampledge: the AI-native sales CRM',
-  description: 'Leads, deals, automation, quotes, contracts and revenue analytics in one workspace, with AI that explains itself and asks before it acts.',
+  description: 'Companies, contacts, deals, automation, quotes, contracts and revenue analytics in one workspace, with AI that explains itself and asks before it acts.',
 };
 
 /**
@@ -21,7 +21,7 @@ export default function LandingPage() {
       <CapabilityMarquee />
 
       <section id="flow" aria-labelledby="flow-title" className="mx-auto max-w-6xl scroll-mt-28 px-4 py-20 sm:px-6">
-        <SectionHead id="flow-title" kicker="How it works" title="Watch a deal move" body="Deals glide from lead to won while Copilot points out the next step and waits for your yes." />
+        <SectionHead id="flow-title" kicker="How it works" title="Watch a deal move" body="Deals glide from first contact to won while Copilot points out the next step and waits for your yes." />
         <FlowBoard />
         <p className="mt-3 text-center text-xs text-muted-foreground">
           <Tr text="Sample deals, for illustration." />
@@ -29,7 +29,7 @@ export default function LandingPage() {
       </section>
 
       <section id="features" aria-labelledby="features-title" className="mx-auto max-w-6xl scroll-mt-28 px-4 pb-20 sm:px-6">
-        <SectionHead id="features-title" kicker="Product" title="What is in the box" body="Eight modules that work as one, from the first lead to the renewal." />
+        <SectionHead id="features-title" kicker="Product" title="What is in the box" body="Eight modules that work as one, from the first contact to the renewal." />
         <FeatureBento />
         <p className="mt-6 text-center text-sm text-muted-foreground">
           <Tr text="AI features draw on each plan’s monthly AI credit allowance. When it is used up they pause until the next month; nothing is charged automatically." />

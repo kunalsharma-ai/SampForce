@@ -25,7 +25,7 @@ describe('company-centric CRM foundations', () => {
       expect(a.leadNumber).toMatch(/^FRFS\d{2,}$/);
       expect(Number(b.leadNumber.slice(4))).toBe(Number(a.leadNumber.slice(4)) + 1);
       expect(a.createdBy).toMatchObject({ name: 'User Frequent Research Fieldwork Solutions' });
-      expect(a.status).toMatchObject({ name: 'New Lead', color: '#7dd3fc' });
+      expect(a.status).toMatchObject({ name: 'New Company', color: '#7dd3fc' });
       const n = (await http.get('/crm-config/lead-numbering').expect(200)).body;
       expect(n).toMatchObject({ prefix: 'FRFS', digits: 2, isDefaultPrefix: true });
       expect(n.next).toBe(`FRFS${String(Number(b.leadNumber.slice(4)) + 1).padStart(2, '0')}`);
@@ -78,7 +78,7 @@ describe('company-centric CRM foundations', () => {
     it('lists the default company and employee statuses with colours', async () => {
       const company = (await http.get('/crm-config/statuses?kind=COMPANY').expect(200)).body;
       expect(company).toHaveLength(15);
-      expect(company[0]).toMatchObject({ name: 'New Lead', isDefault: true, meaning: 'NEW' });
+      expect(company[0]).toMatchObject({ name: 'New Company', isDefault: true, meaning: 'NEW' });
       expect(company.find((s: { name: string }) => s.name === 'Rejected').color).toBe('#ef4444');
       const employee = (await http.get('/crm-config/statuses?kind=EMPLOYEE').expect(200)).body;
       expect(employee).toHaveLength(16);
@@ -103,7 +103,7 @@ describe('company-centric CRM foundations', () => {
       const created = (await http.post('/companies', { name: 'Default Test' }).expect(201)).body;
       expect(created.status.name).toBe('Pilot Job');
       await http.put(`/crm-config/statuses/${s.id}`, { archived: true }).expect(400); // still the default
-      const newLead = all.find((x) => (x as unknown as { name: string }).name === 'New Lead')!;
+      const newLead = all.find((x) => (x as unknown as { name: string }).name === 'New Company')!;
       await http.put(`/crm-config/statuses/${newLead.id}`, { isDefault: true }).expect(200);
 
       // In use: cannot be deleted, can be deactivated, and then cannot be picked.
@@ -264,7 +264,7 @@ describe('company-centric CRM foundations', () => {
       const seen = (await api(manager).get(`/companies/${company.id}`).expect(200)).body;
       expect(seen).toMatchObject({ name: 'Detail Hidden Co', restricted: true, primaryEmail: null, notes: null, emails: [] });
       expect(seen.leadNumber).toBe(company.leadNumber);
-      expect(seen.status.name).toBe('New Lead');
+      expect(seen.status.name).toBe('New Company');
       const st = ((await http.get('/crm-config/statuses?kind=COMPANY').expect(200)).body as Array<{ id: string; name: string }>).find((s) => s.name === 'Discussion Phase')!;
       await api(manager).patch(`/companies/${company.id}`, { statusId: st.id }).expect(200);
       const blocked = await api(manager).patch(`/companies/${company.id}`, { notes: 'overwrite' }).expect(400);

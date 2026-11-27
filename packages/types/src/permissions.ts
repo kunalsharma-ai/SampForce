@@ -106,7 +106,7 @@ export const SYSTEM_ROLE_DEFINITIONS: Record<
   },
   member: {
     name: 'Sales Representative',
-    description: 'Works leads, contacts, companies, deals and activities.',
+    description: 'Works companies, contacts, deals and activities.',
     permissions: MEMBER,
   },
   viewer: {

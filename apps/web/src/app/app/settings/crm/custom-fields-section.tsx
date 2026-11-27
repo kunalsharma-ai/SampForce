@@ -36,7 +36,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 export const FIELD_ENTITY_LABEL = {
   COMPANY: 'Companies',
   CONTACT: 'Employees',
-  LEAD: 'Inbound leads',
+  LEAD: 'Inbound contacts',
   OPPORTUNITY: 'Deals',
   FOLLOW_UP: 'Follow-ups',
   RFQ: 'RFQs',

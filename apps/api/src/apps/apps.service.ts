@@ -53,14 +53,14 @@ interface StoredTeams {
 const TEAMS_MAX_CHANNELS = 20;
 
 const META: Record<AppKey, { name: string; description: string; provider: AppProvider }> = {
-  slack: { name: 'Slack', description: 'Post deal, lead and task updates to Slack channels from workflows.', provider: 'SLACK' },
+  slack: { name: 'Slack', description: 'Post deal, contact and task updates to Slack channels from workflows.', provider: 'SLACK' },
   payments: { name: 'Card payments', description: 'Let customers pay accepted proposals by card, into your own Stripe or Razorpay account.', provider: 'PAYMENTS' },
   docusign: { name: 'DocuSign', description: 'Send contracts for e-signature; a completed envelope marks the contract signed.', provider: 'DOCUSIGN' },
-  zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
+  zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from companies, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   whatsapp: { name: 'WhatsApp Business', description: 'Message contacts on WhatsApp from their record and from approved workflow steps, through your own WhatsApp Business number.', provider: 'WHATSAPP' },
   twilio: { name: 'SMS (Twilio)', description: 'Text contacts from their record and from approved workflow steps, through your own Twilio number. Replies and STOP opt-outs come back to the contact.', provider: 'TWILIO' },
   sampbidx: { name: 'SampBidx', description: 'Send RFQs with their attachments, or the RFQ emails themselves, to your SampBidx bidding tool and follow their status here.', provider: 'SAMPBIDX' },
-  teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
+  teams: { name: 'Microsoft Teams', description: 'Post deal, contact and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
 
 /** Thrown when an app call fails in a way a person must fix; workflow steps fail with this message. */

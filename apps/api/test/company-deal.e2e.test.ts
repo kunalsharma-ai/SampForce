@@ -64,7 +64,7 @@ describe('Company to Deal', () => {
     expect(notes.some((n) => n.type === 'deal.won' && n.title.startsWith('Client won: deal DEAL-') && n.title.endsWith('created for Northwind Panels Ltd'))).toBe(true);
 
     // Winning it again (after a status wobble) makes no second deal; a new RFQ is linked to the same deal.
-    await api(owner).patch(`/companies/${c.id}`, { statusId: statusNamed('New Lead') }).expect(200);
+    await api(owner).patch(`/companies/${c.id}`, { statusId: statusNamed('New Company') }).expect(200);
     const extra = (await api(rep).post('/rfqs', { companyId: c.id, projectName: 'Repeat wave', sampleSize: 100, cpi: 10, currency: 'GBP' }).expect(201)).body;
     const again = (await api(rep).post(`/companies/${c.id}/won`).expect(200)).body as CompanyWonResult;
     expect(again).toMatchObject({ created: false, linkedRfqs: 0, deal: { id: deals[0]!.id } });

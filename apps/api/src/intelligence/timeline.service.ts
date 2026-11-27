@@ -90,7 +90,7 @@ export class TimelineService {
     const created = (source: string | null | undefined) => (source ? tr('Source: {source}', { source: SOURCE_LABEL[source] ? tr(SOURCE_LABEL[source]) : localize(source) }) : null);
     if (entity === 'lead') {
       const l = await tx.lead.findFirst({ where: { id, tenantId, deletedAt: null }, select: { fullName: true, createdAt: true, source: true, convertedContactId: true } });
-      if (!l) throw notFound('Lead');
+      if (!l) throw notFound('Inbound contact');
       return { name: l.fullName, createdAt: l.createdAt, createdDetail: created(l.source), leadIds: [id], contactIds: [], dealIds: [], companyIds: [], names };
     }
     if (entity === 'contact') {
@@ -98,7 +98,7 @@ export class TimelineService {
       if (!c) throw notFound('Contact');
       // A contact converted from a lead keeps the lead's history.
       const leads = await tx.lead.findMany({ where: { tenantId, convertedContactId: id }, select: { id: true, fullName: true } });
-      for (const l of leads) names.set(l.id, { type: 'lead', name: `${l.fullName} (as a lead)` });
+      for (const l of leads) names.set(l.id, { type: 'lead', name: `${l.fullName} (as an inbound contact)` });
       return { name: personName(c), createdAt: c.createdAt, createdDetail: null, leadIds: leads.map((l) => l.id), contactIds: [id], dealIds: [], companyIds: [], names };
     }
     if (entity === 'deal') {

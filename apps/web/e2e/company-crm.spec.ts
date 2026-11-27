@@ -56,7 +56,7 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   await main.getByText('Company statuses', { exact: true }).click();
   const companyStatuses = main.getByRole('list', { name: 'Company statuses' });
   await expect(companyStatuses.getByRole('listitem')).toHaveCount(15);
-  await expect(companyStatuses.getByRole('listitem').first()).toContainText('New Lead');
+  await expect(companyStatuses.getByRole('listitem').first()).toContainText('New Company');
   await main.getByLabel('Name').fill('Proposal Sent');
   await main.locator('#status-color').fill('#0f766e');
   await main.getByRole('button', { name: 'Add status' }).click();
@@ -81,7 +81,7 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   await page.goto('/app/companies');
   const row = main.getByRole('row').filter({ hasText: 'Acme Panels' });
   await expect(row).toContainText('FRFS01');
-  await expect(row).toContainText('New Lead');
+  await expect(row).toContainText('New Company');
   await expect(row.getByRole('img', { name: 'India' })).toBeVisible();
   await shot(page, '04-companies-list');
   await page.goto('/app/contacts');
@@ -90,7 +90,7 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
 
   // The company page shows the lead card; the status changes there and is recorded.
   await page.goto(`/app/companies/${acme.id}`);
-  await expect(main.getByLabel('Lead number')).toHaveText('FRFS01');
+  await expect(main.getByLabel('Company number')).toHaveText('FRFS01');
   await main.getByLabel('Change status').selectOption({ label: 'Discussion Phase' });
   await expect(main.locator('#company-lead').getByText(/^Since /)).toBeVisible();
   await expect(main.getByLabel('Change status')).toHaveValue(/.+/);
@@ -111,9 +111,9 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   // Changing the prefix for every lead re-letters the existing numbers, keeping their order.
   await page.goto('/app/settings/crm');
   await main.getByLabel('Prefix').fill('SAMP');
-  await main.getByText('New and existing leads').click();
-  await main.getByRole('button', { name: 'Save lead numbers' }).click();
-  await expect(main.getByRole('status')).toHaveText('Saved. The next lead will be SAMP04.');
+  await main.getByText('New and existing companies').click();
+  await main.getByRole('button', { name: 'Save company numbers' }).click();
+  await expect(main.getByRole('status')).toHaveText('Saved. The next company will be SAMP04.');
   await shot(page, '07-lead-prefix-changed');
   await page.goto('/app/companies');
   await expect(main.getByRole('row').filter({ hasText: 'Acme Panels' })).toContainText('SAMP01');
@@ -140,10 +140,10 @@ test('a company lead is created step by step with branches, employees and owners
   expect((await patch(me, { designationId: d('Business Development Manager') })).ok()).toBe(true);
   expect((await patch(rahul, { designationId: d('Business Development Executive'), reportingManagerId: me.userId })).ok()).toBe(true);
 
-  // Companies lead with "Create new lead".
+  // Companies lead with "Create new company".
   await page.goto('/app/companies');
   await shot(page, '09-companies-create-new-lead');
-  await main.getByRole('link', { name: 'Create new lead' }).click();
+  await main.getByRole('link', { name: 'Create new company' }).click();
   await expect(page).toHaveURL(/\/app\/companies\/new$/);
   await expect(main.getByRole('heading', { name: 'Step 1 of 8: Company information' })).toBeVisible();
 
@@ -206,8 +206,8 @@ test('a company lead is created step by step with branches, employees and owners
 
   await main.getByRole('button', { name: 'Next' }).click();
   await expect(main.getByText('Business Development Manager').first()).toBeVisible();
-  await main.getByLabel('Lead owner', { exact: true }).fill('Rahul');
-  await main.getByLabel('Lead owner', { exact: true }).press('Enter');
+  await main.getByLabel('Company owner', { exact: true }).fill('Rahul');
+  await main.getByLabel('Company owner', { exact: true }).press('Enter');
   await expect(main.getByText('Business Development Executive')).toBeVisible();
   await main.getByLabel('POC name').fill('Test');
   await main.getByLabel('POC name').press('Enter');
@@ -230,11 +230,11 @@ test('a company lead is created step by step with branches, employees and owners
   await expect(main).toContainText('Rahul Verma – Business Development Executive');
   await axe(page);
   await shot(page, '17-lead-step8-review');
-  await main.getByRole('button', { name: 'Save lead' }).click();
+  await main.getByRole('button', { name: 'Save company' }).click();
 
   // The company page: lead number, profile, employees, branches, ownership and files.
   await expect(page).toHaveURL(/\/app\/companies\/[0-9a-f-]{36}$/);
-  await expect(main.getByLabel('Lead number')).toHaveText('FRFS01');
+  await expect(main.getByLabel('Company number')).toHaveText('FRFS01');
   await expect(main.getByRole('table', { name: 'Employees / POCs' })).toContainText('Priya Nair');
   await expect(main.getByRole('list', { name: 'Branches' })).toContainText('Berlin office');
   await expect(main.getByRole('list', { name: 'Attachments' })).toContainText('acme-brief.pdf');

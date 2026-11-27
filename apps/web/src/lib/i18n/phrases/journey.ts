@@ -13,7 +13,7 @@ export const journey = {
     'Jedes Unternehmen auf seinem Weg: von der ersten E-Mail über Nachverfolgungen, Gespräche, RFQs und Verhandlung bis gewonnen oder verloren. Öffnen Sie eine Karte, um den Weg zu sehen.',
     'كل شركة في رحلتها: من البريد الأول مرورًا بالمتابعات والنقاش وطلبات عروض الأسعار والتفاوض حتى الفوز أو الخسارة. افتح بطاقة لترى رحلتها.',
   ],
-  'Search companies or lead numbers': ['Buscar empresas o números de lead', 'Rechercher des entreprises ou des numéros de lead', 'Unternehmen oder Lead-Nummern suchen', 'ابحث عن الشركات أو أرقام العملاء المحتملين'],
+  'Search companies or company numbers': ['Buscar empresas o números de empresa', 'Rechercher des entreprises ou des numéros d’entreprise', 'Unternehmen oder Unternehmensnummern suchen', 'ابحث عن الشركات أو أرقام الشركات'],
   'Only my companies': ['Solo mis empresas', 'Seulement mes entreprises', 'Nur meine Unternehmen', 'شركاتي فقط'],
   'Journey stages': ['Etapas del recorrido', 'Étapes du parcours', 'Phasen des Wegs', 'مراحل الرحلة'],
   'No companies here': ['No hay empresas aquí', 'Aucune entreprise ici', 'Hier sind keine Unternehmen', 'لا توجد شركات هنا'],

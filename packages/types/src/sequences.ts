@@ -195,7 +195,7 @@ export type RuleAction = z.infer<typeof ruleActionSchema>;
 export const RULE_ACTION_LABELS: Record<RuleAction['type'], string> = {
   stop: 'Stop the sequence for them',
   move_sequence: 'Move them to another sequence',
-  set_lead_status: 'Change the lead status',
+  set_lead_status: 'Change the inbound contact’s status',
   create_task: 'Create a task for the sender',
   notify_owner: 'Notify the sender',
 };

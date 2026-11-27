@@ -76,7 +76,7 @@ export function MailboxConnections() {
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        {t('Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.')}
+        {t('Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts, stores only those, and keeps tokens encrypted. Sending is limited per person per day.')}
       </p>
     </section>
   );

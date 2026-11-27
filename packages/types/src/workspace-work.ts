@@ -13,7 +13,7 @@ import type { WorkspaceLevel } from './workspaces';
 export const TARGET_METRICS = ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE', 'EMAILS_SENT', 'FOLLOW_UPS_DONE', 'MEETINGS', 'RFQS', 'CONVERSIONS'] as const;
 export type TargetMetric = (typeof TARGET_METRICS)[number];
 export const TARGET_METRIC_LABEL: Record<TargetMetric, string> = {
-  LEADS: 'Leads generated',
+  LEADS: 'Companies created',
   CALLS: 'Calls',
   DEALS_WON: 'Deals won',
   REVENUE: 'Revenue',

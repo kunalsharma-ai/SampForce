@@ -135,7 +135,7 @@ export const zoomMeetingCreateSchema = z
     recordToCloud: z.boolean().default(false),
     recordingConsent: z.boolean().default(false),
   })
-  .refine((v) => [v.leadId, v.contactId, v.dealId].filter(Boolean).length === 1, { message: 'Link the meeting to one lead, contact or deal', path: ['leadId'] })
+  .refine((v) => [v.leadId, v.contactId, v.dealId].filter(Boolean).length === 1, { message: 'Link the meeting to one contact or deal', path: ['leadId'] })
   .refine((v) => !v.recordToCloud || v.recordingConsent, { message: 'Confirm that participants agree to the recording', path: ['recordingConsent'] });
 export type ZoomMeetingCreate = z.infer<typeof zoomMeetingCreateSchema>;
 

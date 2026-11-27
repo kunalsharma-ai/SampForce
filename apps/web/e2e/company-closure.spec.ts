@@ -42,7 +42,7 @@ test('an owner closes the company and the Console reopens it', async ({ page, br
   const impact = page.getByRole('dialog', { name: 'Close Shutter Traders' });
   await expect(impact.locator('[data-close-workspaces] li')).toHaveCount(2);
   await expect(impact.locator('[data-close-workspaces]')).toContainText('North Team · Manager Workspace · 1 people');
-  await expect(impact.locator('[data-close-records]')).toContainText('1 leads');
+  await expect(impact.locator('[data-close-records]')).toContainText('1 inbound contacts');
   await impact.getByLabel('Reason (optional)').fill('Moving to another tool');
   await shot(page, '28-close-company-impact');
   await axe(page);

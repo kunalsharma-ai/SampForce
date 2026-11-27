@@ -348,7 +348,7 @@ export function EmailDesigner({
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {t('Merge fields show as typed here. Use “Preview for a lead” below to see them filled in.')}
+          {t('Merge fields show as typed here. Use “Preview for a contact” below to see them filled in.')}
         </p>
         <div className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-2">
           <iframe

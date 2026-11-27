@@ -107,7 +107,7 @@ test('designs an email from blocks, previews it at both widths and for a lead, a
   await axe(page);
 
   // Previewing for a real lead fills in the fields, escaped, with the booking link from the workspace variable.
-  await page.getByLabel('Preview for a lead').fill('Ana');
+  await page.getByLabel('Preview for a contact').fill('Ana');
   await page.getByRole('option', { name: /Ana Buyer/ }).click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const forAna = page.frameLocator('iframe[title="Email preview for Ana Buyer"]');

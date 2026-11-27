@@ -35,7 +35,7 @@ export class WorkspaceService {
           { key: 'profile', label: 'Set your workspace currency and time zone', done: profile > 0, href: '/app/settings' },
           { key: 'pipeline', label: 'Shape your sales pipeline stages', done: pipeline > 0, href: '/app/pipelines' },
           { key: 'invite', label: 'Invite a teammate', done: members > 1 || invites > 0, href: '/app/team' },
-          { key: 'import', label: 'Add or import leads and contacts', done: people[0] + people[1] > 0, href: '/app/settings/import' },
+          { key: 'import', label: 'Add or import companies and contacts', done: people[0] + people[1] > 0, href: '/app/settings/import' },
           { key: 'deal', label: 'Create your first deal', done: deals > 0, href: '/app/deals' },
           { key: 'automation', label: 'Automate a follow-up', done: workflows > 0, href: '/app/automation' },
         ],

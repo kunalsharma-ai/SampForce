@@ -9,6 +9,7 @@ import { errorsWork } from './text/errors-work';
 import { features } from './text/features';
 import { mobile } from './text/mobile';
 import { notifications } from './text/notifications';
+import { RENAMED_TEXT } from './text/renamed';
 import { stored } from './text/stored';
 import { validation } from './text/validation';
 import { workspaces } from './text/workspaces';
@@ -26,10 +27,10 @@ const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProvid
  * and composed sentences are left out of the matching here, because their patterns ("{name} replied") are only safe on
  * text known to be a notification or written by `tr()`.
  */
-export const SERVER_TEXT = /* @__PURE__ */ new TextCatalogue(broad);
+export const SERVER_TEXT = /* @__PURE__ */ new TextCatalogue(broad, RENAMED_TEXT);
 
 /** For notifications, which are stored in English and translated when someone opens them. */
-export const NOTIFICATION_TEXT = /* @__PURE__ */ new TextCatalogue([...broad, notifications, crmAdminNotifications]);
+export const NOTIFICATION_TEXT = /* @__PURE__ */ new TextCatalogue([...broad, notifications, crmAdminNotifications], RENAMED_TEXT);
 
 /** Every phrase, for `tr(key)` in the API, which writes a known phrase by its key. */
 export const ALL_SERVER_TEXT = /* @__PURE__ */ new TextCatalogue(Object.values(SERVER_TEXT_TABLES));

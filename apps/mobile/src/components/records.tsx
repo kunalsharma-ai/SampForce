@@ -153,7 +153,7 @@ function CompanyPicker({ label, value, name, onChange }: { label: string; value:
     );
   return (
     <View style={{ gap: 6 }}>
-      <Field label={label} value={q} onChangeText={setQ} placeholder={t('Type a lead name')} autoCapitalize="none" />
+      <Field label={label} value={q} onChangeText={setQ} placeholder={t('Type a company name')} autoCapitalize="none" />
       {found.map((r) => (
         <Row key={r.id} icon="business-outline" label={String(r.name ?? '')} detail={subtitle('companies', r)} onPress={() => onChange(r.id, String(r.name ?? ''))} />
       ))}
@@ -321,7 +321,7 @@ export function RecordList({ module }: { module: MobileLiveRecordModule }) {
   );
 }
 
-const SINGULAR: Record<MobileLiveRecordModule, string> = { companies: 'Lead', contacts: 'Contact', follow_ups: 'Follow-up', tasks: 'Task' };
+const SINGULAR: Record<MobileLiveRecordModule, string> = { companies: 'Company', contacts: 'Contact', follow_ups: 'Follow-up', tasks: 'Task' };
 
 /** One record: its fields for this person, phone actions, and what they may do with it. */
 export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {

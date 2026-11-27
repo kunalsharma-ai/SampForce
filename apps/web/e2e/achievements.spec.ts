@@ -200,7 +200,7 @@ test('the daily lead target counts only valid new companies, with 25, 50 and 75 
 
   await page.goto('/app/achievements');
   await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('0 valid leads. No target set.');
-  await page.getByLabel('Leads per day').fill('4');
+  await page.getByLabel('Companies per day').fill('4');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
 
@@ -208,7 +208,7 @@ test('the daily lead target counts only valid new companies, with 25, 50 and 75 
   await add('Alpha Insights', { website: 'https://alpha.example', domain: 'alpha.example' });
   await page.reload();
   const quarter = await celebration(page, 'LEAD_MILESTONE');
-  await expect(quarter).toContainText('25% of today’s lead target');
+  await expect(quarter).toContainText('25% of today’s company target');
   await expect(quarter).toContainText('1/4');
   await shot(page, '06-lead-milestone-25');
   await close(page, quarter);
@@ -235,8 +235,8 @@ test('the daily lead target counts only valid new companies, with 25, 50 and 75 
   await add('Delta Research', { linkedinUrl: 'https://www.linkedin.com/company/delta-research' });
   await page.reload();
   const target = await celebration(page, 'LEAD_TARGET');
-  await expect(target).toContainText('Daily Lead Target Achieved!');
-  await expect(target).toContainText('4 qualified leads');
+  await expect(target).toContainText('Daily Company Target Achieved!');
+  await expect(target).toContainText('4 qualified companies');
   await shot(page, '08-daily-lead-target');
   await close(page, target);
   await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('Target reached');

@@ -28,22 +28,22 @@ export const site = {
   'Approval steps': ['Pasos de aprobación', 'Étapes d’approbation', 'Genehmigungsschritte', 'خطوات الموافقة'],
   'Workflow simulator': ['Simulador de flujos', 'Simulateur de workflows', 'Workflow-Simulator', 'محاكي سير العمل'],
   'Versioned quotes': ['Cotizaciones con versiones', 'Devis versionnés', 'Versionierte Angebote', 'عروض أسعار بإصدارات'],
-  'Lead qualification': ['Calificación de leads', 'Qualification des prospects', 'Lead-Qualifizierung', 'تأهيل العملاء المحتملين'],
+  'Contact qualification': ['Calificación de contactos', 'Qualification des contacts', 'Kontaktqualifizierung', 'تأهيل جهات الاتصال'],
   'Forecast scenarios': ['Escenarios de previsión', 'Scénarios de prévision', 'Prognoseszenarien', 'سيناريوهات التوقع'],
   'Win rates': ['Tasas de cierre', 'Taux de réussite', 'Abschlussquoten', 'معدلات الفوز'],
   'Health scores': ['Puntuaciones de salud', 'Scores de santé', 'Health-Scores', 'درجات الصحة'],
   'Renewal reminders': ['Recordatorios de renovación', 'Rappels de renouvellement', 'Verlängerungserinnerungen', 'تذكيرات التجديد'],
-  'Hosted lead forms': ['Formularios de leads alojados', 'Formulaires de prospects hébergés', 'Gehostete Lead-Formulare', 'نماذج عملاء مستضافة'],
+  'Hosted contact forms': ['Formularios de contacto alojados', 'Formulaires de contact hébergés', 'Gehostete Kontaktformulare', 'نماذج جهات اتصال مستضافة'],
   'Append-only audit log': ['Registro de auditoría inalterable', 'Journal d’audit en ajout seul', 'Unveränderliches Audit-Protokoll', 'سجل تدقيق للإضافة فقط'],
   'Roles and permissions': ['Roles y permisos', 'Rôles et autorisations', 'Rollen und Berechtigungen', 'الأدوار والصلاحيات'],
 
   // Watch a deal move
   'Watch a deal move': ['Mira cómo avanza una oportunidad', 'Regardez une opportunité avancer', 'Sehen Sie eine Verkaufschance wandern', 'شاهد صفقة تتقدم'],
-  'Deals glide from lead to won while Copilot points out the next step and waits for your yes.': [
-    'Las oportunidades pasan de lead a ganada mientras Copilot señala el siguiente paso y espera tu sí.',
-    'Les opportunités glissent du prospect au gain pendant que Copilot indique l’étape suivante et attend votre accord.',
-    'Verkaufschancen gleiten vom Lead zum Abschluss, während Copilot den nächsten Schritt zeigt und auf Ihr Ja wartet.',
-    'تنتقل الصفقات من عميل محتمل إلى صفقة رابحة بينما يقترح Copilot الخطوة التالية وينتظر موافقتك.',
+  'Deals glide from first contact to won while Copilot points out the next step and waits for your yes.': [
+    'Las oportunidades avanzan del primer contacto a ganadas mientras Copilot señala el siguiente paso y espera tu sí.',
+    'Les opportunités passent du premier contact à gagnées pendant que Copilot indique l’étape suivante et attend votre accord.',
+    'Verkaufschancen gleiten vom ersten Kontakt bis zum Abschluss, während Copilot den nächsten Schritt zeigt und auf Ihr Ja wartet.',
+    'تنتقل الصفقات بسلاسة من أول تواصل حتى الفوز بينما يشير Copilot إلى الخطوة التالية وينتظر موافقتك.',
   ],
   'Sample deals, for illustration.': ['Oportunidades de ejemplo, solo ilustrativas.', 'Opportunités fictives, à titre d’illustration.', 'Beispiel-Verkaufschancen, nur zur Veranschaulichung.', 'صفقات نموذجية للتوضيح فقط.'],
   'No reply in 9 days. Draft a follow-up for you to approve?': [
@@ -54,11 +54,11 @@ export const site = {
   ],
 
   // What is in the box
-  'Eight modules that work as one, from the first lead to the renewal.': [
-    'Ocho módulos que funcionan como uno, del primer lead a la renovación.',
-    'Huit modules qui fonctionnent comme un seul, du premier prospect au renouvellement.',
-    'Acht Module, die wie eines arbeiten, vom ersten Lead bis zur Verlängerung.',
-    'ثماني وحدات تعمل كوحدة واحدة، من أول عميل محتمل حتى التجديد.',
+  'Eight modules that work as one, from the first contact to the renewal.': [
+    'Ocho módulos que funcionan como uno, del primer contacto a la renovación.',
+    'Huit modules qui fonctionnent comme un seul, du premier contact au renouvellement.',
+    'Acht Module, die wie eines arbeiten, vom ersten Kontakt bis zur Verlängerung.',
+    'ثماني وحدات تعمل كوحدة واحدة، من أول تواصل حتى التجديد.',
   ],
   'This deal may slip: the champion has not replied for 9 days.': [
     'Esta oportunidad podría retrasarse: tu aliado no responde desde hace 9 días.',

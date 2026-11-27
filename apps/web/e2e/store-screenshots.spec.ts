@@ -146,8 +146,8 @@ test('store screenshots', async () => {
   await shoot('screenshot-2-find-more', home.page, panel);
 
   // 3. Saved as leads.
-  await panel.getByRole('button', { name: 'Save 4 as leads' }).click();
-  await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new leads.' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Save 4 as inbound contacts' }).click();
+  await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new inbound contacts.' })).toBeVisible();
   // Scroll past the panel header so the list starts at the top and the confirmation shows at the bottom.
   await panel.evaluate(() => window.scrollTo(0, document.querySelector('header')?.getBoundingClientRect().bottom ?? 0));
   await shoot('screenshot-3-saved', home.page, panel);

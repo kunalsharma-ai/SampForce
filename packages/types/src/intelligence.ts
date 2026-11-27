@@ -81,7 +81,7 @@ export const NEXT_ACTION_LABELS: Record<NextActionKind, string> = {
   deal_at_risk: 'Deal at risk',
   deal_no_next_step: 'No next step',
   close_date_passed: 'Close date passed',
-  new_lead_untouched: 'New lead',
+  new_lead_untouched: 'New inbound contact',
   quote_awaiting_answer: 'Quote follow-up',
   renewal_due: 'Renewal due',
   ai_recommendation: 'AI suggestion',

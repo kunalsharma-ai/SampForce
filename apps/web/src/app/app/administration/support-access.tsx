@@ -37,7 +37,7 @@ export function SupportAccess() {
           </CardTitle>
           <InfoTip topic="admin.supportAccess" />
         </div>
-        <CardDescription>{t('Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.')}</CardDescription>
+        <CardDescription>{t('Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees companies, contacts, deals or other CRM records.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {active ? (

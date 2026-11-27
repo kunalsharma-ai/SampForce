@@ -27,9 +27,9 @@ test('finds a company’s addresses and a person’s likely address, then saves 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
-  await page.getByRole('button', { name: 'Save 4 as leads' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Saved 4 new leads.' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Already a lead: Owen Price' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save 4 as inbound contacts' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved 4 new inbound contacts.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Already an inbound contact: Owen Price' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Kestrel Analytics/ })).toBeVisible();
 
   const leads = await (await page.request.get('/api/v1/leads?q=kestrel')).json();

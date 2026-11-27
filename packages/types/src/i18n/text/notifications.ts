@@ -209,16 +209,16 @@ export const notifications = {
   '{email} bounced': ['{email} rebotó', '{email} a été rejeté', '{email} ist unzustellbar', 'ارتدّ {email}'],
   '{email} unsubscribed': ['{email} se dio de baja', '{email} s’est désabonné', '{email} hat sich abgemeldet', 'ألغى {email} الاشتراك'],
   // Company leads (ADR 0060)
-  'Lead assigned to you: {lead}': ['Lead asignado a ti: {lead}', 'Prospect qui vous est attribué : {lead}', 'Ihnen zugewiesener Lead: {lead}', 'عميل محتمل أُسند إليك: {lead}'],
+  'Company assigned to you: {lead}': ['Empresa asignada a ti: {lead}', 'Entreprise qui vous est attribuée : {lead}', 'Ihnen zugewiesenes Unternehmen: {lead}', 'شركة مسندة إليك: {lead}'],
   'Assigned by {name}.': ['Asignado por {name}.', 'Attribué par {name}.', 'Zugewiesen von {name}.', 'أسنده {name}.'],
   // Company work (ADR 0060, Phase 3)
   'Follow-up assigned to you: {title}': ['Seguimiento asignado a ti: {title}', 'Relance qui vous est attribuée : {title}', 'Ihnen zugewiesene Nachverfolgung: {title}', 'متابعة أُسندت إليك: {title}'],
   'RFQ assigned to you: {rfq}': ['RFQ asignada a ti: {rfq}', 'RFQ qui vous est attribuée : {rfq}', 'Ihnen zugewiesene RFQ: {rfq}', 'طلب عرض سعر أُسند إليك: {rfq}'],
   // Lead transfers (ADR 0063, Phase 4)
-  'Lead transfer request: {lead}': ['Solicitud de traspaso de lead: {lead}', 'Demande de transfert de prospect : {lead}', 'Anfrage zur Lead-Übergabe: {lead}', 'طلب نقل عميل محتمل: {lead}'],
+  'Company transfer request: {lead}': ['Solicitud de transferencia de empresa: {lead}', 'Demande de transfert d’entreprise : {lead}', 'Anfrage zur Unternehmensübertragung: {lead}', 'طلب نقل شركة: {lead}'],
   'Requested by {name}.': ['Solicitado por {name}.', 'Demandé par {name}.', 'Angefragt von {name}.', 'طلبه {name}.'],
-  'Lead transfer approved: {lead}': ['Traspaso de lead aprobado: {lead}', 'Transfert de prospect approuvé : {lead}', 'Lead-Übergabe genehmigt: {lead}', 'تمت الموافقة على نقل العميل المحتمل: {lead}'],
-  'Lead transfer rejected: {lead}': ['Traspaso de lead rechazado: {lead}', 'Transfert de prospect refusé : {lead}', 'Lead-Übergabe abgelehnt: {lead}', 'رُفض نقل العميل المحتمل: {lead}'],
+  'Company transfer approved: {lead}': ['Transferencia de empresa aprobada: {lead}', 'Transfert d’entreprise approuvé : {lead}', 'Unternehmensübertragung genehmigt: {lead}', 'تمت الموافقة على نقل الشركة: {lead}'],
+  'Company transfer rejected: {lead}': ['Transferencia de empresa rechazada: {lead}', 'Transfert d’entreprise rejeté : {lead}', 'Unternehmensübertragung abgelehnt: {lead}', 'رُفض نقل الشركة: {lead}'],
   'Decided by {name}.': ['Decidido por {name}.', 'Décidé par {name}.', 'Entschieden von {name}.', 'قرّره {name}.'],
   "Client concern: {lead}": ["Inquietud del cliente: {lead}", "Préoccupation client : {lead}", "Kundenanliegen: {lead}", "ملاحظة عميل: {lead}"],
   "Client concern escalated: {lead}": ["Inquietud del cliente escalada: {lead}", "Préoccupation client remontée : {lead}", "Kundenanliegen eskaliert: {lead}", "صُعِّدت ملاحظة عميل: {lead}"],
@@ -238,7 +238,7 @@ export const notifications = {
   // Edit everywhere (ADR 0065)
   'Instruction updated by {name}': ['Instrucción actualizada por {name}', 'Instruction modifiée par {name}', 'Anweisung geändert von {name}', 'عدّل {name} التعليمات'],
   'Remark updated by {name}': ['Observación actualizada por {name}', 'Remarque modifiée par {name}', 'Bemerkung geändert von {name}', 'عدّل {name} الملاحظة'],
-  'Lead transfer request updated: {lead}': ['Solicitud de traspaso de lead actualizada: {lead}', 'Demande de transfert de prospect modifiée : {lead}', 'Anfrage zur Lead-Übergabe geändert: {lead}', 'عُدّل طلب نقل العميل المحتمل: {lead}'],
+  'Company transfer request updated: {lead}': ['Solicitud de transferencia de empresa actualizada: {lead}', 'Demande de transfert d’entreprise mise à jour : {lead}', 'Anfrage zur Unternehmensübertragung aktualisiert: {lead}', 'تم تحديث طلب نقل الشركة: {lead}'],
   'Updated by {name}.': ['Actualizado por {name}.', 'Modifié par {name}.', 'Geändert von {name}.', 'عدّله {name}.'],
   // Targets and tasks (ADR 0071, part 4)
   'You have a new target': ['Tienes un nuevo objetivo', 'Vous avez un nouvel objectif', 'Sie haben ein neues Ziel', 'لديك هدف جديد'],

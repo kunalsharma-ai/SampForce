@@ -56,7 +56,7 @@ test('an owner removes people completely and deletes invitation rows', async ({ 
   // Remove Simran A: shows what moves, hands it to the owner, asks for the password.
   await members.getByRole('button', { name: 'Remove Simran A' }).click();
   const removeDialog = page.getByRole('dialog', { name: 'Remove Simran A' });
-  await expect(removeDialog.locator('[data-impact-records]')).toContainText('1 leads');
+  await expect(removeDialog.locator('[data-impact-records]')).toContainText('1 inbound contacts');
   await expect(removeDialog.getByLabel('Who receives their records')).toContainText('Test Person');
   if (process.env.PREVIEW_DIR) {
     await page.screenshot({ path: `${process.env.PREVIEW_DIR}/02-remove-person-dialog.png` });

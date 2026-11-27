@@ -333,7 +333,7 @@ function pageSection(scanning) {
   sec.append(h('p', { class: 'small' }, `${page.people.length} address${page.people.length === 1 ? '' : 'es'} found.`), h('ul', { class: 'people' }, rows.map((r) => r.el)), findRow);
 
   if (!me?.canSave) {
-    sec.append(h('p', { class: 'muted small' }, 'Your role in this workspace can look people up but not save leads.'));
+    sec.append(h('p', { class: 'muted small' }, 'Your role in this workspace can look people up but not save contacts.'));
     return sec;
   }
 
@@ -345,10 +345,10 @@ function pageSection(scanning) {
   }
 
   const out = h('div');
-  const save = h('button', { class: 'primary', type: 'button' }, 'Save as leads');
+  const save = h('button', { class: 'primary', type: 'button' }, 'Save as inbound contacts');
   const update = () => {
     const n = rows.filter((r) => r.box.checked && !r.box.disabled).length;
-    save.textContent = n ? `Save ${n} as lead${n === 1 ? '' : 's'}${sequence?.value ? ' and enrol' : ''}` : 'Choose people to save';
+    save.textContent = n ? `Save ${n} as inbound contact${n === 1 ? '' : 's'}${sequence?.value ? ' and enrol' : ''}` : 'Choose people to save';
     save.disabled = !n || state.busy;
   };
   rows.forEach((r) => r.box.addEventListener('change', update));
@@ -372,7 +372,7 @@ function pageSection(scanning) {
       });
       const created = res.results.filter((r) => r.outcome === 'created').length;
       const existing = res.results.filter((r) => r.outcome === 'existing').length;
-      const lines = [`Saved ${created} new lead${created === 1 ? '' : 's'}.`];
+      const lines = [`Saved ${created} new inbound contact${created === 1 ? '' : 's'}.`];
       if (existing) lines.push(`${existing} already in SampForce.`);
       if (res.enrollment) lines.push(`Enrolled ${res.enrollment.enrolled}${res.enrollment.skipped.length ? `, skipped ${res.enrollment.skipped.length}` : ''}.`);
       state.busy = false;
@@ -430,7 +430,7 @@ async function discover(ps) {
 
 function outcomeText(res) {
   const n = (o) => res.results.filter((r) => r.outcome === o).length;
-  const where = res.destination.type === 'crm' ? 'the CRM as leads' : res.destination.name;
+  const where = res.destination.type === 'crm' ? 'the CRM as inbound contacts' : res.destination.name;
   const lines = [`Added ${n('added')} to ${where}.`];
   if (n('duplicate')) lines.push(`${n('duplicate')} already in that list.`);
   if (n('existing')) lines.push(`${n('existing')} already in SampForce.`);
@@ -491,7 +491,7 @@ function prospectsSection() {
       for (const l of ps.lists ?? []) dest.append(h('option', { value: `list:${l.id}` }, `List: ${l.name}`));
       dest.append(h('option', { value: 'new' }, 'A new prospect list'));
     }
-    if (me.canSave) dest.append(h('option', { value: 'crm' }, 'The CRM, as leads'));
+    if (me.canSave) dest.append(h('option', { value: 'crm' }, 'The CRM, as inbound contacts'));
     if (ps.dest && [...dest.options].some((o) => o.value === ps.dest)) dest.value = ps.dest;
     const newName = h('input', { id: 'newlist', type: 'text', value: ps.newName });
     newName.addEventListener('input', () => (ps.newName = newName.value));
@@ -521,7 +521,7 @@ function prospectsSection() {
       seqWrap,
       h('label', { class: 'switch', for: 'reveal' }, reveal, h('span', {}, 'Find their email addresses (one provider call each)')),
     );
-    if (!dest.options.length) sec.append(h('p', { class: 'muted small' }, 'Your role can search but not save prospects or leads.'));
+    if (!dest.options.length) sec.append(h('p', { class: 'muted small' }, 'Your role can search but not save prospects or contacts.'));
     const out = h('div');
     if (ps.outcome) {
       out.append(alertBox('success', outcomeText(ps.outcome)));

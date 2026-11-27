@@ -266,7 +266,7 @@ export class MeetingRecordsService {
     const a = r.analysis as unknown as MeetingAnalysis | null;
     if (!a) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Analyse the meeting first.' });
     if (!r.reviewedAt) throw new ConflictException({ code: 'REVIEW_REQUIRED', message: 'Review and save the meeting summary before adding it to the record.' });
-    if (!r.dealId && !r.contactId && !r.leadId) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the meeting to a deal, contact or lead first.' });
+    if (!r.dealId && !r.contactId && !r.leadId) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the meeting to a deal or contact first.' });
     if (r.activityId) throw new ConflictException({ code: 'ALREADY_SAVED', message: 'This meeting summary is already on the record.' });
     const list = (title: string, xs: string[]) => (xs.length ? `\n\n${title}:\n${xs.map((x) => `- ${x}`).join('\n')}` : '');
     const body = [

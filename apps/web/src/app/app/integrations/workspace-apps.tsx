@@ -49,7 +49,7 @@ export function WorkspaceApps() {
         </h2>
         <InfoTip topic="integrations.apps" />
       </div>
-      {app && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{app === 'zoom' ? t('Zoom is connected. Schedule meetings from any lead, contact or deal.') : app === 'docusign' ? t('DocuSign is connected. Send draft contracts for signature from the contract page.') : t('Connected. Choose a default channel below, then send a test message.')}</p>}
+      {app && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{app === 'zoom' ? t('Zoom is connected. Schedule meetings from any company, contact or deal.') : app === 'docusign' ? t('DocuSign is connected. Send draft contracts for signature from the contract page.') : t('Connected. Choose a default channel below, then send a test message.')}</p>}
       {app && error && (
         <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
           {OUTCOME[error] ? t.maybe(OUTCOME[error]) : t('The connection did not complete ({error}).', { error })}

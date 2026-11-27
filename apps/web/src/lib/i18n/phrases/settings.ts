@@ -11,11 +11,11 @@ export const settings = {
     'تفاصيل مساحة العمل وتفضيلات العرض واللغة والمنطقة والحقول المخصصة واستيراد البيانات.',
   ],
   Data: ['Datos', 'Données', 'Daten', 'البيانات'],
-  'Add fields to leads, contacts, companies and deals.': [
-    'Añade campos a leads, contactos, empresas y oportunidades.',
-    'Ajoutez des champs aux prospects, contacts, entreprises et opportunités.',
-    'Fügen Sie Leads, Kontakten, Unternehmen und Verkaufschancen Felder hinzu.',
-    'أضف حقولًا إلى العملاء المحتملين وجهات الاتصال والشركات والصفقات.',
+  'Add fields to inbound contacts, contacts, companies and deals.': [
+    'Añade campos a contactos entrantes, contactos, empresas y oportunidades.',
+    'Ajoutez des champs aux contacts entrants, contacts, entreprises et opportunités.',
+    'Fügen Sie Eingangskontakten, Kontakten, Unternehmen und Verkaufschancen Felder hinzu.',
+    'أضف حقولًا إلى جهات الاتصال الواردة وجهات الاتصال والشركات والصفقات.',
   ],
   'Import data': ['Importar datos', 'Importer des données', 'Daten importieren', 'استيراد البيانات'],
   'Bring in records from a CSV file, with a check before anything is saved.': [
@@ -307,11 +307,11 @@ export const settings = {
   ],
 
   // Custom fields
-  'Extra fields on leads, contacts, companies and deals. They appear in forms, record pages, imports and exports.': [
-    'Campos adicionales en leads, contactos, empresas y oportunidades. Aparecen en formularios, fichas, importaciones y exportaciones.',
-    'Champs supplémentaires sur les prospects, contacts, entreprises et opportunités. Ils apparaissent dans les formulaires, les fiches, les imports et les exports.',
-    'Zusätzliche Felder für Leads, Kontakte, Unternehmen und Verkaufschancen. Sie erscheinen in Formularen, Datensätzen, Importen und Exporten.',
-    'حقول إضافية على العملاء المحتملين وجهات الاتصال والشركات والصفقات. تظهر في النماذج وصفحات السجلات وعمليات الاستيراد والتصدير.',
+  'Extra fields on inbound contacts, contacts, companies and deals. They appear in forms, record pages, imports and exports.': [
+    'Campos adicionales en contactos entrantes, contactos, empresas y oportunidades. Aparecen en formularios, fichas, importaciones y exportaciones.',
+    'Champs supplémentaires sur les contacts entrants, contacts, entreprises et opportunités. Ils apparaissent dans les formulaires, les fiches, les imports et les exports.',
+    'Zusatzfelder für Eingangskontakte, Kontakte, Unternehmen und Verkaufschancen. Sie erscheinen in Formularen, Datensätzen, Importen und Exporten.',
+    'حقول إضافية على جهات الاتصال الواردة وجهات الاتصال والشركات والصفقات. تظهر في النماذج وصفحات السجلات والاستيراد والتصدير.',
   ],
   'No custom fields.': ['Sin campos personalizados.', 'Aucun champ personnalisé.', 'Keine benutzerdefinierten Felder.', 'لا توجد حقول مخصصة.'],
   Required: ['Obligatorio', 'Obligatoire', 'Pflichtfeld', 'مطلوب'],
@@ -346,11 +346,11 @@ export const settings = {
   'Add at least one option': ['Añade al menos una opción', 'Ajoutez au moins une option', 'Fügen Sie mindestens eine Option hinzu', 'أضف خيارًا واحدًا على الأقل'],
 
   // Import
-  'Bring in leads, contacts or companies from a CSV file (UTF-8, up to 2 MB and 5,000 rows). Every file is checked before anything is saved.': [
-    'Trae leads, contactos o empresas desde un archivo CSV (UTF-8, hasta 2 MB y 5000 filas). Cada archivo se comprueba antes de guardar nada.',
-    'Importez des prospects, contacts ou entreprises depuis un fichier CSV (UTF-8, jusqu’à 2 Mo et 5 000 lignes). Chaque fichier est vérifié avant tout enregistrement.',
-    'Übernehmen Sie Leads, Kontakte oder Unternehmen aus einer CSV-Datei (UTF-8, bis 2 MB und 5.000 Zeilen). Jede Datei wird geprüft, bevor etwas gespeichert wird.',
-    'استورد العملاء المحتملين أو جهات الاتصال أو الشركات من ملف CSV (UTF-8، حتى 2 ميغابايت و5000 صف). يُفحص كل ملف قبل حفظ أي شيء.',
+  'Bring in inbound contacts, contacts or companies from a CSV file (UTF-8, up to 2 MB and 5,000 rows). Every file is checked before anything is saved.': [
+    'Importa contactos entrantes, contactos o empresas desde un archivo CSV (UTF-8, hasta 2 MB y 5.000 filas). Cada archivo se revisa antes de guardar nada.',
+    'Importez des contacts entrants, contacts ou entreprises depuis un fichier CSV (UTF-8, jusqu’à 2 Mo et 5 000 lignes). Chaque fichier est vérifié avant tout enregistrement.',
+    'Importieren Sie Eingangskontakte, Kontakte oder Unternehmen aus einer CSV-Datei (UTF-8, bis 2 MB und 5.000 Zeilen). Jede Datei wird geprüft, bevor etwas gespeichert wird.',
+    'استورد جهات اتصال واردة أو جهات اتصال أو شركات من ملف CSV (UTF-8، حتى 2 ميغابايت و5,000 صف). يُفحص كل ملف قبل حفظ أي شيء.',
   ],
   '1. Choose a file': ['1. Elige un archivo', '1. Choisissez un fichier', '1. Datei wählen', '1. اختر ملفًا'],
   'Import into': ['Importar en', 'Importer dans', 'Importieren in', 'الاستيراد إلى'],
@@ -404,7 +404,7 @@ export const settings = {
   'Rows with errors': ['Filas con errores', 'Lignes avec erreurs', 'Zeilen mit Fehlern', 'صفوف بها أخطاء'],
   Row: ['Fila', 'Ligne', 'Zeile', 'الصف'],
   Problem: ['Problema', 'Problème', 'Problem', 'المشكلة'],
-  'View leads': ['Ver leads', 'Voir les prospects', 'Leads ansehen', 'عرض العملاء المحتملين'],
+  'View inbound contacts': ['Ver contactos entrantes', 'Voir les contacts entrants', 'Eingangskontakte ansehen', 'عرض جهات الاتصال الواردة'],
   'View contacts': ['Ver contactos', 'Voir les contacts', 'Kontakte ansehen', 'عرض جهات الاتصال'],
   'View companies': ['Ver empresas', 'Voir les entreprises', 'Unternehmen ansehen', 'عرض الشركات'],
 } as const satisfies PhraseTable;

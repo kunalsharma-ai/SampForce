@@ -35,7 +35,7 @@ export function JourneyBoardView() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search companies or lead numbers')} aria-label={t('Search companies or lead numbers')} className="ps-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search companies or company numbers')} aria-label={t('Search companies or company numbers')} className="ps-9" />
         </div>
         <label className="flex min-h-9 items-center gap-2 text-sm">
           <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={mine} onChange={(e) => setMine(e.target.checked)} />

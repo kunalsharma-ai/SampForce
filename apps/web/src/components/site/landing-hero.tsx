@@ -106,7 +106,7 @@ export function LandingHero() {
           </span>
         </p>
         <motion.p initial={{ y: 16 }} animate={{ y: 0 }} transition={{ delay: 0.5 }} className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-          {t('One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.')}
+          {t('One workspace for companies, contacts, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.')}
         </motion.p>
         <div className="mt-9 flex flex-wrap items-center gap-3">
           <MagneticCta onClick={() => openPortal('start')}>

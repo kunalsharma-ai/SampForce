@@ -4,11 +4,11 @@ import type { PhraseTable } from './types';
 export const communication = {
   // Page
   'Email & Communication': ['Correo y comunicación', 'E-mail et communication', 'E-Mail & Kommunikation', 'البريد والتواصل'],
-  'One inbox for your team: conversations with contacts and leads from every connected mailbox. SampForce stores only messages that involve a known contact or lead, never the rest of your mailbox.': [
-    'Una bandeja de entrada para tu equipo: conversaciones con contactos y leads desde cada buzón conectado. SampForce guarda solo los mensajes en los que participa un contacto o lead conocido, nunca el resto de tu buzón.',
-    'Une seule boîte de réception pour votre équipe : les conversations avec les contacts et les prospects de chaque boîte connectée. SampForce ne conserve que les messages impliquant un contact ou un prospect connu, jamais le reste de votre boîte.',
-    'Ein Posteingang für Ihr Team: Unterhaltungen mit Kontakten und Leads aus jedem verbundenen Postfach. SampForce speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist, nie den Rest Ihres Postfachs.',
-    'صندوق وارد واحد لفريقك: المحادثات مع جهات الاتصال والعملاء المحتملين من كل صندوق بريد متصل. يحفظ SampForce فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا، ولا يحفظ بقية صندوق بريدك أبدًا.',
+  'One inbox for your team: conversations with contacts from every connected mailbox. SampForce stores only messages that involve a known contact, never the rest of your mailbox.': [
+    'Una bandeja para tu equipo: conversaciones con contactos de todos los buzones conectados. SampForce solo guarda los mensajes en los que participa un contacto conocido, nunca el resto de tu buzón.',
+    'Une boîte de réception pour votre équipe : les conversations avec les contacts de chaque messagerie connectée. SampForce ne stocke que les messages impliquant un contact connu, jamais le reste de votre boîte.',
+    'Ein Posteingang für Ihr Team: Unterhaltungen mit Kontakten aus jedem verbundenen Postfach. SampForce speichert nur Nachrichten mit einem bekannten Kontakt, nie den Rest Ihres Postfachs.',
+    'صندوق وارد واحد لفريقك: المحادثات مع جهات الاتصال من كل صندوق بريد متصل. لا يخزّن SampForce إلا الرسائل التي تخص جهة اتصال معروفة، ولا يخزّن بقية بريدك أبدًا.',
   ],
 
   // Mailbox status and toolbar
@@ -60,7 +60,7 @@ export const communication = {
   // Conversation view
   'All conversations': ['Todas las conversaciones', 'Toutes les conversations', 'Alle Unterhaltungen', 'كل المحادثات'],
   'In {mailbox} ({provider})': ['En {mailbox} ({provider})', 'Dans {mailbox} ({provider})', 'In {mailbox} ({provider})', 'في {mailbox} ({provider})'],
-  'Lead: {name}': ['Lead: {name}', 'Prospect : {name}', 'Lead: {name}', 'العميل المحتمل: {name}'],
+  'Inbound contact: {name}': ['Contacto entrante: {name}', 'Contact entrant : {name}', 'Eingangskontakt: {name}', 'جهة اتصال واردة: {name}'],
   'Deal: {name}': ['Negocio: {name}', 'Affaire : {name}', 'Deal: {name}', 'الصفقة: {name}'],
   'Conversation status': ['Estado de la conversación', 'Statut de la conversation', 'Status der Unterhaltung', 'حالة المحادثة'],
   'Conversation category': ['Categoría de la conversación', 'Catégorie de la conversation', 'Kategorie der Unterhaltung', 'فئة المحادثة'],
@@ -106,11 +106,11 @@ export const communication = {
 
   // Sync log
   'Mailbox sync log': ['Registro de sincronización del buzón', 'Journal de synchronisation de la boîte', 'Synchronisierungsprotokoll des Postfachs', 'سجل مزامنة صندوق البريد'],
-  'Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact or lead.': [
-    'Cada sincronización de un buzón conectado, de la más reciente a la más antigua. SampForce guarda solo los mensajes en los que participa un contacto o lead conocido.',
-    'Chaque synchronisation d’une boîte connectée, de la plus récente à la plus ancienne. SampForce ne conserve que les messages impliquant un contact ou un prospect connu.',
-    'Jede Synchronisierung eines verbundenen Postfachs, neueste zuerst. SampForce speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist.',
-    'كل مزامنة لصندوق بريد متصل، الأحدث أولًا. يحفظ SampForce فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا.',
+  'Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact.': [
+    'Cada sincronización de un buzón conectado, de la más reciente a la más antigua. SampForce solo guarda los mensajes en los que participa un contacto conocido.',
+    'Chaque synchronisation d’une messagerie connectée, de la plus récente à la plus ancienne. SampForce ne stocke que les messages impliquant un contact connu.',
+    'Jede Synchronisierung eines verbundenen Postfachs, neueste zuerst. SampForce speichert nur Nachrichten mit einem bekannten Kontakt.',
+    'كل مزامنة لصندوق بريد متصل، الأحدث أولًا. لا يخزّن SampForce إلا الرسائل التي تخص جهة اتصال معروفة.',
   ],
   'Sync {mailbox} now': ['Sincronizar {mailbox} ahora', 'Synchroniser {mailbox} maintenant', '{mailbox} jetzt synchronisieren', 'مزامنة {mailbox} الآن'],
   'No syncs recorded yet.': ['Aún no hay sincronizaciones registradas.', 'Aucune synchronisation enregistrée pour l’instant.', 'Noch keine Synchronisierungen erfasst.', 'لم تُسجَّل أي مزامنة بعد.'],
@@ -122,7 +122,7 @@ export const communication = {
 
   // Compose
   'New email': ['Nuevo correo', 'Nouvel e-mail', 'Neue E-Mail', 'بريد جديد'],
-  'Sent from your connected mailbox and logged on the matching contact or lead.': ['Se envía desde tu buzón conectado y se registra en el contacto o lead correspondiente.', 'Envoyé depuis votre boîte connectée et consigné sur le contact ou le prospect correspondant.', 'Wird aus Ihrem verbundenen Postfach gesendet und beim passenden Kontakt oder Lead protokolliert.', 'يُرسَل من صندوق بريدك المتصل ويُسجَّل على جهة الاتصال أو العميل المحتمل المطابق.'],
+  'Sent from your connected mailbox and logged on the matching contact.': ['Enviado desde tu buzón conectado y registrado en el contacto correspondiente.', 'Envoyé depuis votre messagerie connectée et consigné sur le contact correspondant.', 'Aus Ihrem verbundenen Postfach gesendet und beim passenden Kontakt erfasst.', 'أُرسل من بريدك المتصل وسُجّل على جهة الاتصال المطابقة.'],
   To: ['Para', 'À', 'An', 'إلى'],
   'Insert a template': ['Insertar una plantilla', 'Insérer un modèle', 'Vorlage einfügen', 'إدراج قالب'],
   'Choose a template': ['Elige una plantilla', 'Choisissez un modèle', 'Vorlage wählen', 'اختر قالبًا'],

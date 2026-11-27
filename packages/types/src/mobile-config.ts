@@ -35,7 +35,7 @@ export interface MobileModuleDef {
 
 export const MOBILE_MODULE_DEFS: MobileModuleDef[] = [
   { key: 'dashboard', label: 'Dashboard', description: 'The home screen with the cards you choose for each workspace level.', feature: null, customFieldEntity: null, records: false, permission: { read: 'dashboard:read', write: 'dashboard:read' }, required: true },
-  { key: 'companies', label: 'Leads and companies', description: 'Company leads with their status, owner and contact details.', feature: 'account_management', customFieldEntity: 'COMPANY', records: true, permission: { read: 'companies:read', write: 'companies:write' } },
+  { key: 'companies', label: 'Companies', description: 'Companies with their status, owner and contact details.', feature: 'account_management', customFieldEntity: 'COMPANY', records: true, permission: { read: 'companies:read', write: 'companies:write' } },
   { key: 'contacts', label: 'Contacts', description: 'Employees and points of contact at client companies.', feature: 'contact_management', customFieldEntity: 'CONTACT', records: true, permission: { read: 'contacts:read', write: 'contacts:write' } },
   { key: 'follow_ups', label: 'Follow-ups', description: 'Calls, meetings and reminders due with clients.', feature: 'follow_up_management', customFieldEntity: 'FOLLOW_UP', records: true, permission: { read: 'activities:read', write: 'activities:write' } },
   { key: 'tasks', label: 'Tasks', description: 'Tasks assigned to people, with priority and due date.', feature: 'task_management', customFieldEntity: null, records: true, permission: { read: 'activities:read', write: 'activities:write' } },
@@ -67,8 +67,8 @@ export interface MobileFieldDef {
 export const MOBILE_FIELDS: Record<MobileRecordModule, MobileFieldDef[]> = {
   companies: [
     { key: 'name', label: 'Company name', required: true },
-    { key: 'leadNumber', label: 'Lead number', readOnly: true },
-    { key: 'status', label: 'Lead status' },
+    { key: 'leadNumber', label: 'Company number', readOnly: true },
+    { key: 'status', label: 'Company status' },
     { key: 'owner', label: 'Assigned to' },
     { key: 'primaryEmail', label: 'Email address' },
     { key: 'primaryPhone', label: 'Phone number' },
@@ -156,12 +156,12 @@ export const MOBILE_DASHBOARD_CARDS = [
 export type MobileDashboardCard = (typeof MOBILE_DASHBOARD_CARDS)[number];
 
 export const MOBILE_DASHBOARD_CARD_DEFS: Record<MobileDashboardCard, { label: string; description: string; levels: MobileWorkspaceLevel[]; module: MobileModuleKey }> = {
-  todays_target: { label: 'Today’s target', description: 'Leads to generate today and progress so far.', levels: ['EXECUTIVE', 'MANAGER'], module: 'targets' },
-  leads_today: { label: 'Leads today', description: 'Leads created today.', levels: ['EXECUTIVE', 'MANAGER', 'SUPER'], module: 'companies' },
+  todays_target: { label: 'Today’s target', description: 'Companies to create today and progress so far.', levels: ['EXECUTIVE', 'MANAGER'], module: 'targets' },
+  leads_today: { label: 'Companies today', description: 'Companies created today.', levels: ['EXECUTIVE', 'MANAGER', 'SUPER'], module: 'companies' },
   pending_follow_ups: { label: 'Pending follow-ups', description: 'Follow-ups due today and overdue.', levels: ['EXECUTIVE', 'MANAGER'], module: 'follow_ups' },
   my_tasks: { label: 'My tasks', description: 'Open tasks assigned to me.', levels: ['EXECUTIVE', 'MANAGER', 'SUPER'], module: 'tasks' },
-  personal_performance: { label: 'My performance', description: 'Leads, calls and won deals this month.', levels: ['EXECUTIVE'], module: 'dashboard' },
-  team_performance: { label: 'Team performance', description: 'The team’s leads, follow-ups and wins.', levels: ['MANAGER'], module: 'dashboard' },
+  personal_performance: { label: 'My performance', description: 'Companies, calls and won deals this month.', levels: ['EXECUTIVE'], module: 'dashboard' },
+  team_performance: { label: 'Team performance', description: 'The team’s companies, follow-ups and wins.', levels: ['MANAGER'], module: 'dashboard' },
   executive_ranking: { label: 'Executive ranking', description: 'Executives ranked by achievement.', levels: ['MANAGER', 'SUPER'], module: 'dashboard' },
   team_tasks: { label: 'Team tasks', description: 'Open and overdue tasks of the team.', levels: ['MANAGER', 'SUPER'], module: 'tasks' },
   organisation_performance: { label: 'Organisation performance', description: 'Sales across the organisation.', levels: ['SUPER'], module: 'dashboard' },

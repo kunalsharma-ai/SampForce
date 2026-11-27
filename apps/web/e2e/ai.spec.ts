@@ -51,7 +51,7 @@ test('AI Agents page shows status and lets an owner switch AI off', async ({ pag
   await page.goto('/app/agents');
   await expect(page.getByRole('heading', { level: 1, name: 'AI Agents' })).toBeVisible();
   await expect(page.getByText('API key set')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Lead Qualification' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Contact Qualification' })).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.getByRole('button', { name: 'Turn off all AI' }).click();
@@ -67,7 +67,7 @@ test('lead scoring, deal health and meeting notes on record pages', async ({ pag
   await signUp(page, 'Records AI');
   const lead = (await apiPost(page, '/leads', { fullName: 'Grace Hopper', email: 'grace@navy.example', phone: '+1 555 0100', companyName: 'Navy', jobTitle: 'Director', estimatedValue: 80000 })).lead;
   await page.goto(`/app/leads/${lead.id}`);
-  await page.getByRole('button', { name: 'Score lead' }).click();
+  await page.getByRole('button', { name: 'Score contact' }).click();
   await expect(page.getByText(/^Grade [ABCD]$/)).toBeVisible();
   await expect(page.getByText('Call this week to confirm budget and timing.')).toBeVisible();
   await expectNoA11yViolations(page);

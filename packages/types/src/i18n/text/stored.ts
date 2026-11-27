@@ -162,7 +162,7 @@ export const stored = {
 
   // Why a sequence enrollment paused or stopped
   'The address is on the do-not-email list.': ['La dirección está en la lista de no enviar correos.', 'L’adresse figure sur la liste d’exclusion des e-mails.', 'Die Adresse steht auf der Sperrliste für E-Mails.', 'العنوان مدرج في قائمة عدم المراسلة.'],
-  'The lead or contact was deleted.': ['Se eliminó el lead o el contacto.', 'Le prospect ou le contact a été supprimé.', 'Der Lead oder Kontakt wurde gelöscht.', 'حُذف العميل المحتمل أو جهة الاتصال.'],
+  'The contact was deleted.': ['El contacto se eliminó.', 'Le contact a été supprimé.', 'Der Kontakt wurde gelöscht.', 'حُذفت جهة الاتصال.'],
   'The person opted out of marketing.': ['La persona se dio de baja del marketing.', 'La personne s’est désinscrite du marketing.', 'Die Person hat dem Marketing widersprochen.', 'ألغى الشخص الاشتراك في التسويق.'],
   "The sender's mailbox is not connected. Reconnect it in Integrations, then resume.": [
     'El buzón del remitente no está conectado. Vuelve a conectarlo en Integraciones y reanuda.',

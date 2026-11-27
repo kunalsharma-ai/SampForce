@@ -164,11 +164,11 @@ export const administration = {
   'Create token': ['Crear token', 'Créer un jeton', 'Token erstellen', 'إنشاء رمز'],
   'Support access': ['Acceso del soporte', 'Accès du support', 'Support-Zugriff', 'وصول الدعم'],
   'On until {date}': ['Activado hasta el {date}', 'Activé jusqu’au {date}', 'An bis {date}', 'مفعّل حتى {date}'],
-  'Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.': [
-    'Permite que el soporte de SampForce vea los miembros y el registro de auditoría de este espacio de trabajo durante un tiempo limitado, por ejemplo mientras ayuda con un problema. El soporte nunca ve leads, oportunidades ni otros registros del CRM.',
-    'Permettez au support SampForce de voir les membres et le journal d’audit de cet espace de travail pendant une durée limitée, par exemple pendant qu’il vous aide à résoudre un problème. Le support ne voit jamais les prospects, opportunités ni autres enregistrements CRM.',
-    'Lassen Sie den SampForce-Support die Mitglieder und das Prüfprotokoll dieses Arbeitsbereichs für begrenzte Zeit sehen, etwa während er bei einem Problem hilft. Der Support sieht nie Leads, Deals oder andere CRM-Datensätze.',
-    'اسمح لدعم SampForce برؤية أعضاء مساحة العمل وسجل التدقيق لمدة محدودة، مثلًا أثناء المساعدة في مشكلة. لا يرى الدعم أبدًا العملاء المحتملين أو الصفقات أو سجلات إدارة العملاء الأخرى.',
+  'Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees companies, contacts, deals or other CRM records.': [
+    'Permite que el soporte de SampForce vea los miembros y el registro de auditoría de este espacio de trabajo durante un tiempo limitado, por ejemplo mientras ayuda con un problema. El soporte nunca ve empresas, contactos, oportunidades ni otros registros del CRM.',
+    'Autorisez le support SampForce à voir les membres et le journal d’audit de cet espace de travail pendant une durée limitée, par exemple pendant qu’il vous aide à résoudre un problème. Le support ne voit jamais les entreprises, contacts, opportunités ni autres enregistrements du CRM.',
+    'Erlauben Sie dem SampForce-Support, Mitglieder und Prüfprotokoll dieses Arbeitsbereichs für begrenzte Zeit zu sehen, etwa während er bei einem Problem hilft. Der Support sieht nie Unternehmen, Kontakte, Verkaufschancen oder andere CRM-Datensätze.',
+    'اسمح لدعم SampForce برؤية أعضاء مساحة العمل هذه وسجل التدقيق لفترة محدودة، مثلًا أثناء مساعدتك في مشكلة. لا يرى الدعم أبدًا الشركات أو جهات الاتصال أو الصفقات أو سجلات CRM الأخرى.',
   ],
   'Granted by {name}: “{reason}”': ['Concedido por {name}: «{reason}»', 'Accordé par {name} : « {reason} »', 'Gewährt von {name}: „{reason}“', 'منحه {name}: «{reason}»'],
   'Turn off now': ['Desactivar ahora', 'Désactiver maintenant', 'Jetzt ausschalten', 'إيقاف الآن'],
@@ -284,11 +284,11 @@ export const administration = {
     'لن يتمكن من تسجيل الدخول إلى مساحة العمل هذه وسيختفي من قائمة الأعضاء. لا يُمسح شيء من CRM: تنتقل سجلاته إلى الشخص الذي تختاره. لا يمكن التراجع عن ذلك، لكن يمكنك دعوته مجددًا لاحقًا.',
   ],
   'Who receives their records': ['Quién recibe sus registros', 'Qui reçoit ses fiches', 'Wer die Datensätze übernimmt', 'من يستلم سجلاته'],
-  '{companies} companies, {contacts} contacts, {leads} leads, {deals} deals, {rfqs} RFQs, {contracts} contracts and {tasks} open tasks': [
-    '{companies} empresas, {contacts} contactos, {leads} leads, {deals} oportunidades, {rfqs} RFQ, {contracts} contratos y {tasks} tareas abiertas',
-    '{companies} entreprises, {contacts} contacts, {leads} leads, {deals} affaires, {rfqs} RFQ, {contracts} contrats et {tasks} tâches ouvertes',
-    '{companies} Unternehmen, {contacts} Kontakte, {leads} Leads, {deals} Deals, {rfqs} RFQs, {contracts} Verträge und {tasks} offene Aufgaben',
-    '{companies} شركات و{contacts} جهات اتصال و{leads} عملاء محتملين و{deals} صفقات و{rfqs} طلبات عروض أسعار و{contracts} عقود و{tasks} مهام مفتوحة',
+  '{companies} companies, {contacts} contacts, {leads} inbound contacts, {deals} deals, {rfqs} RFQs, {contracts} contracts and {tasks} open tasks': [
+    '{companies} empresas, {contacts} contactos, {leads} contactos entrantes, {deals} oportunidades, {rfqs} RFQ, {contracts} contratos y {tasks} tareas abiertas',
+    '{companies} entreprises, {contacts} contacts, {leads} contacts entrants, {deals} opportunités, {rfqs} RFQ, {contracts} contrats et {tasks} tâches ouvertes',
+    '{companies} Unternehmen, {contacts} Kontakte, {leads} Eingangskontakte, {deals} Verkaufschancen, {rfqs} RFQs, {contracts} Verträge und {tasks} offene Aufgaben',
+    '{companies} شركات و{contacts} جهات اتصال و{leads} جهات اتصال واردة و{deals} صفقات و{rfqs} طلبات عروض أسعار و{contracts} عقود و{tasks} مهام مفتوحة',
   ],
   '{name} was removed. {count} records and tasks now belong to {person}.': ['Se quitó a {name}. {count} registros y tareas pertenecen ahora a {person}.', '{name} a été retiré. {count} fiches et tâches appartiennent désormais à {person}.', '{name} wurde entfernt. {count} Datensätze und Aufgaben gehören jetzt {person}.', 'تمت إزالة {name}. أصبحت {count} من السجلات والمهام ملكًا لـ{person}.'],
   '{name} was removed.': ['Se quitó a {name}.', '{name} a été retiré.', '{name} wurde entfernt.', 'تمت إزالة {name}.'],

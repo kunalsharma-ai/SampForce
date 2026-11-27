@@ -88,22 +88,22 @@ test('Spanish translates the Command Center and the lead workflow end to end', a
   await page.goto('/app?view=analytics');
   const main = page.getByRole('main');
   await expect(main.getByRole('button', { name: 'Personalizar diseño' })).toBeVisible();
-  await expect(main.getByText('Leads totales')).toBeVisible();
+  await expect(main.getByText('Total de contactos entrantes')).toBeVisible();
   await expect(main.getByText('Prepara tu espacio de trabajo')).toBeVisible();
 
   // Leads list: header, column names and filters.
   await page.goto('/app/leads');
-  await expect(main.getByRole('heading', { name: 'Leads', level: 1 })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Contactos entrantes', level: 1 })).toBeVisible();
   await expect(main.getByRole('columnheader', { name: 'Nombre' })).toBeVisible();
   await expect(main.getByLabel('Filtrar por estado')).toBeVisible();
 
   // Create a lead through the translated form; it is saved and opens in Spanish.
-  await main.getByRole('button', { name: 'Nuevo lead' }).click();
+  await main.getByRole('button', { name: 'Nuevo contacto entrante' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Los campos marcados con * son obligatorios.')).toBeVisible();
   await dialog.getByLabel('Nombre completo *').fill('Lucía Fernández');
   await dialog.getByLabel('Empresa', { exact: true }).fill('Iberia Logística');
-  await dialog.getByRole('button', { name: 'Crear lead' }).click();
+  await dialog.getByRole('button', { name: 'Crear contacto entrante' }).click();
   await expect(page).toHaveURL(/\/app\/leads\/[\w-]+$/);
   await expect(main.getByRole('heading', { name: 'Lucía Fernández' })).toBeVisible();
   await expect(main.getByText('Nuevo', { exact: true })).toBeVisible();

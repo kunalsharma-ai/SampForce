@@ -144,7 +144,7 @@ function EmailAssistPanel({
               {t('Suggest subject lines')}
             </Button>
           </div>
-          {!asTemplate && !hasTarget && <p className="text-xs text-muted-foreground">{t('Add a recipient who is a lead or contact to draft from their record. Rewriting works on any email.')}</p>}
+          {!asTemplate && !hasTarget && <p className="text-xs text-muted-foreground">{t('Add a recipient who is a contact to draft from their record. Rewriting works on any email.')}</p>}
           {busy && <p className="text-xs text-muted-foreground" role="status">{t('Writing…')}</p>}
           {error && (
             <p role="alert" className="text-sm text-critical">

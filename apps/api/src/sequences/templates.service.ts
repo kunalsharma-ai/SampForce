@@ -100,7 +100,7 @@ export class TemplatesService {
   preview(auth: AuthContext, input: { subject: string; body: string; design?: EmailDesign | null; leadId?: string; contactId?: string }): Promise<TemplatePreview> {
     return this.prisma.run(auth, async (tx) => {
       const person = await loadPerson(tx, auth.tenantId, input);
-      if ((input.leadId || input.contactId) && !person) throw notFound(input.leadId ? 'Lead' : 'Contact');
+      if ((input.leadId || input.contactId) && !person) throw notFound(input.leadId ? 'Inbound contact' : 'Contact');
       const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
       const mailbox = await tx.integrationConnection.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, status: 'CONNECTED' }, select: { accountEmail: true } });
       const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, mailbox?.accountEmail) };

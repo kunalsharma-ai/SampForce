@@ -111,14 +111,14 @@ export class DashboardService {
       const velocity = winRate !== null && avgDeal !== null && cycle ? (openCount * avgDeal * winRate) / Math.max(cycle, 1) : null;
 
       const kpis: KpiValue[] = [
-        { key: 'totalLeads', label: 'Total leads', value: totalLeads, format: 'number', definition: 'All active (not deleted) leads.' },
-        { key: 'newLeads', label: 'New leads', value: newLeads, format: 'number', definition: `Leads created in the last ${PERIOD_DAYS} days.` },
-        { key: 'qualifiedLeads', label: 'Qualified leads', value: qualifiedLeads, format: 'number', definition: 'Leads currently marked Qualified.' },
+        { key: 'totalLeads', label: 'Total inbound contacts', value: totalLeads, format: 'number', definition: 'All active (not deleted) inbound contacts.' },
+        { key: 'newLeads', label: 'New inbound contacts', value: newLeads, format: 'number', definition: `Inbound contacts created in the last ${PERIOD_DAYS} days.` },
+        { key: 'qualifiedLeads', label: 'Qualified contacts', value: qualifiedLeads, format: 'number', definition: 'Inbound contacts currently marked Qualified.' },
         { key: 'activeOpportunities', label: 'Active opportunities', value: openCount, format: 'number', definition: `Open deals. ${money_note}` },
         { key: 'pipelineValue', label: 'Pipeline value', value: round(n(money?.pipeline_value)), format: 'currency', definition: `Sum of open deal amounts. ${money_note}` },
         { key: 'weightedPipelineValue', label: 'Weighted pipeline', value: round(n(money?.weighted_value)), format: 'currency', definition: `Open amounts × deal probability (or stage probability). ${money_note}` },
         { key: 'closedWonRevenue', label: 'Closed-won revenue', value: round(wonValue), format: 'currency', definition: `Won in the last ${PERIOD_DAYS} days. ${money_note}` },
-        { key: 'conversionRate', label: 'Lead conversion rate', value: round(ratio(convertedInPeriod, newLeads), 4), format: 'percent', definition: `Leads created in the last ${PERIOD_DAYS} days that have converted.` },
+        { key: 'conversionRate', label: 'Contact conversion rate', value: round(ratio(convertedInPeriod, newLeads), 4), format: 'percent', definition: `Inbound contacts created in the last ${PERIOD_DAYS} days that have converted.` },
         { key: 'averageDealSize', label: 'Average deal size', value: round(ratio(wonValue, wonCount)), format: 'currency', definition: `Average won amount, last ${PERIOD_DAYS} days. ${money_note}` },
         { key: 'averageSalesCycleDays', label: 'Average sales cycle', value: round(money?.avg_cycle_days ?? null, 1), format: 'days', definition: `Days from deal creation to win, for deals won in the last ${PERIOD_DAYS} days.` },
         { key: 'forecastRevenue', label: 'Quarter forecast', value: round(forecast), format: 'currency', definition: `Won this quarter plus weighted open deals expected to close this quarter. A rule-based projection, not a guarantee. ${money_note}` },

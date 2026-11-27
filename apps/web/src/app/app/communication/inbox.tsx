@@ -407,7 +407,7 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
                 className="text-primary underline underline-offset-2"
                 href={`/app/leads/${t.lead.id}`}
               >
-                {tr('Lead: {name}', { name: t.lead.name })}
+                {tr('Inbound contact: {name}', { name: t.lead.name })}
               </Link>
             )}
             {t.deal && (
@@ -729,7 +729,7 @@ function SyncLogDialog({
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Mailbox sync log')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
-          {t('Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact or lead.')}
+          {t('Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact.')}
         </DialogDescription>
         {canSync && mine.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">

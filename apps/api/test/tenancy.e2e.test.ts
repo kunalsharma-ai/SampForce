@@ -24,7 +24,7 @@ describe('tenant isolation', () => {
       }),
     );
     await withDbContext(db, { tenantId: a.tenantId }, (tx) =>
-      tx.lead.create({ data: { tenantId: a.tenantId, fullName: 'A lead' } }),
+      tx.lead.create({ data: { tenantId: a.tenantId, fullName: 'An inbound contact' } }),
     );
   });
   afterAll(async () => {
@@ -83,7 +83,7 @@ describe('tenant isolation', () => {
 
     it('shows only the context tenant rows', async () => {
       const leads = await withDbContext(db, { tenantId: a.tenantId }, (tx) => tx.lead.findMany());
-      expect(leads.map((l) => l.fullName)).toEqual(['A lead']);
+      expect(leads.map((l) => l.fullName)).toEqual(['An inbound contact']);
       // Even an explicit filter for the other tenant returns nothing.
       const sneaky = await withDbContext(db, { tenantId: a.tenantId }, (tx) =>
         tx.lead.findMany({ where: { tenantId: b.tenantId } }),

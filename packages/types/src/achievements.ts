@@ -18,7 +18,7 @@ export const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
   deals: 'Companies converted into deals',
   rfqs: 'RFQs submitted',
   tasks: 'Tasks and follow-ups',
-  leads: 'Lead targets',
+  leads: 'Company targets',
   sales: 'Sales targets and milestones',
   consistency: 'Consistency',
 };

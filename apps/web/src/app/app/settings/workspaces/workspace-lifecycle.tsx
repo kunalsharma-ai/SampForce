@@ -123,7 +123,7 @@ export function DeleteWorkspaceDialog({ row, onClose, onDeleted }: { row: Worksp
                   <dt className="font-medium">{t('Records that move')}</dt>
                   <dd className="text-muted-foreground" data-impact-records>
                     {recordCount
-                      ? t('{companies} companies, {contacts} contacts, {leads} leads, {deals} deals and {tasks} open tasks', { companies: r!.companies, contacts: r!.contacts, leads: r!.leads, deals: r!.deals, tasks: r!.openTasks })
+                      ? t('{companies} companies, {contacts} contacts, {leads} inbound contacts, {deals} deals and {tasks} open tasks', { companies: r!.companies, contacts: r!.contacts, leads: r!.leads, deals: r!.deals, tasks: r!.openTasks })
                       : t('None')}
                   </dd>
                 </div>

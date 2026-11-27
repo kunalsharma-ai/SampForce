@@ -146,11 +146,11 @@ export const dashboard = {
   'No losses.': ['Sin pérdidas.', 'Aucune perte.', 'Keine Verluste.', 'لا توجد خسائر.'],
   'Team performance': ['Rendimiento del equipo', 'Performance de l’équipe', 'Teamleistung', 'أداء الفريق'],
   'Won revenue in the period and open pipeline, by owner.': ['Ingresos ganados en el periodo y pipeline abierto, por responsable.', 'Chiffre d’affaires gagné sur la période et pipeline ouvert, par responsable.', 'Gewonnener Umsatz im Zeitraum und offene Pipeline nach Verantwortlichem.', 'الإيرادات المكتسبة في الفترة ومسار المبيعات المفتوح، حسب المسؤول.'],
-  'Grouped bar chart for {people} people; {name} leads with {won} won.': [
-    'Gráfico de barras agrupadas de {people} personas; {name} va en cabeza con {won} ganados.',
-    'Histogramme groupé pour {people} personnes ; {name} est en tête avec {won} gagnés.',
-    'Gruppiertes Balkendiagramm für {people} Personen; {name} führt mit {won} gewonnen.',
-    'رسم أعمدة مجمّعة لـ {people} أشخاص؛ يتصدر {name} بمبلغ {won} مكتسب.',
+  'Grouped bar chart for {people} people; {name} has the most companies with {won} won.': [
+    'Gráfico de barras agrupadas de {people} personas; {name} tiene más empresas, con {won} ganadas.',
+    'Diagramme en barres groupées pour {people} personnes ; {name} a le plus d’entreprises, avec {won} gagnées.',
+    'Gruppiertes Balkendiagramm für {people} Personen; {name} hat die meisten Unternehmen, davon {won} gewonnen.',
+    'مخطط أعمدة مجمّعة لـ {people} أشخاص؛ لدى {name} أكبر عدد من الشركات مع {won} مربوحة.',
   ],
   'Grouped bar chart for {people} people.': ['Gráfico de barras agrupadas de {people} personas.', 'Histogramme groupé pour {people} personnes.', 'Gruppiertes Balkendiagramm für {people} Personen.', 'رسم أعمدة مجمّعة لـ {people} أشخاص.'],
   'No deals or activities yet.': ['Todavía no hay oportunidades ni actividades.', 'Pas encore d’opportunités ni d’activités.', 'Noch keine Verkaufschancen oder Aktivitäten.', 'لا توجد صفقات أو أنشطة بعد.'],
@@ -213,11 +213,11 @@ export const dashboard = {
   'Available with {module}': ['Disponible con {module}', 'Disponible avec {module}', 'Verfügbar mit {module}', 'متاح مع {module}'],
   'Not enough data yet': ['Aún no hay datos suficientes', 'Pas encore assez de données', 'Noch nicht genug Daten', 'لا توجد بيانات كافية بعد'],
   'Your next best actions': ['Tus próximas acciones recomendadas', 'Vos prochaines actions recommandées', 'Ihre nächsten besten Schritte', 'أفضل إجراءاتك التالية'],
-  'Ranked from your replies, tasks, deal health, quotes, renewals and new leads.': [
-    'Ordenadas según tus respuestas, tareas, salud de las oportunidades, presupuestos, renovaciones y nuevos leads.',
-    'Classées d’après vos réponses, tâches, la santé des opportunités, les devis, les renouvellements et les nouveaux prospects.',
-    'Sortiert nach Antworten, Aufgaben, Zustand der Verkaufschancen, Angeboten, Verlängerungen und neuen Leads.',
-    'مرتبة حسب ردودك ومهامك وصحة الصفقات وعروض الأسعار والتجديدات والعملاء المحتملين الجدد.',
+  'Ranked from your replies, tasks, deal health, quotes, renewals and new contacts.': [
+    'Ordenado a partir de tus respuestas, tareas, salud de las oportunidades, presupuestos, renovaciones y contactos nuevos.',
+    'Classé selon vos réponses, tâches, santé des opportunités, devis, renouvellements et nouveaux contacts.',
+    'Sortiert nach Ihren Antworten, Aufgaben, Zustand der Verkaufschancen, Angeboten, Verlängerungen und neuen Kontakten.',
+    'مرتّبة حسب ردودك ومهامك وسلامة الصفقات وعروض الأسعار والتجديدات وجهات الاتصال الجديدة.',
   ],
   'Nothing needs you right now.': ['Nada requiere tu atención ahora mismo.', 'Rien ne requiert votre attention pour le moment.', 'Gerade braucht nichts Ihre Aufmerksamkeit.', 'لا شيء يحتاج إليك الآن.'],
   '{count} hidden or snoozed.': ['{count} ocultas o pospuestas.', '{count} masquées ou reportées.', '{count} ausgeblendet oder zurückgestellt.', '{count} مخفية أو مؤجلة.'],

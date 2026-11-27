@@ -227,7 +227,7 @@ export class VoiceNotesService {
       if (state.action.type !== item.action.type) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: `Action ${item.index + 1} cannot change its kind.` });
       const need = WRITE_PERMISSION[item.action.type];
       if (!auth.permissions.includes(need)) throw new ForbiddenException({ code: 'FORBIDDEN', message: `Your role cannot do this (${need}).` });
-      if (item.action.type === 'add_note' && !rec) throw new BadRequestException({ code: 'NEEDS_RECORD', message: 'A note needs a record. Make the voice note from a lead, contact, deal or company.' });
+      if (item.action.type === 'add_note' && !rec) throw new BadRequestException({ code: 'NEEDS_RECORD', message: 'A note needs a record. Make the voice note from a contact, deal or company.' });
     }
     const done: string[] = [];
     for (const item of input.items) {
@@ -285,7 +285,7 @@ export class VoiceNotesService {
       }
       case 'create_lead': {
         const { lead, duplicates } = await this.leads.create(auth, { fullName: a.name, companyName: a.company ?? undefined, email: a.email ?? undefined, phone: a.phone ?? undefined, source: 'Voice note' }, meta);
-        if (duplicates.length) state.warnings.push(`Possible duplicate of ${duplicates.length} existing record${duplicates.length === 1 ? '' : 's'}; check the lead.`);
+        if (duplicates.length) state.warnings.push(`Possible duplicate of ${duplicates.length} existing record${duplicates.length === 1 ? '' : 's'}; check the contact.`);
         return { type: 'lead', id: lead.id, link: `/app/leads/${lead.id}` };
       }
       case 'create_contact': {
@@ -412,6 +412,6 @@ export function checkAction(raw: VoiceAction, note: string, today: string, rec: 
       a.dueTime = null;
     }
   }
-  if (a.type === 'add_note' && !rec) warnings.push('A note needs a record. Make the voice note from a lead, contact, deal or company to save it.');
+  if (a.type === 'add_note' && !rec) warnings.push('A note needs a record. Make the voice note from a contact, deal or company to save it.');
   return { action: a, status: 'proposed', warnings, result: null };
 }

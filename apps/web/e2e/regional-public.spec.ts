@@ -17,8 +17,8 @@ test('a German visitor sees the hosted lead form in German, from the browser lan
   test.setTimeout(90_000);
   await signUp(page, 'Formular Nord');
   await page.goto('/app/marketing');
-  await page.getByRole('tab', { name: 'Lead forms' }).click();
-  await page.getByRole('button', { name: 'New lead form' }).click();
+  await page.getByRole('tab', { name: 'Contact forms' }).click();
+  await page.getByRole('button', { name: 'New contact form' }).click();
   await page.getByLabel('Internal name').fill('Demo request');
   await page.getByLabel('Heading visitors see').fill('Demo buchen');
   await page.getByRole('button', { name: 'Create form' }).click();

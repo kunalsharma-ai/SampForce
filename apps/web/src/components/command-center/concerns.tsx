@@ -157,7 +157,7 @@ export function RaiseConcernDialog({
             </Field>
           </div>
           <Field id="cc-owner" label={t('Assigned owner (optional)')}>
-            <PersonSelect value={form.ownerId} onChange={(ownerId) => set({ ownerId })} placeholder={t('The lead owner')} />
+            <PersonSelect value={form.ownerId} onChange={(ownerId) => set({ ownerId })} placeholder={t('The company owner')} />
           </Field>
           {error && (
             <p role="alert" className="text-sm text-critical">

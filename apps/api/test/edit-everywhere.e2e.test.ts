@@ -178,7 +178,7 @@ describe('edit everywhere', () => {
     expect(edited.editedAt).toEqual(expect.any(String));
 
     // The deciding manager is told it changed, and sees the new details.
-    const notes = ((await api(manager).get('/notifications').expect(200)).body.items as Array<{ title: string }>).filter((n) => n.title.startsWith('Lead transfer request updated'));
+    const notes = ((await api(manager).get('/notifications').expect(200)).body.items as Array<{ title: string }>).filter((n) => n.title.startsWith('Company transfer request updated'));
     expect(notes).toHaveLength(1);
     const toDecide = (await api(manager).get('/lead-transfers?box=toDecide').expect(200)).body;
     expect(toDecide.find((x: { id: string }) => x.id === t.id)).toMatchObject({ reason: 'TECHNICAL', canEdit: false, canDecide: true });

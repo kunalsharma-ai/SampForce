@@ -100,7 +100,7 @@ function Dashboard() {
               [t('Page views'), d.totals.pageViews],
               [t('Returning visitors'), d.totals.returning],
               [t('Enquiries'), d.totals.enquiries],
-              [t('Leads created'), d.totals.leadsCreated],
+              [t('Inbound contacts created'), d.totals.leadsCreated],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-border bg-surface/80 p-4 shadow-sm">
                 <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -161,11 +161,11 @@ function Dashboard() {
                 <SimpleTable caption={t('Visits by source')} head={[t('Source'), t('Visits')]} rows={d.sources.map((s) => [s.source, s.visits])} empty={t('No visits yet.')} />
                 <SimpleTable
                   caption={t('Visits by UTM campaign')}
-                  head={[t('Campaign'), t('Visits'), t('Visitors'), t('Leads')]}
+                  head={[t('Campaign'), t('Visits'), t('Visitors'), t('Inbound contacts')]}
                   rows={d.campaigns.map((c) => [c.campaign ? c.campaign.name : t('{value} (no matching campaign)', { value: c.utmCampaign ?? '' }), c.visits, c.visitors, c.leads])}
                   empty={t('No visits with a utm_campaign yet.')}
                 />
-                <p className="text-xs text-muted-foreground">{t("Source is utm_source, otherwise the referring site. A utm_campaign is matched to a SampForce campaign by its UTM campaign value; leads from enquiries take the visitor's first campaign.")}</p>
+                <p className="text-xs text-muted-foreground">{t("Source is utm_source, otherwise the referring site. A utm_campaign is matched to a SampForce campaign by its UTM campaign value; inbound contacts from enquiries take the visitor’s first campaign.")}</p>
               </CardContent>
             </Card>
           </div>
@@ -292,7 +292,7 @@ function VisitorList() {
                 <tr key={v.id}>
                   <th scope="row" className="py-2 text-start font-normal">
                     <button type="button" className="font-medium underline underline-offset-2" onClick={() => setOpen(v.id)}>{v.label}</button>
-                    {v.identified && <span className="block text-xs text-muted-foreground">{v.identified.type === 'lead' ? t('Lead') : t('Contact')}{v.identified.email ? ` · ${v.identified.email}` : ''}</span>}
+                    {v.identified && <span className="block text-xs text-muted-foreground">{v.identified.type === 'lead' ? t('Inbound contact') : t('Contact')}{v.identified.email ? ` · ${v.identified.email}` : ''}</span>}
                   </th>
                   <td className="py-2"><IntentBadge v={v} /></td>
                   <td className="py-2 text-end tabular-nums">{v.visits}</td>
@@ -339,7 +339,7 @@ function VisitorDialog({ id, onClose }: { id: string; onClose: () => void }) {
             ) : (
               <Button variant="outline" size="sm" onClick={() => setConfirm(true)}>{t('Delete browsing history')}</Button>
             )}
-            <p className="mt-1 text-xs text-muted-foreground">{t('For privacy requests. Removes the visits and page views; the lead or contact stays.')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('For privacy requests. Removes the visits and page views; the inbound contact or contact stays.')}</p>
           </div>
         )}
       </DialogContent>
@@ -353,7 +353,7 @@ function VisitorBody({ v }: { v: VisitorDetail }) {
     <div className="space-y-4 text-sm">
       {v.identified ? (
         <p>
-          {rich(v.identified.type === 'lead' ? t('Identified by an enquiry as {name} (lead).') : t('Identified by an enquiry as {name} (contact).'), {
+          {rich(v.identified.type === 'lead' ? t('Identified by an enquiry as {name} (inbound contact).') : t('Identified by an enquiry as {name} (contact).'), {
             name: (
               <Link className="font-medium text-primary underline underline-offset-2" href={`/app/${v.identified.type === 'lead' ? 'leads' : 'contacts'}/${v.identified.id}`}>
                 {v.identified.name}
@@ -574,7 +574,7 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
             <label className="block space-y-1">
               <span className="font-medium">{t('Keep visit data for (days)')}</span>
               <Input type="number" min={30} max={730} disabled={disabled} value={form.retentionDays} onChange={(e) => set({ retentionDays: Number(e.target.value) })} />
-              <span className="block text-xs text-muted-foreground">{t('Older visits are deleted every hour. Enquiries and links to leads and contacts are kept.')}</span>
+              <span className="block text-xs text-muted-foreground">{t('Older visits are deleted every hour. Enquiries and links to inbound contacts and contacts are kept.')}</span>
             </label>
             <label className="block space-y-1">
               <span className="font-medium">{t('High intent from score')}</span>
@@ -584,7 +584,7 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
           </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" disabled={disabled} checked={form.createLeads} onChange={(e) => set({ createLeads: e.target.checked })} />
-            {t('Create a lead from an enquiry when the email matches no contact or open lead')}
+            {t('Create an inbound contact from an enquiry when the email matches no contact or open inbound contact')}
           </label>
           <label className="block space-y-1">
             <span className="font-medium">{t('Marketing consent text on enquiry forms')}</span>

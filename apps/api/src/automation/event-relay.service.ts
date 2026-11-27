@@ -128,7 +128,7 @@ export class EventRelay {
         const to = (payload.changes as { ownerId?: { to?: string } } | undefined)?.ownerId?.to;
         const users = others([to]);
         if (users.length === 0) return;
-        const name = recordLabel(await loadRecord()) ?? 'A lead';
+        const name = recordLabel(await loadRecord()) ?? 'An inbound contact';
         await this.notifications.send(tx, event.tenantId, users, { type: 'lead.assigned', title: `${name} was assigned to you`, link, eventId: event.id });
         return;
       }

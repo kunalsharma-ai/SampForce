@@ -87,7 +87,7 @@ export const companyEmail = {
   'Invite to an event': ['Invitar a un evento', 'Inviter à un événement', 'Zu einer Veranstaltung einladen', 'دعوة إلى فعالية'],
   'Decision maker': ['Responsable de decisión', 'Décideur', 'Entscheider', 'صاحب القرار'],
   Procurement: ['Compras', 'Achats', 'Einkauf', 'المشتريات'],
-  'Technical lead': ['Responsable técnico', 'Responsable technique', 'Technische Leitung', 'المسؤول التقني'],
+  'Technical contact': ['Contacto técnico', 'Contact technique', 'Technischer Ansprechpartner', 'جهة الاتصال التقنية'],
   Operations: ['Operaciones', 'Opérations', 'Betrieb', 'العمليات'],
   'General inbox': ['Buzón general', 'Boîte générale', 'Allgemeines Postfach', 'البريد العام'],
   'Book a short call': ['Reservar una llamada breve', 'Planifier un court appel', 'Kurzes Gespräch vereinbaren', 'حجز مكالمة قصيرة'],

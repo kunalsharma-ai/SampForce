@@ -45,7 +45,7 @@ function NextActionsPanel() {
           </CardTitle>
           <InfoTip topic="commandCenter.nextActions" />
         </div>
-        <CardDescription>{t('Ranked from your replies, tasks, deal health, quotes, renewals and new leads.')}</CardDescription>
+        <CardDescription>{t('Ranked from your replies, tasks, deal health, quotes, renewals and new contacts.')}</CardDescription>
       </CardHeader>
       <CardContent>
         {list.isPending ? (

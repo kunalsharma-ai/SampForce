@@ -83,7 +83,7 @@ export class AgentsService {
   async qualifyLead(auth: AuthContext, leadId: string, opts: { runId?: string; meta?: RequestMeta } = {}): Promise<RecommendationRow<LeadQualification>> {
     const facts = await this.prisma.run(auth, async (tx) => {
       const lead = await tx.lead.findFirst({ where: { id: leadId, tenantId: auth.tenantId, deletedAt: null } });
-      if (!lead) throw notFound('Lead');
+      if (!lead) throw notFound('Inbound contact');
       const acts = await tx.activity.findMany({ where: { tenantId: auth.tenantId, leadId, deletedAt: null }, select: { occurredAt: true }, orderBy: { occurredAt: 'desc' }, take: 50 });
       return { lead, dates: acts.map((a) => a.occurredAt) };
     });
@@ -171,7 +171,7 @@ export class AgentsService {
     if (req.dealId) return { type: 'deal', id: req.dealId, meeting };
     if (contactId) return { type: 'contact', id: contactId, meeting };
     if (req.leadId) return { type: 'lead', id: req.leadId, meeting };
-    throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the notes to a deal, contact or lead.' });
+    throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the notes to a deal or contact.' });
   }
 
   // ───────────── Proposal draft ─────────────

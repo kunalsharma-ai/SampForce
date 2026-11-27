@@ -10,7 +10,7 @@ export default function WebsiteVisitorsPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Website Visitors"
-        description="Visits to your own website from a consent-aware tracking script: important pages, repeat visits, campaigns and enquiries, linked to your leads and contacts."
+        description="Visits to your own website from a consent-aware tracking script: important pages, repeat visits, campaigns and enquiries, linked to your inbound contacts and contacts."
       />
       <RequirePermission permission="visitors:read">
         <VisitorsWorkspace />

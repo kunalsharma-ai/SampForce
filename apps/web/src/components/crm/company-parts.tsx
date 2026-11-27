@@ -379,7 +379,7 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          {t('Lead ownership')}
+          {t('Company ownership')}
           <InfoTip topic="crm.ownership" />
         </CardTitle>
         {canWrite && (
@@ -398,8 +398,8 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
       <CardContent className="space-y-4">
         <DetailList
           items={[
-            ['Lead created by', personLabel(c.createdBy) || null],
-            ['Lead owner', personLabel(c.ownerPerson) || null],
+            ['Company created by', personLabel(c.createdBy) || null],
+            ['Company owner', personLabel(c.ownerPerson) || null],
             ['Assigned manager', personLabel(c.manager) || null],
             ['POC name', personLabel(c.poc) || null],
             ['Assigned department', c.department && t.maybe(c.department.name)],
@@ -450,7 +450,7 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
       {transfersOn && canWrite && <RequestTransferDialog company={c} open={asking} onClose={() => setAsking(false)} />}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg p-6">
-          <DialogTitle className="text-lg font-semibold">{t('Change lead owner')}</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t('Change company owner')}</DialogTitle>
           <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('{name} keeps being shown as the creator. The new owner is notified.', { name: c.createdBy?.name ?? t('The creator') })}</DialogDescription>
           <form onSubmit={submit} noValidate className="space-y-4">
             <Field id="owner-new" label={t('New owner')} error={error ?? undefined}>

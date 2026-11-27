@@ -95,7 +95,7 @@ export function PhonePreview({ config, level, features }: { config: MobileAppCon
       </div>
       <figcaption className="relative z-10 mt-2 space-y-0.5 rounded bg-card py-1 text-center text-xs text-muted-foreground">
         <span className="block font-medium text-foreground">{t.maybe(MOBILE_LEVEL_LABEL[level])}</span>
-        <span className="block">{t('{n} modules · {f} of {total} lead fields shown', { n: r.modules.length, f: visibleCompanyFields, total: companyFieldTotal })}</span>
+        <span className="block">{t('{n} modules · {f} of {total} company fields shown', { n: r.modules.length, f: visibleCompanyFields, total: companyFieldTotal })}</span>
       </figcaption>
     </figure>
   );
