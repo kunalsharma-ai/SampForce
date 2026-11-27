@@ -42,6 +42,8 @@ type OperatorRecord = { id: string; email: string; name: string; role: 'ADMIN' |
  * switch them off, and keep custom roles. Nobody can give a permission they do not hold themselves, change their own
  * role or status, or leave the platform without an active Super Admin.
  */
+import { OperatorPhotosService } from './operator-photos';
+
 @Injectable()
 export class OperatorAdminService {
   private readonly logger = new Logger(OperatorAdminService.name);
@@ -52,6 +54,7 @@ export class OperatorAdminService {
     private readonly mailer: MailerService,
     private readonly sessions: OperatorSessions,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly photos: OperatorPhotosService,
   ) {}
 
   // ───── Roles ─────
@@ -139,7 +142,8 @@ export class OperatorAdminService {
       this.prisma.operatorConsoleRole.findMany({ select: { id: true, name: true } }),
     ]);
     const names = new Map(custom.map((r) => [r.id, r.name]));
-    return ops.map((o) => this.row(o, names));
+    const photos = await this.photos.urls(ops);
+    return ops.map((o) => ({ ...this.row(o, names), photoUrl: photos.get(o.id) ?? null }));
   }
 
   private row(o: OperatorRecord & { mfaEnabledAt?: Date | null }, names: Map<string, string>): ConsoleOperatorRow {

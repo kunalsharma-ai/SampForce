@@ -279,6 +279,8 @@ export interface OperatorMe {
   mfaSetupRequired?: boolean;
   /** The operator's Console palette, colour mode, sidebar and sound (ADR 0074). */
   preferences: import('./console-shell').ConsolePreferences;
+  /** The operator's photo: their own Console photo, else the one on the SampForce account with the same email. */
+  photoUrl?: string | null;
 }
 
 export interface OperatorTenantRow {

@@ -3,6 +3,7 @@
 import { cn } from '@dealflow/ui';
 import type * as React from 'react';
 import './welcome-banner.css';
+import { WelcomePhoto } from './welcome-photo';
 
 /** The part of the day, by the viewer's own clock: it picks the greeting, the sky and the scene. */
 export type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
@@ -29,6 +30,7 @@ export function WelcomeBanner({
   hello,
   name,
   initials,
+  photoUrl,
   badge,
   date,
   line,
@@ -43,6 +45,8 @@ export function WelcomeBanner({
   hello: string;
   name: string;
   initials: string;
+  /** The person's profile photo; their initials show without one, or when it fails to load. */
+  photoUrl?: string | null;
   badge?: React.ReactNode;
   date: string;
   line: string;
@@ -66,7 +70,7 @@ export function WelcomeBanner({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="sf-welcome-in flex min-w-0 flex-1 items-start gap-3 pe-16 sm:gap-4 sm:pe-40">
             <span aria-hidden className="sf-welcome-avatar">
-              {initials}
+              <WelcomePhoto initials={initials} photoUrl={photoUrl ?? null} />
             </span>
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">

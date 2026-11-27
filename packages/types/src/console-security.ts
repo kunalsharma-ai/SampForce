@@ -190,6 +190,8 @@ export interface ConsoleOperatorRow {
   createdAt: string;
   /** Two-step verification is on (ADR 0074 operator security). */
   mfaEnabled: boolean;
+  /** Their photo (ADR 0087), when they have one. */
+  photoUrl?: string | null;
 }
 
 /** An invitation link for a new operator, or a fresh one; shown to the inviter once when email cannot be sent. */

@@ -157,6 +157,7 @@ function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) 
       hello={t(HELLO[part])}
       name={first}
       initials={initials}
+      photoUrl={session?.user.photoUrl ?? null}
       colors={[ROLE[level].a, ROLE[level].b]}
       date={new Intl.DateTimeFormat(t.formatLocale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
       badge={

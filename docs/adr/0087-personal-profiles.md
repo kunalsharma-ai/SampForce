@@ -28,6 +28,14 @@ photos already existed (ADR 0072, M6) but were tucked into Account security and 
 - Lists elsewhere (owner refs, member rows) were not changed: avatars look people up by user id in the cached cards,
   so no list endpoint loads profile data.
 
+- **The photo everywhere** (Kunal, 2026-11-27): the welcome banner on every home dashboard shows the photo in its
+  avatar ring (initials when there is none or it fails to load). Console operators are separate accounts, so they
+  get an `OperatorPhoto` of their own (`PUT/DELETE /operator/me/photo`, served at `GET /operator/photos/:id` to
+  signed-in operators only); without one, the Console uses the photo of the SampForce account with the same email,
+  so a photo chosen on My profile shows in the Console too, without a second upload. It shows on the Console top
+  bar, the Overview greeting, the operators list and the Console account page, where it can be replaced or removed.
+  The phone app already used the profile photo.
+
 ## Consequences
 
 - Workspaces with many hundreds of people load one larger cards list; acceptable, it is cached for a minute.
