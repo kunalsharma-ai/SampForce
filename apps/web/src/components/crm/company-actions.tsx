@@ -9,6 +9,7 @@ import * as React from 'react';
 export type CompanyAction =
   | 'edit'
   | 'addEmployee'
+  | 'findPeople'
   | 'addBranch'
   | 'addFollowUp'
   | 'scheduleCall'
