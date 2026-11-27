@@ -1,15 +1,19 @@
 import type { Metadata } from 'next';
-import { PageHeader } from '@/components/page-header';
-import { ApprovalsInbox } from './approvals-inbox';
+import { Suspense } from 'react';
+import { ApprovalCenter } from './approval-center';
 
 export const metadata: Metadata = { title: 'Approvals' };
 
+/*
+ * Approvals (ADR 0097): requests between workspaces (deletes, record edits, task, target and data changes), the
+ * automation and quote approvals that were here before, Deleted items and the Super Workspace's rules.
+ */
 export default function ApprovalsPage() {
   return (
-    <div className="max-w-4xl">
-      <PageHeader title="Approvals" description="Automation steps and quote discounts waiting for a person. You see the requests your role can decide. Requests expire after 7 days." />
-      {/* The API lists only requests whose permission the viewer holds (automation:manage or quotes:approve). */}
-      <ApprovalsInbox />
+    <div className="max-w-5xl">
+      <Suspense>
+        <ApprovalCenter />
+      </Suspense>
     </div>
   );
 }

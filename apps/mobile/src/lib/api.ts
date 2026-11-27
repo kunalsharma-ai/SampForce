@@ -86,7 +86,7 @@ export interface ApiClientOptions {
   now?: () => number;
 }
 
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /** A request body sent as is, with its own content type. */
 class RawBody {
@@ -133,6 +133,15 @@ export class ApiClient {
   async deleteConfirmed(path: string, password: string): Promise<void> {
     const pass = await this.authed<{ token: string }>('POST', '/auth/confirm-password', { password });
     return this.authed<void>('DELETE', path, undefined, false, { 'x-password-confirmation': pass.token });
+  }
+  /**
+   * Carries out an action a manager approved (ADR 0097): the same method, path and body as asked for, with the
+   * approval's id, and the person's password when the action deletes.
+   */
+  async carryOut<T>(action: { method: Method; path: string; body?: unknown }, approvalId: string, password?: string): Promise<T> {
+    const headers: Record<string, string> = { 'x-approval-id': approvalId };
+    if (password) headers['x-password-confirmation'] = (await this.authed<{ token: string }>('POST', '/auth/confirm-password', { password })).token;
+    return this.authed<T>(action.method, action.path, action.body, false, headers);
   }
   /** Sends a file as the raw request body (a photo upload). */
   putFile<T>(path: string, data: Blob, contentType: string): Promise<T> {
