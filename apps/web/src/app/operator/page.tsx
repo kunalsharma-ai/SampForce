@@ -47,6 +47,7 @@ import { api } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { usePreferences } from '@/stores/preferences';
 import { can, useOperator } from './operator-shell';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
 import { dayPart, lineOfTheDay, WelcomeBanner } from '@/components/welcome/welcome-banner';
 
 const KPI: Record<ConsoleKpiKey, { label: string; href: string; upIsBad?: boolean }> = {
@@ -167,6 +168,7 @@ export default function ConsoleOverviewPage() {
         canPlans={can(me.data, 'plans.manage')}
         canBill={can(me.data, 'billing.manage')}
       />
+      <BirthdayCelebration path="/operator/birthdays" wishes={false} />
       <ActionRequired actions={d.actions} />
       <section aria-labelledby="kpi-title">
         <h2 id="kpi-title" className="sr-only">

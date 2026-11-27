@@ -4,6 +4,15 @@
  */
 export const PHRASES: Readonly<Record<string, readonly [string, string, string, string]>> = {
   'Add': ['Añadir', 'Ajouter', 'Hinzufügen', 'إضافة'],
+  'Happy birthday, {name}!': ['¡Feliz cumpleaños, {name}!', 'Joyeux anniversaire, {name} !', 'Alles Gute zum Geburtstag, {name}!', 'عيد ميلاد سعيد يا {name}!'],
+  'You turn {age} today. Wishing you a wonderful year ahead, from all of us.': ['Hoy cumples {age}. Te deseamos un año maravilloso, de parte de todos.', 'Vous avez {age} ans aujourd’hui. Toute l’équipe vous souhaite une merveilleuse année.', 'Heute werden Sie {age}. Wir alle wünschen Ihnen ein wunderbares neues Lebensjahr.', 'تبلغ اليوم {age} عامًا. نتمنى لك جميعًا عامًا رائعًا.'],
+  'Wishing you a wonderful year ahead, from all of us.': ['Te deseamos un año maravilloso, de parte de todos.', 'Toute l’équipe vous souhaite une merveilleuse année.', 'Wir alle wünschen Ihnen ein wunderbares neues Lebensjahr.', 'نتمنى لك جميعًا عامًا رائعًا.'],
+  "It's {name}'s birthday today!": ['¡Hoy es el cumpleaños de {name}!', 'C’est l’anniversaire de {name} aujourd’hui !', 'Heute hat {name} Geburtstag!', 'اليوم عيد ميلاد {name}!'],
+  'Send your wishes and make the day special.': ['Envía tus felicitaciones y haz que el día sea especial.', 'Envoyez vos vœux pour rendre la journée spéciale.', 'Senden Sie Glückwünsche und machen Sie den Tag besonders.', 'أرسل تهنئتك واجعل اليوم مميزًا.'],
+  '{count} birthdays today!': ['¡{count} cumpleaños hoy!', '{count} anniversaires aujourd’hui !', 'Heute {count} Geburtstage!', '{count} أعياد ميلاد اليوم!'],
+  'Celebrating {names}. Send your wishes and make the day special.': ['Celebramos a {names}. Envía tus felicitaciones y haz que el día sea especial.', 'Nous fêtons {names}. Envoyez vos vœux pour rendre la journée spéciale.', 'Wir feiern {names}. Senden Sie Glückwünsche und machen Sie den Tag besonders.', 'نحتفل بـ {names}. أرسل تهنئتك واجعل اليوم مميزًا.'],
+  'Birthday celebration': ['Celebración de cumpleaños', 'Fête d’anniversaire', 'Geburtstagsfeier', 'احتفال بعيد ميلاد'],
+  'Also celebrating today: {names}': ['También celebran hoy: {names}', 'Fêtent aussi leur anniversaire aujourd’hui : {names}', 'Heute feiern auch: {names}', 'يحتفل اليوم أيضًا: {names}'],
   'Handled by {name}': ['Lo atiende: {name}', 'Traité par : {name}', 'Bearbeitet von: {name}', 'يتولاه: {name}'],
   'Answers and guides for what you can use': ['Respuestas y guías de lo que puedes usar', 'Réponses et guides pour ce que vous pouvez utiliser', 'Antworten und Anleitungen zu dem, was Sie nutzen können', 'إجابات وأدلة لما يمكنك استخدامه'],
   'Ask a question': ['Hacer una pregunta', 'Poser une question', 'Eine Frage stellen', 'اطرح سؤالاً'],

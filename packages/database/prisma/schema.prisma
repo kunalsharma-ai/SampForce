@@ -170,6 +170,14 @@ model UserProfile {
   moodSetAt     DateTime? @map("mood_set_at")
   /// The mood clears itself after this time; null keeps it until it is changed.
   moodExpiresAt DateTime? @map("mood_expires_at")
+  /// Date of birth: day and month, and the year only if the person gives it.
+  birthDay          Int?    @map("birth_day")
+  birthMonth        Int?    @map("birth_month")
+  birthYear         Int?    @map("birth_year")
+  /// Whether teammates may see the year (and so the age). Off by default: only the day and month show.
+  birthYearVisible  Boolean @default(false) @map("birth_year_visible")
+  /// Whether the birthday shows to teammates and is celebrated on their dashboards.
+  celebrateBirthday Boolean @default(true) @map("celebrate_birthday")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

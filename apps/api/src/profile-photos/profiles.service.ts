@@ -1,15 +1,20 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  ageOn,
+  birthdayOn,
   MOOD_MAX_DAYS,
   PROFILE_COVERS,
   profileCompleteness,
+  type BirthdayPerson,
   type MoodInput,
   type MyProfile,
   type MyProfileInput,
   type PersonCard,
   type PersonMood,
   type PersonProfile,
+  type PersonBirthday,
   type ProfileCover,
+  type TodayBirthdays,
 } from '@dealflow/types';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -27,7 +32,42 @@ type ProfileRow = {
   moodText: string | null;
   moodSetAt: Date | null;
   moodExpiresAt: Date | null;
+  birthDay: number | null;
+  birthMonth: number | null;
+  birthYear: number | null;
+  birthYearVisible: boolean;
+  celebrateBirthday: boolean;
 };
+
+/** The person's date of birth as they see it themselves. */
+function ownBirthday(p: Pick<ProfileRow, 'birthDay' | 'birthMonth' | 'birthYear'> | null | undefined): PersonBirthday | null {
+  return p?.birthDay && p.birthMonth ? { day: p.birthDay, month: p.birthMonth, year: p.birthYear ?? null } : null;
+}
+
+/** The date of birth as teammates see it: nothing when the person keeps it private, the year only when shared. */
+export function sharedBirthday(p: Pick<ProfileRow, 'birthDay' | 'birthMonth' | 'birthYear' | 'birthYearVisible' | 'celebrateBirthday'> | null | undefined): PersonBirthday | null {
+  const b = ownBirthday(p);
+  if (!b || !p!.celebrateBirthday) return null;
+  return p!.birthYearVisible ? b : { ...b, year: null };
+}
+
+/** Today's birthdays among these people, for the reader's local date; the reader's own first. */
+export function birthdaysOn(
+  people: { id: string; name: string; photoUrl: string | null; profile: Pick<ProfileRow, 'birthDay' | 'birthMonth' | 'birthYear' | 'birthYearVisible' | 'celebrateBirthday'> | null }[],
+  date: string,
+  selfId: string | null,
+): BirthdayPerson[] {
+  const out: BirthdayPerson[] = [];
+  for (const p of people) {
+    const self = p.id === selfId;
+    // The reader always sees their own birthday (even kept private); teammates only when it is shared.
+    const b = self ? ownBirthday(p.profile) : sharedBirthday(p.profile);
+    if (!b || !birthdayOn(b, date)) continue;
+    const year = self || p.profile?.birthYearVisible ? (p.profile?.birthYear ?? null) : null;
+    out.push({ id: p.id, name: p.name, photoUrl: p.photoUrl, age: year ? ageOn(year, date) : null, self });
+  }
+  return out.sort((a, b) => Number(b.self) - Number(a.self) || a.name.localeCompare(b.name));
+}
 
 /** The mood, unless it has cleared itself. */
 export function liveMood(p: Pick<ProfileRow, 'moodEmoji' | 'moodText' | 'moodSetAt' | 'moodExpiresAt'> | null | undefined, now = new Date()): PersonMood | null {
@@ -74,16 +114,20 @@ export class ProfilesService {
       cover: coverOf(user.profile?.cover),
       tags: user.profile?.tags ?? [],
       mood: liveMood(user.profile),
+      birthday: ownBirthday(user.profile),
+      birthYearVisible: user.profile?.birthYearVisible ?? false,
+      celebrateBirthday: user.profile?.celebrateBirthday ?? true,
     };
     return { ...base, completeness: profileCompleteness(base) };
   }
 
   async update(auth: AuthContext, input: MyProfileInput, meta: RequestMeta): Promise<MyProfile> {
-    const { name, phone, ...rest } = input;
+    const { name, phone, birthday, ...rest } = input;
     if (name !== undefined || phone !== undefined) {
       await this.prisma.user.update({ where: { id: auth.userId }, data: { ...(name !== undefined ? { name } : {}), ...(phone !== undefined ? { phone } : {}) } });
     }
-    const fields = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+    const fields: Record<string, unknown> = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+    if (birthday !== undefined) Object.assign(fields, { birthDay: birthday?.day ?? null, birthMonth: birthday?.month ?? null, birthYear: birthday?.year ?? null });
     if (Object.keys(fields).length) {
       await this.prisma.userProfile.upsert({ where: { userId: auth.userId }, create: { userId: auth.userId, ...fields }, update: fields });
     }
@@ -130,6 +174,20 @@ export class ProfilesService {
     });
   }
 
+  /** Birthdays today in the caller's workspace, for the reader's local date (they send it: time zones differ). */
+  async birthdays(auth: AuthContext, date: string): Promise<TodayBirthdays> {
+    const members = await this.prisma.run(auth, (tx) =>
+      tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE' }, select: { userId: true } }),
+    );
+    const ids = [...new Set(members.map((m) => m.userId))];
+    if (!ids.length) return { date, people: [] };
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids }, status: 'ACTIVE', profile: { is: { birthDay: { not: null } } } },
+      select: { id: true, name: true, photo: { select: { updatedAt: true } }, profile: true },
+    });
+    return { date, people: birthdaysOn(users.map((u) => ({ id: u.id, name: u.name, photoUrl: photoUrl(u.id, u.photo?.updatedAt), profile: u.profile })), date, auth.userId) };
+  }
+
   /** A teammate's full profile. Someone outside the caller's workspace is "not found". */
   async person(auth: AuthContext, userId: string): Promise<PersonProfile> {
     const missing = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Person not found.' });
@@ -162,6 +220,7 @@ export class ProfilesService {
       cover: coverOf(user.profile?.cover),
       tags: user.profile?.tags ?? [],
       mood: liveMood(user.profile),
+      birthday: user.id === auth.userId ? ownBirthday(user.profile) : sharedBirthday(user.profile),
       ...membership,
     };
   }
