@@ -10,7 +10,7 @@ import type { AddressInfo } from 'node:net';
  * It also takes chat messages (POST /v1/messages, ADR 0078) and lists them at GET /__messages, and clients
  * (PUT /v1/clients/{externalId}, ADR 0080): one client per external id, contacts matched by external id or email,
  * name, email, country and time zone required; listed at GET /__clients. A company named "REFUSE" gets 422.
- * Deals (PUT /v1/deals/{externalId}, ADR 0095): one deal per external id, the client must exist already (by
+ * Deals (PUT /v1/deals/{externalId}, ADR 0099): one deal per external id, the client must exist already (by
  * client.id or client.externalId), name, currency and amount required; listed at GET /__deals. A deal
  * named "REFUSE" gets 422.
  *

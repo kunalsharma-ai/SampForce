@@ -48,7 +48,7 @@ const REMOTE: Record<SampbidxRemoteStatus, { label: MessageKey; tone: 'neutral' 
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },
 };
 
-const KIND: Record<SampbidxTransferRow['kind'], MessageKey> = { RFQ: 'RFQ details', CLIENT: 'Client details', MAILBOX_EMAIL: 'Email from mailbox', EMAIL_FILE: 'Email file', PASTED_EMAIL: 'Pasted email' };
+const KIND: Record<SampbidxTransferRow['kind'], MessageKey> = { RFQ: 'RFQ details', CLIENT: 'Client details', DEAL: 'Deal details', MAILBOX_EMAIL: 'Email from mailbox', EMAIL_FILE: 'Email file', PASTED_EMAIL: 'Pasted email' };
 
 /** True when the workspace's plan has SampBidx; the panels below stay hidden otherwise. */
 export function useSampbidxEnabled(): boolean {

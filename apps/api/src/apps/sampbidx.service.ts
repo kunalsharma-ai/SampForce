@@ -978,7 +978,7 @@ export class SampbidxService {
 
   // ─── Helpers ───
 
-  /** A won company's win, so SampBidx knows the client is a customer (ADR 0095). Null while it is not won. */
+  /** A won company's win, so SampBidx knows the client is a customer (ADR 0099). Null while it is not won. */
   private async relationship(auth: AuthContext, company: { wonAt: Date | null; wonDealId: string | null }) {
     if (!company.wonAt) return null;
     const deal = company.wonDealId

@@ -78,7 +78,7 @@ export class SampbidxController {
     private readonly bulk: SampbidxBulkService,
   ) {}
 
-  // ─── Settings page and bulk sends (ADR 0095) ───
+  // ─── Settings page and bulk sends (ADR 0099) ───
 
   /** The settings page: the saved connection as it is, sync counts, recent errors and bulk sends. Never the key. */
   @Get('overview')

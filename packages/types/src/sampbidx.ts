@@ -16,7 +16,7 @@ export interface SampbidxSettings {
   callbackUrl: string;
   /** When the first correctly signed status update arrived. */
   lastCallbackAt: string | null;
-  /** The last "Test connection" of the saved connection (ADR 0095): when, and the failed step's message if it failed. */
+  /** The last "Test connection" of the saved connection (ADR 0099): when, and the failed step's message if it failed. */
   lastCheck?: { at: string; ok: boolean; message: string | null } | null;
 }
 
@@ -467,7 +467,7 @@ export interface SampbidxCompanySendResult {
   rfq: SampbidxTransferRow | null;
 }
 
-// ─── Connection check, settings page and bulk transfers (ADR 0095) ───
+// ─── Connection check, settings page and bulk transfers (ADR 0099) ───
 
 /** The steps of "Test connection", in order. Each passes, fails with the real reason, or is not reached. */
 export const SAMPBIDX_CHECK_STEPS = ['address', 'network', 'reachable', 'api', 'key', 'callback'] as const;

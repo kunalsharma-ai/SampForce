@@ -5,6 +5,10 @@ import type { TextTable } from '../catalogue';
  * language at hand) and translated when the person opens their notifications (ADR 0052).
  */
 export const notifications = {
+  // Bulk sends to SampBidx (ADR 0099)
+  'SampBidx send finished with {failed} failed': ['El envío a SampBidx terminó con {failed} fallidos', 'L’envoi à SampBidx s’est terminé avec {failed} échecs', 'Senden an SampBidx mit {failed} Fehlern beendet', 'انتهى الإرسال إلى SampBidx مع {failed} فاشلة'],
+  'SampBidx confirmed {sent} of {total}': ['SampBidx confirmó {sent} de {total}', 'SampBidx a confirmé {sent} sur {total}', 'SampBidx hat {sent} von {total} bestätigt', 'أكد SampBidx استلام {sent} من {total}'],
+  'Sent {sent}, failed {failed}, skipped {skipped}.': ['Enviados {sent}, fallidos {failed}, omitidos {skipped}.', 'Envoyés {sent}, en échec {failed}, ignorés {skipped}.', 'Gesendet {sent}, fehlgeschlagen {failed}, übersprungen {skipped}.', 'أُرسل {sent}، فشل {failed}، تم تخطي {skipped}.'],
   // Help Center support tickets (ADR 0073)
   'SampForce support replied to query #{number}': [
     'El soporte de SampForce respondió a la consulta n.º {number}',

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { type AppConnection, Prisma, type SampbidxBatch } from '@dealflow/database';
 import {
   SAMPBIDX_BATCH_MAX,
@@ -26,6 +26,7 @@ import { PrismaService } from '../common/prisma.service';
 import { canSeeDetails, companyScope, dealScope, personRefs, visibility } from '../crm/visibility';
 import { missingContactFields, previewContact } from './sampbidx-company';
 import { SampbidxClient, SampbidxError } from './sampbidx';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SampbidxService } from './sampbidx.service';
 
 type BatchInput = z.output<typeof sampbidxBatchInputSchema>;
@@ -45,7 +46,7 @@ interface Plan {
 }
 
 /**
- * Many deals or won companies to SampBidx in one go (ADR 0095), plus the SampBidx settings page: "Test connection"
+ * Many deals or won companies to SampBidx in one go (ADR 0099), plus the SampBidx settings page: "Test connection"
  * step by step, the connection's real state, sync counts and the error log.
  *
  * A bulk send is checked first (preview): each record is ready, needs a detail typed in, or is skipped with the
@@ -66,6 +67,7 @@ export class SampbidxBulkService {
     private readonly audit: AuditService,
     private readonly sampbidx: SampbidxService,
     private readonly client: SampbidxClient,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ─── Check before sending ───
@@ -439,6 +441,21 @@ export class SampbidxBulkService {
       }
       await save();
     }
+    // The person who started it hears the outcome, also when they left the page (on-screen card and the bell).
+    const sent = items.filter((i) => i.outcome === 'SENT').length;
+    const failed = items.filter((i) => i.outcome === 'FAILED').length;
+    const skipped = items.filter((i) => i.outcome === 'SKIPPED').length;
+    await this.prisma
+      .run(auth, (tx) =>
+      this.notifications.send(tx, auth.tenantId, [batch.createdById], {
+        type: failed ? 'sampbidx.transfer_failed' : 'sampbidx.transfer_completed',
+        title: failed ? `SampBidx send finished with ${failed} failed` : `SampBidx confirmed ${sent} of ${items.length}`,
+        body: `Sent ${sent}, failed ${failed}, skipped ${skipped}.`,
+        link: batch.kind === 'DEALS' ? '/app/deals?view=list' : '/app/companies',
+        eventId: `sampbidx-batch-${batchId}-${batch.updatedAt.getTime()}`,
+      }),
+      )
+      .catch((e) => this.log.warn(`Batch ${batchId}: no notification: ${(e as Error).message}`));
     await save(true);
   }
 

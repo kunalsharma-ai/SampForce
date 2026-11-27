@@ -9,6 +9,8 @@ import { useMembers } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useBulkAction } from '@/lib/table-views';
 import { ENTITY_FEATURE, useCanDelete } from '@/lib/features';
+import { SampBidxBulkSlot } from '@/components/deals/sampbidx-bulk-slot';
+import { SampbidxBulkButton } from '@/components/sampbidx/bulk-send';
 
 /** Actions for the selected rows. Each record is changed through the normal API rules and audited. */
 export function BulkBar({
@@ -82,6 +84,8 @@ export function BulkBar({
           </Select>
         </>
       )}
+      {entity === 'deals' && <SampBidxBulkSlot dealIds={ids} />}
+      {entity === 'companies' && <SampbidxBulkButton kind="WON_COMPANIES" ids={ids} />}
       {canDelete && (
         <Button variant="outline" size="sm" className="text-critical" disabled={bulk.isPending} onClick={() => setConfirm(true)}>
           <Trash2 aria-hidden /> {t('Delete')}

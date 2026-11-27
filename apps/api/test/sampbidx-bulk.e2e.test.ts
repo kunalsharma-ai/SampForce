@@ -6,7 +6,7 @@ import { SBX, startSampbidxFixture, type SampbidxFixture } from './fixtures/samp
 import { SECRET_BOX, type SecretBox } from '../src/common/crypto';
 import { api, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser } from './helpers';
 
-/** The SampBidx settings page, Test connection and bulk sends of deals and won companies (ADR 0095), against the stand-in. */
+/** The SampBidx settings page, Test connection and bulk sends of deals and won companies (ADR 0099), against the stand-in. */
 describe('SampBidx settings and bulk sends (stand-in)', () => {
   let app: INestApplication;
   let sbx: SampbidxFixture;
@@ -180,6 +180,11 @@ describe('SampBidx settings and bulk sends (stand-in)', () => {
     expect(b.counts).toMatchObject({ sent: 0, failed: 1 });
     expect(b.items[0]!.reason).toContain('SampBidx answered with an error (503)');
     expect(sbx.deals.has(d.id)).toBe(false);
+    // The person who started it is told, with the real outcome.
+    const list = (await api(rep).get('/notifications').expect(200)).body as { items?: { type: string; title: string }[] } | { type: string; title: string }[];
+    const told = (Array.isArray(list) ? list : (list.items ?? [])).filter((n) => n.type.startsWith('sampbidx.transfer'));
+    expect(told[0]).toMatchObject({ type: 'sampbidx.transfer_failed', title: 'SampBidx send finished with 1 failed' });
+    expect(told.some((n) => n.type === 'sampbidx.transfer_completed')).toBe(true);
     const o = (await api(owner).get('/apps/sampbidx/overview').expect(200)).body as SampbidxOverview;
     expect(o.errors[0]).toMatchObject({ kind: 'DEAL', delivery: 'FAILED' });
 

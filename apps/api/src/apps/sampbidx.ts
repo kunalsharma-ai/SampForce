@@ -100,7 +100,7 @@ export class SampbidxClient {
   }
 
   /**
-   * PUT /v1/deals/{externalId} (ADR 0095): creates the deal or updates the one SampBidx already has for this SampForce
+   * PUT /v1/deals/{externalId} (ADR 0099): creates the deal or updates the one SampBidx already has for this SampForce
    * deal, linked to its client. Answers SampBidx's id for the deal and optionally its page.
    */
   async upsertDeal(keys: SampbidxKeys, externalId: string, transferId: string, deal: unknown): Promise<SampbidxAccepted> {
