@@ -37,4 +37,13 @@ export const teamChat = {
     'لا توجد محادثات بعد. ابدأ واحدة من دردشة الفريق.',
   ],
   'Sound for new messages': ['Sonido para mensajes nuevos', 'Son pour les nouveaux messages', 'Ton bei neuen Nachrichten', 'صوت للرسائل الجديدة'],
+  'Play a sound for new team chat messages': ['Reproducir un sonido con los mensajes nuevos del chat del equipo', 'Jouer un son pour les nouveaux messages du chat d’équipe', 'Ton bei neuen Team-Chat-Nachrichten abspielen', 'تشغيل صوت لرسائل دردشة الفريق الجديدة'],
+  'A short chime when a message arrives in a conversation you are not looking at. Kept on this device.': [
+    'Un breve tono cuando llega un mensaje a una conversación que no estás viendo. Se guarda en este dispositivo.',
+    'Un bref carillon quand un message arrive dans une conversation que vous ne regardez pas. Enregistré sur cet appareil.',
+    'Ein kurzer Ton, wenn eine Nachricht in einer Unterhaltung eingeht, die Sie gerade nicht ansehen. Auf diesem Gerät gespeichert.',
+    'نغمة قصيرة عند وصول رسالة في محادثة لا تنظر إليها. يُحفظ على هذا الجهاز.',
+  ],
+  'Task progress and comments': ['Avance y comentarios de tareas', 'Avancement et commentaires des tâches', 'Aufgabenfortschritt und Kommentare', 'تقدّم المهام والتعليقات'],
+  'Team status: check-in, breaks and check-out': ['Estado del equipo: entrada, pausas y salida', 'Statut de l’équipe : arrivée, pauses et départ', 'Teamstatus: Einchecken, Pausen und Auschecken', 'حالة الفريق: تسجيل الحضور والاستراحات والانصراف'],
 } as const satisfies PhraseTable;

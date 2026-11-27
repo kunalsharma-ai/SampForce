@@ -152,6 +152,15 @@ export class EventRelay {
         await this.notifications.send(tx, event.tenantId, users, { type: 'deal.won', title: `Deal won: ${recordLabel(deal) ?? 'a deal'}`, link, eventId: event.id });
         return;
       }
+      // Redesign R10: the owner hears about a lost deal too, when someone else closed it.
+      case 'deal.lost': {
+        const deal = await loadRecord();
+        const owner = (deal?.owner as { id?: string } | null | undefined)?.id;
+        const users = others([owner]);
+        if (users.length === 0) return;
+        await this.notifications.send(tx, event.tenantId, users, { type: 'deal.lost', title: `Deal lost: ${recordLabel(deal) ?? 'a deal'}`, link, eventId: event.id });
+        return;
+      }
       default:
         return;
     }
