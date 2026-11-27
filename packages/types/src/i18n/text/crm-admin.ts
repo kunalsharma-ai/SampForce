@@ -45,6 +45,7 @@ export const crmAdmin = {
 export const crmAdminNotifications = {
   'Follow-up overdue: {title}': ['Seguimiento vencido: {title}', 'Relance en retard : {title}', 'Überfällige Nachverfolgung: {title}', 'متابعة متأخرة: {title}'],
   // Follow-up cadence (ADR 0083)
+  'Only the Super Workspace sets company events.': ['Solo el Super Workspace define los eventos de la empresa.', 'Seul le Super Workspace définit les événements de l’entreprise.', 'Nur der Super-Workspace legt die Firmenereignisse fest.', 'مساحة العمل الرئيسية وحدها تحدد فعاليات الشركة.'],
   'Only the Super Workspace sets the follow-up cadence.': ['Solo el Super Workspace define la cadencia de seguimiento.', 'Seul le Super Workspace définit la cadence de relance.', 'Nur der Super-Workspace legt den Nachverfolgungsrhythmus fest.', 'مساحة العمل الرئيسية وحدها تحدد وتيرة المتابعة.'],
   'already had the initial email': ['ya recibió el correo inicial', 'a déjà reçu l’e-mail initial', 'hat die erste E-Mail schon erhalten', 'تلقى البريد الأول بالفعل'],
   'cannot be in the future': ['no puede estar en el futuro', 'ne peut pas être dans le futur', 'darf nicht in der Zukunft liegen', 'لا يمكن أن يكون في المستقبل'],
