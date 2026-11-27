@@ -1,0 +1,146 @@
+/*
+ * Achievement celebrations (ADR 0090). Each kind has its own scene and colours. Transforms, opacity and stroke offsets
+ * only, on decorative layers hidden from assistive technology. Under reduced motion (the system setting, SampForce's
+ * Motion setting, or the celebration setting, which sets data-sfc-still) every animation ends at once, so each scene
+ * settles on its final, still frame. The history page shows the same scenes still.
+ */
+
+.sfc {
+  --c1: #e02424;
+  --c2: #ffc857;
+  --c3: #7f1d1d;
+  --ink: hsl(var(--foreground));
+}
+.sfc[data-tone='deal'] { --c1: #e02424; --c2: #ffb347; --c3: #7f1d1d; }
+.sfc[data-tone='prospect'] { --c1: #0d9488; --c2: #5eead4; --c3: #115e59; }
+.sfc[data-tone='rfq'] { --c1: #2563eb; --c2: #7dd3fc; --c3: #1e3a8a; }
+.sfc[data-tone='task'] { --c1: #059669; --c2: #6ee7b7; --c3: #064e3b; }
+.sfc[data-tone='sweep'] { --c1: #7c3aed; --c2: #c4b5fd; --c3: #4c1d95; }
+.sfc[data-tone='milestone'] { --c1: #ea580c; --c2: #fdba74; --c3: #9a3412; }
+.sfc[data-tone='quota'] { --c1: #f97316; --c2: #fde047; --c3: #c2410c; }
+.sfc[data-tone='target'] { --c1: #b45309; --c2: #fcd34d; --c3: #78350f; }
+.sfc[data-tone='medal'] { --c1: #be123c; --c2: #fda4af; --c3: #881337; }
+.sfc[data-tone='diamond'] { --c1: #6d28d9; --c2: #f0abfc; --c3: #1e1b4b; }
+.sfc[data-tone='rhythm'] { --c1: #0f766e; --c2: #a7f3d0; --c3: #134e4a; }
+
+/* Text on the coloured bands stays white; on the card body the theme's own colours keep it readable. */
+.sfc-band {
+  /* Dark at the start, where the level chip sits, so its white text stays readable. */
+  background: linear-gradient(135deg, var(--c3) 0%, var(--c3) 32%, var(--c1) 100%);
+  color: #fff;
+}
+[dir='rtl'] .sfc-band { background: linear-gradient(225deg, var(--c3) 0%, var(--c3) 32%, var(--c1) 100%); }
+.sfc-accent { color: var(--c3); }
+.dark .sfc-accent { color: var(--c2); }
+.sfc-chip {
+  background: color-mix(in srgb, var(--c1) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c1) 30%, transparent);
+}
+.sfc-glow { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c1) 35%, transparent), 0 18px 50px -12px color-mix(in srgb, var(--c1) 55%, transparent); }
+
+[data-sfc-still] *,
+[data-sfc-still] *::before,
+[data-sfc-still] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ── The card itself ── */
+.sfc-enter { animation: sfc-enter 0.55s cubic-bezier(0.2, 1.25, 0.35, 1) both; }
+.sfc-enter-soft { animation: sfc-enter-soft 0.5s ease-out both; }
+.sfc-enter-full { animation: sfc-enter-full 0.75s cubic-bezier(0.16, 1.3, 0.3, 1) both; }
+.sfc-veil { animation: sfc-fade 0.5s ease-out both; }
+.sfc-timer { transform-origin: 0 50%; animation: sfc-timer var(--sfc-ms, 8000ms) linear both; }
+.sfc:hover .sfc-timer, .sfc:focus-within .sfc-timer { animation-play-state: paused; }
+.sfc-rise { animation: sfc-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes sfc-enter { from { opacity: 0; transform: translateY(24px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes sfc-enter-soft { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sfc-enter-full { from { opacity: 0; transform: scale(0.7) rotate(-2deg); } to { opacity: 1; transform: none; } }
+@keyframes sfc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sfc-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes sfc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ── Deal journey: a token travels Lead → Client → Deal won, the last stop bursts ── */
+.sfc-track-fill { transform-origin: 0 50%; animation: sfc-grow-x 1.4s cubic-bezier(0.6, 0, 0.2, 1) 0.35s both; }
+.sfc-node { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-pop 0.45s cubic-bezier(0.3, 1.8, 0.5, 1) both; }
+.sfc-node-1 { animation-delay: 0.3s; }
+.sfc-node-2 { animation-delay: 0.95s; }
+.sfc-node-3 { animation-delay: 1.6s; }
+.sfc-token { animation: sfc-travel 1.4s cubic-bezier(0.6, 0, 0.2, 1) 0.35s both; }
+.sfc-burst line { stroke-dasharray: 14; stroke-dashoffset: 14; animation: sfc-dash 0.6s ease-out 1.75s forwards; }
+@keyframes sfc-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes sfc-pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes sfc-travel { from { transform: translateX(0); } to { transform: translateX(var(--sfc-travel, 200px)); } }
+@keyframes sfc-dash { to { stroke-dashoffset: 0; } }
+
+/* ── Prospect: a seed of light grows rings ── */
+.sfc-ripple { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-ripple 2.4s ease-out infinite; }
+.sfc-ripple-2 { animation-delay: 0.8s; }
+.sfc-ripple-3 { animation-delay: 1.6s; }
+.sfc-sprout { transform-box: fill-box; transform-origin: 50% 100%; animation: sfc-sprout 0.9s cubic-bezier(0.3, 1.6, 0.5, 1) 0.2s both; }
+@keyframes sfc-ripple { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes sfc-sprout { from { transform: scale(0) translateY(10px); } to { transform: none; } }
+
+/* ── RFQ: a paper plane flies its route and lands on the SampBidx stamp ── */
+.sfc-route { stroke-dasharray: 6 7; animation: sfc-route 1.2s linear infinite; }
+.sfc-stamp { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-stamp 0.6s cubic-bezier(0.3, 1.7, 0.5, 1) 1.55s both; }
+.sfc-trail { animation: sfc-fade 0.4s ease-out 0.3s both; }
+@keyframes sfc-route { to { stroke-dashoffset: -26; } }
+@keyframes sfc-stamp { 0% { transform: scale(2.2) rotate(-25deg); opacity: 0; } 100% { transform: rotate(-8deg); opacity: 1; } }
+
+/* ── Check: drawn stroke with a glow ring (routine and the sweep finale) ── */
+.sfc-check-circle { stroke-dasharray: 160; stroke-dashoffset: 160; animation: sfc-draw 0.6s ease-out 0.1s forwards; }
+.sfc-check-mark { stroke-dasharray: 48; stroke-dashoffset: 48; animation: sfc-draw 0.4s ease-out 0.55s forwards; }
+.sfc-halo { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-halo 1.2s ease-out 0.6s both; }
+@keyframes sfc-draw { to { stroke-dashoffset: 0; } }
+@keyframes sfc-halo { from { transform: scale(0.7); opacity: 0.8; } to { transform: scale(1.7); opacity: 0; } }
+
+/* ── Clean sweep: the day's task cards fly off one by one, then the big check ── */
+.sfc-sheet { animation: sfc-sweep 0.55s cubic-bezier(0.5, 0, 0.75, 0) both; }
+.sfc-sheet-1 { animation-delay: 0.25s; }
+.sfc-sheet-2 { animation-delay: 0.5s; }
+.sfc-sheet-3 { animation-delay: 0.75s; }
+.sfc-sweep-final { animation: sfc-pop-in 0.6s cubic-bezier(0.3, 1.7, 0.5, 1) 1.15s both; }
+@keyframes sfc-sweep { 0% { transform: none; opacity: 1; } 100% { transform: translate(140%, -30%) rotate(18deg); opacity: 0; } }
+@keyframes sfc-pop-in { from { transform: scale(0); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Progress ring: fills from the last milestone to the new one ── */
+.sfc-ring-fill { transition: none; animation: sfc-ring 1.3s cubic-bezier(0.3, 0.8, 0.2, 1) 0.2s both; }
+.sfc-ray { transform-box: view-box; transform-origin: 50% 50%; animation: sfc-rays 1s ease-out 1.4s both; }
+.sfc-badge-float { animation: sfc-float 3.2s ease-in-out 1.6s infinite; }
+@keyframes sfc-ring { from { stroke-dashoffset: var(--sfc-from); } to { stroke-dashoffset: var(--sfc-to); } }
+@keyframes sfc-rays { from { opacity: 0; transform: scale(0.6); } 40% { opacity: 1; } to { opacity: 0; transform: scale(1.25); } }
+@keyframes sfc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+/* ── Gauge: the needle sweeps to the target, the trophy pops ── */
+.sfc-needle { transform-box: view-box; transform-origin: 120px 112px; animation: sfc-needle 1.6s cubic-bezier(0.3, 1.25, 0.4, 1) 0.3s both; }
+.sfc-arc-fill { stroke-dasharray: 302; stroke-dashoffset: 302; animation: sfc-draw 1.5s cubic-bezier(0.3, 0.8, 0.2, 1) 0.3s forwards; }
+.sfc-trophy { transform-box: fill-box; transform-origin: 50% 100%; animation: sfc-pop 0.6s cubic-bezier(0.3, 1.8, 0.5, 1) 1.6s both; }
+@keyframes sfc-needle { from { transform: rotate(-90deg); } to { transform: rotate(var(--sfc-angle, 90deg)); } }
+
+/* ── Medal: rays turn slowly behind a medal that drops in ── */
+.sfc-sunburst { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-spin 14s linear infinite; }
+.sfc-medal { animation: sfc-drop 0.8s cubic-bezier(0.3, 1.5, 0.5, 1) 0.15s both; }
+@keyframes sfc-spin { to { transform: rotate(360deg); } }
+@keyframes sfc-drop { from { transform: translateY(-60px) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Diamond: the exceptional stage, aurora and a turning gem ── */
+.sfc-aurora { animation: sfc-aurora 9s ease-in-out infinite alternate; }
+.sfc-gem { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-gem 1s cubic-bezier(0.3, 1.5, 0.5, 1) 0.2s both, sfc-gem-turn 6s ease-in-out 1.2s infinite; }
+.sfc-twinkle { transform-box: fill-box; transform-origin: 50% 50%; animation: sfc-twinkle 2.2s ease-in-out infinite; }
+.sfc-twinkle-2 { animation-delay: 0.7s; }
+.sfc-twinkle-3 { animation-delay: 1.4s; }
+@keyframes sfc-aurora { from { transform: translate3d(-6%, -4%, 0) scale(1.05); } to { transform: translate3d(6%, 4%, 0) scale(1.15); } }
+@keyframes sfc-gem { from { transform: scale(0) rotate(-90deg); } to { transform: none; } }
+@keyframes sfc-gem-turn { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(6deg) scale(1.04); } }
+@keyframes sfc-twinkle { 0%, 100% { transform: scale(0.4); opacity: 0.3; } 50% { transform: scale(1); opacity: 1; } }
+
+/* ── Rhythm: a calm sunrise and a steady wave, no confetti ── */
+.sfc-sun { transform-box: fill-box; transform-origin: 50% 100%; animation: sfc-sunrise 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+.sfc-wave { stroke-dasharray: 420; stroke-dashoffset: 420; animation: sfc-draw 2.2s ease-in-out 0.5s forwards; }
+.sfc-leaf { transform-box: fill-box; transform-origin: 0% 100%; animation: sfc-leaf 3.6s ease-in-out 1.4s infinite; }
+@keyframes sfc-sunrise { from { transform: translateY(34px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sfc-leaf { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-7deg); } }

@@ -5376,3 +5376,61 @@ model AvailabilityEvent {
   @@index([tenantId, sessionId])
   @@map("availability_events")
 }
+
+/// A real achievement of one person (ADR 0090): recorded once, in the same transaction as the business change that
+/// earned it, so a refresh, an edit or a sync can never record or celebrate it twice.
+model Achievement {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  userId      String    @map("user_id")
+  /// DEAL_CONVERTED, PROSPECT_CONVERTED, RFQ_SUBMITTED, TASK_IMPORTANT, ALL_TASKS_DONE, LEAD_MILESTONE, LEAD_TARGET,
+  /// SALES_TARGET, DEALS_WON_MILESTONE, MAJOR_DEAL or CONSISTENCY.
+  kind        String
+  /// deals, rfqs, tasks, leads, sales or consistency (what the person can switch off).
+  category    String
+  /// ROUTINE, DAILY, MAJOR or EXCEPTIONAL: how big the celebration is.
+  level       String
+  /// What makes it unique for the person, e.g. "company-won:<companyId>" or "leads:DAY:2026-11-26:50".
+  dedupeKey   String    @map("dedupe_key")
+  /// The figures shown: company, deal value, RFQ number, target and actual. Read from the records, never typed.
+  details     Json      @default("{}")
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  link        String?
+  achievedAt  DateTime  @default(now()) @map("achieved_at")
+  /// Whether the person's settings asked for a pop-up when it was earned.
+  celebrate   Boolean   @default(true)
+  /// When a browser tab took it to show (once, so a second tab or a refresh never replays it).
+  shownAt     DateTime? @map("shown_at")
+
+  @@unique([tenantId, userId, dedupeKey])
+  @@index([tenantId, userId, achievedAt(sort: Desc)])
+  @@index([tenantId, userId, shownAt])
+  @@map("achievements")
+}
+
+/// A person's celebration settings and personal targets (ADR 0090).
+model AchievementSettings {
+  id                   String   @id @default(uuid()) @map("_id")
+  tenantId             String   @map("tenant_id")
+  userId               String   @map("user_id")
+  enabled              Boolean  @default(true)
+  /// SUBTLE or EXPRESSIVE.
+  style                String   @default("EXPRESSIVE")
+  sound                Boolean  @default(false)
+  reduceMotion         Boolean  @default(false) @map("reduce_motion")
+  /// Categories switched off (deals, rfqs, tasks, leads, sales, consistency).
+  mutedCategories      String[] @map("muted_categories")
+  /// Personal targets, used when no manager or Super Workspace target covers the period.
+  dailyLeadTarget      Int?     @map("daily_lead_target")
+  weeklyLeadTarget     Int?     @map("weekly_lead_target")
+  monthlyLeadTarget    Int?     @map("monthly_lead_target")
+  monthlyRevenueTarget Float?   @map("monthly_revenue_target")
+  /// A won deal at least this big (workspace currency) counts as a major deal.
+  majorDealAmount      Float?   @map("major_deal_amount")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId])
+  @@map("achievement_settings")
+}

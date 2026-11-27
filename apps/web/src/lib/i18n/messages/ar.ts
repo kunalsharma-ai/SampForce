@@ -44,6 +44,7 @@ export const ar: Messages = {
   'module.targets': 'الأهداف',
   'module.rfqs': 'طلبات عروض الأسعار',
   'module.chat': 'دردشة الفريق',
+  'module.achievements': 'إنجازاتي',
   'module.team-status': 'حالة الفريق',
   'module.activities': 'أنشطة المبيعات',
   'module.communication': 'البريد والتواصل',
