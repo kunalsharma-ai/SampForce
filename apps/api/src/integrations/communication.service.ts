@@ -3,6 +3,7 @@ import { ConflictException, HttpException, HttpStatus, Inject, Injectable } from
 import { randomUUID } from 'node:crypto';
 import type { EmailMessage, IntegrationConnection, Meeting, TenantTx } from '@dealflow/database';
 import { type EmailRow, type IntegrationProviderKey, type MeetingRow, meetingPlatform, type SendEmailInput } from '@dealflow/types';
+import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -26,6 +27,7 @@ export class CommunicationService {
     private readonly activities: ActivitiesService,
     private readonly audit: AuditService,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   listEmails(auth: AuthContext, q: EmailQuery): Promise<EmailRow[]> {
@@ -163,6 +165,8 @@ export class CommunicationService {
         },
         { connection: { select: { provider: true } } },
       ))!;
+      // The first email to an employee starts their follow-up cadence (ADR 0083).
+      await this.cadence.emailStored(tx, auth, email);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: audit.action, entityType: 'email', entityId: email.id,
         metadata: { provider: conn.provider, contactId, leadId, ...audit.metadata }, meta,

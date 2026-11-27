@@ -40,6 +40,14 @@ export const crmAdmin = {
 /** Reminder notifications (ADR 0062), stored in English and shown in the reader's language. */
 export const crmAdminNotifications = {
   'Follow-up overdue: {title}': ['Seguimiento vencido: {title}', 'Relance en retard : {title}', 'Überfällige Nachverfolgung: {title}', 'متابعة متأخرة: {title}'],
+  // Follow-up cadence (ADR 0083)
+  'Only the Super Workspace sets the follow-up cadence.': ['Solo el Super Workspace define la cadencia de seguimiento.', 'Seul le Super Workspace définit la cadence de relance.', 'Nur der Super-Workspace legt den Nachverfolgungsrhythmus fest.', 'مساحة العمل الرئيسية وحدها تحدد وتيرة المتابعة.'],
+  'already had the initial email': ['ya recibió el correo inicial', 'a déjà reçu l’e-mail initial', 'hat die erste E-Mail schon erhalten', 'تلقى البريد الأول بالفعل'],
+  'cannot be in the future': ['no puede estar en el futuro', 'ne peut pas être dans le futur', 'darf nicht in der Zukunft liegen', 'لا يمكن أن يكون في المستقبل'],
+  'is past outreach (an RFQ, a reply or a later stage)': ['ya pasó la fase de contacto (una RFQ, una respuesta o una etapa posterior)', 'a dépassé la prise de contact (une RFQ, une réponse ou une étape suivante)', 'ist über die Kontaktaufnahme hinaus (eine RFQ, eine Antwort oder eine spätere Phase)', 'تجاوز مرحلة التواصل (طلب عرض سعر أو رد أو مرحلة لاحقة)'],
+  'Follow-ups for today: {today} due, {overdue} overdue': ['Seguimientos de hoy: {today} pendientes, {overdue} atrasados', 'Relances du jour : {today} à faire, {overdue} en retard', 'Nachverfolgungen heute: {today} fällig, {overdue} überfällig', 'متابعات اليوم: {today} مستحقة، {overdue} متأخرة'],
+  'Follow-up {step} of {total} planned: {name}': ['Seguimiento {step} de {total} planificado: {name}', 'Relance {step} sur {total} planifiée : {name}', 'Nachverfolgung {step} von {total} geplant: {name}', 'تم تخطيط المتابعة {step} من {total}: {name}'],
+  'Follow-up {step} of {total}: {name}': ['Seguimiento {step} de {total}: {name}', 'Relance {step} sur {total} : {name}', 'Nachverfolgung {step} von {total}: {name}', 'المتابعة {step} من {total}: {name}'],
   'Follow-up due soon: {title}': ['Seguimiento próximo: {title}', 'Relance bientôt due : {title}', 'Nachverfolgung bald fällig: {title}', 'متابعة مستحقة قريبًا: {title}'],
   'Task overdue: {title}': ['Tarea vencida: {title}', 'Tâche en retard : {title}', 'Überfällige Aufgabe: {title}', 'مهمة متأخرة: {title}'],
   'Task due soon: {title}': ['Tarea próxima: {title}', 'Tâche bientôt due : {title}', 'Aufgabe bald fällig: {title}', 'مهمة مستحقة قريبًا: {title}'],

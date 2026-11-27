@@ -102,7 +102,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'lead_assigned', label: 'New lead assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
   { key: 'lead_reassigned', label: 'Lead reassigned', types: ['company.reassigned', 'lead.reassigned'] },
   { key: 'follow_up_assigned', label: 'Follow-up assigned', types: ['followup.assigned', 'task.assigned'] },
-  { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'task.due_soon'] },
+  { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'followup.daily', 'task.due_soon'] },
   { key: 'follow_up_overdue', label: 'Follow-up overdue', types: ['followup.overdue', 'task.overdue'] },
   { key: 'manager_remarks', label: 'Manager remarks', types: ['remark.', 'manager_remark.'] },
   { key: 'instructions', label: 'Senior management instructions', types: ['instruction.'] },

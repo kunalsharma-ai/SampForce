@@ -33,7 +33,6 @@ import {
   type SampbidxCompanyPreview,
   type SampbidxCompanySendResult,
   type SampbidxPreviewContact,
-  type SampbidxSendCompanyInput,
   type sampbidxSendCompanySchema,
   contributorStatus,
   type z,

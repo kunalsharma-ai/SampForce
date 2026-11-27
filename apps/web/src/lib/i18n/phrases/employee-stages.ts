@@ -2,7 +2,42 @@ import type { PhraseTable } from './types';
 
 /** Employee communication stages, RFQ contributors and company sends to SampBidx (ADR 0080). */
 export const employeeStages = {
+  // The follow-up cadence (ADR 0083)
+  'Follow-up cadence': ['Cadencia de seguimiento', 'Cadence de relance', 'Nachfass-Rhythmus', 'وتيرة المتابعة'],
+  'Every new employee starts in Fresh Email Pending. When the initial email goes out, SampForce plans each follow-up as a task for the employee owner, and stops as soon as the employee answers or an RFQ arrives.': [
+    'Cada empleado nuevo empieza en Correo inicial pendiente. Cuando sale el correo inicial, SampForce planifica cada seguimiento como una tarea para el responsable del empleado y se detiene en cuanto el empleado responde o llega una RFQ.',
+    'Chaque nouvel employé commence en E-mail initial en attente. Quand l’e-mail initial part, SampForce planifie chaque relance comme une tâche pour le responsable de l’employé, et s’arrête dès que l’employé répond ou qu’une RFQ arrive.',
+    'Jeder neue Mitarbeiter beginnt in „Erste E-Mail ausstehend“. Sobald die erste E-Mail rausgeht, plant SampForce jedes Nachfassen als Aufgabe für den Verantwortlichen und hört auf, sobald der Mitarbeiter antwortet oder eine RFQ eingeht.',
+    'يبدأ كل موظف جديد في مرحلة البريد الأول قيد الانتظار. عند إرسال البريد الأول يخطط SampForce كل متابعة كمهمة لمالك الموظف، ويتوقف فور رد الموظف أو وصول طلب عرض سعر.',
+  ],
+  'Follow-ups after the initial email': ['Seguimientos después del correo inicial', 'Relances après l’e-mail initial', 'Nachfassaktionen nach der ersten E-Mail', 'المتابعات بعد البريد الأول'],
+  'Days between follow-ups': ['Días entre seguimientos', 'Jours entre les relances', 'Tage zwischen den Nachfassaktionen', 'الأيام بين المتابعات'],
+  '{count} follow-ups, one every {days} days: the last one is due {total} days after the initial email.': [
+    '{count} seguimientos, uno cada {days} días: el último vence {total} días después del correo inicial.',
+    '{count} relances, une tous les {days} jours : la dernière est prévue {total} jours après l’e-mail initial.',
+    '{count} Nachfassaktionen, eine alle {days} Tage: die letzte ist {total} Tage nach der ersten E-Mail fällig.',
+    '{count} متابعات، واحدة كل {days} أيام: آخرها مستحقة بعد {total} يومًا من البريد الأول.',
+  ],
+  'Choose 1 to {max} follow-ups, 1 to {days} days apart.': ['Elige de 1 a {max} seguimientos, con 1 a {days} días entre ellos.', 'Choisissez de 1 à {max} relances, espacées de 1 à {days} jours.', 'Wählen Sie 1 bis {max} Nachfassaktionen im Abstand von 1 bis {days} Tagen.', 'اختر من 1 إلى {max} متابعات، بفاصل من 1 إلى {days} أيام.'],
+  'Only administrators of the Super Workspace can change the follow-up cadence.': ['Solo los administradores del Super Workspace pueden cambiar la cadencia de seguimiento.', 'Seuls les administrateurs du Super Workspace peuvent modifier la cadence de relance.', 'Nur Administratoren des Super-Workspace können den Nachfass-Rhythmus ändern.', 'يمكن لمسؤولي مساحة العمل الرئيسية فقط تغيير وتيرة المتابعة.'],
+  'Initial email pending': ['Correo inicial pendiente', 'E-mail initial en attente', 'Erste E-Mail ausstehend', 'البريد الأول قيد الانتظار'],
+  'Mark initial email as sent': ['Marcar el correo inicial como enviado', 'Marquer l’e-mail initial comme envoyé', 'Erste E-Mail als gesendet markieren', 'وضع علامة على البريد الأول كمرسل'],
+  'Follow-up {step} of {total}, due {date}': ['Seguimiento {step} de {total}, vence {date}', 'Relance {step} sur {total}, prévue le {date}', 'Nachfassen {step} von {total}, fällig {date}', 'المتابعة {step} من {total}، مستحقة {date}'],
+  '{done} of {total} follow-ups done': ['{done} de {total} seguimientos hechos', '{done} relances sur {total} faites', '{done} von {total} Nachfassaktionen erledigt', 'تمت {done} من {total} متابعات'],
+  'All {total} follow-ups done': ['Los {total} seguimientos hechos', 'Les {total} relances sont faites', 'Alle {total} Nachfassaktionen erledigt', 'تمت جميع المتابعات الـ {total}'],
+  'Cadence stopped: {reason}': ['Cadencia detenida: {reason}', 'Cadence arrêtée : {reason}', 'Rhythmus gestoppt: {reason}', 'توقفت الوتيرة: {reason}'],
+  'the contact replied': ['el contacto respondió', 'le contact a répondu', 'der Kontakt hat geantwortet', 'رد جهة الاتصال'],
+  'the contact replied by email': ['el contacto respondió por correo', 'le contact a répondu par e-mail', 'der Kontakt hat per E-Mail geantwortet', 'رد جهة الاتصال بالبريد'],
+  'the contact called': ['el contacto llamó', 'le contact a appelé', 'der Kontakt hat angerufen', 'اتصلت جهة الاتصال'],
+  'a call took place': ['hubo una llamada', 'un appel a eu lieu', 'ein Anruf hat stattgefunden', 'جرت مكالمة'],
+  'a meeting took place': ['hubo una reunión', 'une réunion a eu lieu', 'ein Meeting hat stattgefunden', 'عُقد اجتماع'],
+  'negotiation started': ['empezó la negociación', 'la négociation a commencé', 'die Verhandlung hat begonnen', 'بدأ التفاوض'],
+  'an RFQ arrived': ['llegó una RFQ', 'une RFQ est arrivée', 'eine RFQ ist eingegangen', 'وصل طلب عرض سعر'],
+  'the contact answered': ['el contacto contestó', 'le contact a répondu', 'der Kontakt hat reagiert', 'أجابت جهة الاتصال'],
+  'Email sent or received': ['Correo enviado o recibido', 'E-mail envoyé ou reçu', 'E-Mail gesendet oder empfangen', 'بريد مرسل أو مستلم'],
   // The built-in communication stages
+  'Fresh Email Pending': ['Correo inicial pendiente', 'E-mail initial en attente', 'Erste E-Mail ausstehend', 'البريد الأول قيد الانتظار'],
+  'Initial Email Sent': ['Correo inicial enviado', 'E-mail initial envoyé', 'Erste E-Mail gesendet', 'تم إرسال البريد الأول'],
   'RFQ Under Review': ['RFQ en revisión', 'RFQ en cours d’examen', 'RFQ in Prüfung', 'طلب العرض قيد المراجعة'],
   'RFQ Qualification': ['Calificación de la RFQ', 'Qualification de la RFQ', 'RFQ-Qualifizierung', 'تأهيل طلب العرض'],
   'RFQ Sent to SampBidx': ['RFQ enviada a SampBidx', 'RFQ envoyée à SampBidx', 'RFQ an SampBidx gesendet', 'تم إرسال طلب العرض إلى SampBidx'],

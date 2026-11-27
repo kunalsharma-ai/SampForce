@@ -50,10 +50,10 @@ describe('Employee stages, RFQ contributors and company sends to SampBidx', () =
     await sbx.close();
   });
 
-  it('gives every workspace the 20 stages, each its own colour, readable in light and dark', async () => {
+  it('gives every workspace the 22 stages, each its own colour, readable in light and dark', async () => {
     const a = await activity();
     expect(a.stages.map((s) => s.key)).toEqual(BUILT_IN_STAGES.map((s) => s.key));
-    expect(new Set(a.stages.map((s) => s.color)).size).toBe(20);
+    expect(new Set(a.stages.map((s) => s.color)).size).toBe(22);
     for (const s of a.stages) {
       const t = stageTones(s.color);
       expect(stageContrast(t.light.fg, t.light.bg)).toBeGreaterThanOrEqual(4.5);
@@ -64,10 +64,11 @@ describe('Employee stages, RFQ contributors and company sends to SampBidx', () =
       }
     }
     expect(a.rows).toHaveLength(10);
-    expect(a.rows.every((r) => r.contributor === 'NONE' && r.rfqCount === 0 && r.stage === null)).toBe(true);
+    // New employees start in Fresh Email Pending (the follow-up cadence, ADR 0083).
+    expect(a.rows.every((r) => r.contributor === 'NONE' && r.rfqCount === 0 && r.stage?.key === 'FRESH_EMAIL_PENDING')).toBe(true);
     // Stages show up in CRM configuration too, where a workspace can add its own.
     const cfg = (await api(owner).get('/crm-config/statuses?kind=STAGE').expect(200)).body as { key: string | null; phase: string }[];
-    expect(cfg).toHaveLength(20);
+    expect(cfg).toHaveLength(22);
     const own = (await api(owner).post('/crm-config/statuses', { kind: 'STAGE', name: 'Awaiting PO', color: '#0f766e', phase: 'NEGOTIATION' }).expect(201)).body;
     expect(own).toMatchObject({ key: null, phase: 'NEGOTIATION', meaning: 'ACTIVE' });
   });
@@ -139,9 +140,9 @@ describe('Employee stages, RFQ contributors and company sends to SampBidx', () =
     const h = (await api(rep).get(`/contacts/${anita}/communication`).expect(200)).body as EmployeeCommunication;
     expect(h.employee.id).toBe(anita);
     const stages = h.events.filter((e) => e.kind === 'STAGE').reverse();
-    expect(stages.map((e) => e.to?.key)).toEqual(['RFQ_RECEIVED', 'FOLLOW_UP_1', 'FOLLOW_UP_2', 'DISCUSSION', 'CALL_SCHEDULED', 'CALL_DONE', 'NEGOTIATION', 'RFQ_LOST', 'RFQ_RECEIVED']);
-    expect(stages.map((e) => e.source)).toEqual(['RFQ', 'FOLLOW_UP', 'FOLLOW_UP', 'INTERACTION', 'CALL_SCHEDULED', 'INTERACTION', 'INTERACTION', 'RFQ_OUTCOME', 'RFQ']);
-    expect(stages[1]).toMatchObject({ from: { key: 'RFQ_RECEIVED' }, by: { id: rep.userId } });
+    expect(stages.map((e) => e.to?.key)).toEqual(['FRESH_EMAIL_PENDING', 'RFQ_RECEIVED', 'FOLLOW_UP_1', 'FOLLOW_UP_2', 'DISCUSSION', 'CALL_SCHEDULED', 'CALL_DONE', 'NEGOTIATION', 'RFQ_LOST', 'RFQ_RECEIVED']);
+    expect(stages.map((e) => e.source)).toEqual(['CADENCE', 'RFQ', 'FOLLOW_UP', 'FOLLOW_UP', 'INTERACTION', 'CALL_SCHEDULED', 'INTERACTION', 'INTERACTION', 'RFQ_OUTCOME', 'RFQ']);
+    expect(stages[2]).toMatchObject({ from: { key: 'RFQ_RECEIVED' }, by: { id: rep.userId } });
     expect(h.events.filter((e) => e.kind === 'FOLLOW_UP' && e.subKind === 'DONE')).toHaveLength(3);
     expect(h.events.some((e) => e.kind === 'INTERACTION' && e.subKind === 'NEGOTIATION')).toBe(true);
     // Newest first.

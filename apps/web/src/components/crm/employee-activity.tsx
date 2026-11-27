@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/crm';
 import { useChangeStage, useEmployeeActivity, useEmployeeCommunication, useEmployeeStages, useMarkContributor } from '@/lib/employee-stages';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { CadenceStatus } from './cadence-status';
 import { CommunicationTimeline } from './communication-timeline';
 import { ContributorBadge, StageChip, StagePicker, StageSpread, stageStyle, STAGE_DOT } from './stage-chip';
 
@@ -290,6 +291,7 @@ function EmployeeLine({ row: r, stages, canWrite, onHistory }: { row: EmployeeAc
           {r.nextFollowUpAt ? t('Next {date}', { date: formatDate(r.nextFollowUpAt) }) : t('No follow-up planned')}
         </p>
         {overdue && <p className="font-medium text-critical">{t('{n} overdue', { n: String(r.followUpsOverdue) })}</p>}
+        <CadenceStatus cadence={r.cadence} contactId={r.id} companyId={r.company.id || null} canMark={!!editable} />
         <p className="text-muted-foreground">{t('Last activity {date}', { date: formatDate(r.lastActivityAt) })}</p>
         {r.owner && (
           <p className="truncate text-muted-foreground" title={personLabel(r.owner)}>
@@ -396,6 +398,7 @@ export function EmployeeCommunicationCard({ contactId, restricted = false }: { c
             ))}
           </dl>
         )}
+        {e && <CadenceStatus cadence={e.cadence} contactId={contactId} companyId={e.company.id || null} canMark={editable} className="text-sm" />}
         {editable && e && (e.contributor === 'NONE' || e.marked) && (
           <Button size="sm" variant="outline" disabled={mark.isPending} onClick={() => mark.mutate({ contactId, marked: !e.marked })}>
             <BadgeCheck aria-hidden /> {e.marked ? t('Remove the RFQ contributor mark') : t('Mark as RFQ contributor')}
