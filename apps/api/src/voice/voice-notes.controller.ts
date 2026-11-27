@@ -2,6 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import type { Request } from 'express';
 import { Readable } from 'node:stream';
 import {
+  deleteAllCountSchema,
+  deleteAllSchema,
+  type DeleteAllInput,
   type TranscriptionStatus,
   type VoiceApply,
   voiceApplySchema,
@@ -11,16 +14,15 @@ import {
   voiceNoteCreateSchema,
   voiceNoteUpdateSchema,
   voiceInterpretSchema,
-  VOICE_RECORD_TYPES,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { MeetingRecordsService } from '../meetings/meeting-records.service';
-import { VoiceNotesService } from './voice-notes.service';
+import { voiceNoteListQuerySchema, VoiceNotesService } from './voice-notes.service';
 import { ConfirmPassword } from '../common/password-confirmation';
 
-const listQuery = z.object({ type: z.enum(VOICE_RECORD_TYPES).optional(), id: z.string().uuid().optional() });
+const listQuery = voiceNoteListQuerySchema;
 const uuid = new ParseUUIDPipe();
 
 /** Enhancement feature 12: voice notes turned into CRM actions the person confirms (ADR 0026). */
@@ -31,6 +33,24 @@ export class VoiceNotesController {
     private readonly voice: VoiceNotesService,
     private readonly meetings: MeetingRecordsService,
   ) {}
+
+  /** Delete every record this list shows for its filters, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.voice.deleteAll(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('delete-all/count')
+  @HttpCode(200)
+  @RequirePermissions('activities:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.voice.matchingIds(auth, body.query)).length };
+  }
 
   @Get()
   @RequirePermissions('activities:write')

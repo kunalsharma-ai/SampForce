@@ -27,7 +27,7 @@ import {
   type z,
   followUpListQuerySchema,
   type followUpUpdateSchema,
-  type interactionListQuerySchema,
+  interactionListQuerySchema,
   rfqListQuerySchema,
   type BulkActionResult,
   type DeleteAllInput,
@@ -48,6 +48,16 @@ import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
 type FollowUpQuery = z.output<typeof followUpListQuerySchema>;
+
+/** The activities a company's interactions log shows (logged ones; synced emails are read separately). */
+function interactionWhere(tenantId: string, companyId: string, contactIds: string[], q: InteractionQuery): Prisma.ActivityWhereInput {
+  return {
+    tenantId,
+    deletedAt: null,
+    ...(q.contactId ? { contactId: q.contactId } : { OR: [{ companyId }, ...(contactIds.length ? [{ contactId: { in: contactIds } }] : [])] }),
+    ...(q.kind ? kindFilter(q.kind) : {}),
+  };
+}
 type InteractionQuery = z.output<typeof interactionListQuerySchema>;
 type RfqQuery = z.output<typeof rfqListQuerySchema>;
 type TaskModel = Prisma.TaskGetPayload<object>;
@@ -245,12 +255,7 @@ export class CompanyWorkService {
       const tid = auth.tenantId;
       const contacts = await tx.contact.findMany({ where: { tenantId: tid, companyId, deletedAt: null }, select: { id: true, firstName: true, lastName: true } });
       const contactIds = q.contactId ? contacts.filter((c) => c.id === q.contactId).map((c) => c.id) : contacts.map((c) => c.id);
-      const where: Prisma.ActivityWhereInput = {
-        tenantId: tid,
-        deletedAt: null,
-        ...(q.contactId ? { contactId: q.contactId } : { OR: [{ companyId }, ...(contactIds.length ? [{ contactId: { in: contactIds } }] : [])] }),
-        ...(q.kind ? kindFilter(q.kind) : {}),
-      };
+      const where = interactionWhere(tid, companyId, contactIds, q);
       const acts = await tx.activity.findMany({ where, orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }], take: q.limit });
       const wantEmails = !q.kind || q.kind === 'EMAIL_SENT' || q.kind === 'EMAIL_RECEIVED';
       const emails =
@@ -350,6 +355,24 @@ export class CompanyWorkService {
       const rows = await this.interactionsIn(tx, auth.tenantId, [id]);
       return rows[0]!;
     });
+  }
+
+  /**
+   * Every logged interaction the company's log shows for this filter (no limit), for "delete all" (ADR 0096). Emails
+   * read from a mailbox are not interactions stored here, so they stay.
+   */
+  matchingIdsInteractions(auth: AuthContext, companyId: string, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(interactionListQuerySchema, query);
+    return this.prisma.run(auth, async (tx) => {
+      await this.visibleCompany(tx, auth, companyId);
+      const contacts = await tx.contact.findMany({ where: { tenantId: auth.tenantId, companyId, deletedAt: null }, select: { id: true } });
+      const contactIds = q.contactId ? contacts.filter((c) => c.id === q.contactId).map((c) => c.id) : contacts.map((c) => c.id);
+      return (await tx.activity.findMany({ where: interactionWhere(auth.tenantId, companyId, contactIds, q), select: { id: true } })).map((r) => r.id);
+    });
+  }
+
+  async deleteAllInteractions(auth: AuthContext, companyId: string, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'interactions', input, await this.matchingIdsInteractions(auth, companyId, input.query), (id) => this.removeInteraction(auth, id, meta));
   }
 
   removeInteraction(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

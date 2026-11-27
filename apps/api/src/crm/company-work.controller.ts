@@ -31,6 +31,26 @@ const uuid = new ParseUUIDPipe();
 export class CompanyDashboardController {
   constructor(private readonly work: CompanyWorkService) {}
 
+  /** Delete every record this list shows for its filters, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('interactions/delete-all')
+  @HttpCode(200)
+  @AlsoRequireFeature('interactions')
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAllInteractions(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.work.deleteAllInteractions(auth, id, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('interactions/delete-all/count')
+  @HttpCode(200)
+  @AlsoRequireFeature('interactions')
+  @RequirePermissions('activities:write')
+  async countAllInteractions(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.work.matchingIdsInteractions(auth, id, body.query)).length };
+  }
+
   @Get('dashboard')
   @RequirePermissions('companies:read')
   dashboard(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {

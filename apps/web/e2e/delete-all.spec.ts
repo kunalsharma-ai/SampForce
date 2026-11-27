@@ -49,3 +49,38 @@ test('deletes every RFQ in the register and every open task at once', async ({ p
   await expect(main.getByText('Nothing to do. Nice work.')).toBeVisible();
   await shot(page, '07-tasks-after-delete-all');
 });
+
+test('deletes the whole call history and a company interactions log at once', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signUp(page, 'Call Sweep Research');
+  const company = await page.request.post('/api/v1/companies', { data: { name: 'Sweep Dialling Ltd', primaryPhone: '+44 20 7946 0000' }, headers: ORIGIN });
+  const companyId = (await company.json()).id as string;
+  for (let i = 0; i < 3; i++) {
+    const res = await page.request.post('/api/v1/calls', { data: { companyId, numberSource: 'COMPANY' }, headers: ORIGIN });
+    expect(res.ok(), await res.text()).toBe(true);
+  }
+  for (let i = 0; i < 4; i++) {
+    const res = await page.request.post('/api/v1/interactions', { data: { companyId, kind: 'EMAIL_SENT', subject: `Sweep email ${i + 1}` }, headers: ORIGIN });
+    expect(res.ok(), await res.text()).toBe(true);
+  }
+
+  await page.goto('/app/calls');
+  const main = page.getByRole('main');
+  await expect(main.getByTestId('call-row')).toHaveCount(3);
+  await main.getByRole('button', { name: 'Delete all' }).click();
+  let dialog = page.getByRole('dialog', { name: 'Delete everything in this list?' });
+  await expect(dialog).toContainText('This deletes all 3 records');
+  await shot(page, '08-calls-delete-all-confirm');
+  await dialog.getByRole('button', { name: 'Delete all 3' }).click();
+  await expect(main.getByText('No calls here yet.')).toBeVisible();
+
+  await page.goto(`/app/companies/${companyId}`);
+  const log = main.locator('#company-interactions');
+  await expect(log.getByText('Sweep email 4')).toBeVisible();
+  await log.getByRole('button', { name: 'Delete all' }).click();
+  dialog = page.getByRole('dialog', { name: 'Delete everything in this list?' });
+  await expect(dialog).toContainText('This deletes all 4 records');
+  await shot(page, '09-interactions-delete-all-confirm');
+  await dialog.getByRole('button', { name: 'Delete all 4' }).click();
+  await expect(log.getByText('Sweep email 4')).toHaveCount(0);
+});

@@ -26,6 +26,14 @@ do to its single delete:
 `query` is the list's own query, parsed with the same schema as its GET route. The shared helper is
 `apps/api/src/common/delete-all.ts`; the screen side is `components/delete-all-button.tsx`.
 
+The same routes cover a company's interactions log (`POST /companies/:id/interactions/delete-all`), the call history
+(`/calls/delete-all`) and voice notes (`/voice-notes/delete-all`).
+- Calls: the single route only discards calls that were never logged. "Delete all" removes logged calls too, through
+  a new `removeCall`, together with the interaction each one logged on its company. It reaches only the calls that the
+  person's history shows them.
+- Interactions: emails read from a connected mailbox are not stored as interactions, so they stay.
+- Voice notes: a person only ever sees and deletes their own.
+
 ## Consequences
 
-Interactions on a company page, calls, voice notes and settings lists (statuses, templates…) have no "delete all".
+Settings lists (statuses, templates, price books…) have no "delete all".

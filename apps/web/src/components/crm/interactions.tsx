@@ -1,5 +1,6 @@
 'use client';
 
+import { DeleteAllButton } from '@/components/delete-all-button';
 import { useCanDelete } from '@/lib/features';
 import { INTERACTION_KINDS, type InteractionKind, type InteractionRow, interactionInputSchema, interactionUpdateSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
@@ -51,11 +52,23 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
           {t('Interactions')}
           <InfoTip topic="crm.interactions" />
         </CardTitle>
-        {canWrite && (
-          <Button size="sm" onClick={() => setLogging(true)}>
-            <Plus aria-hidden /> {t('Log interaction')}
-          </Button>
-        )}
+        <span className="flex flex-wrap items-center gap-2">
+          {!company.restricted && (
+            <DeleteAllButton
+              path={`/companies/${company.id}/interactions`}
+              query={{ kind, contactId }}
+              hasItems={!!list.data?.some((r) => r.source === 'LOGGED')}
+              permission="activities:write"
+              feature="interactions"
+              invalidate={['interactions', 'company-dashboard', 'calls']}
+            />
+          )}
+          {canWrite && (
+            <Button size="sm" onClick={() => setLogging(true)}>
+              <Plus aria-hidden /> {t('Log interaction')}
+            </Button>
+          )}
+        </span>
       </CardHeader>
       <CardContent className="space-y-3">
         {canWrite && <RfqCapture source={{ type: 'company', id: company.id }} companyId={company.id} />}

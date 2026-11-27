@@ -1,5 +1,6 @@
 'use client';
 
+import { DeleteAllButton } from '@/components/delete-all-button';
 import { CALL_OUTCOME_LABELS, CALL_OUTCOMES, CALL_REACHED, CALL_WINDOW_LABELS, type CallOutcome, type CallRow, type CallTarget, type CallWindow } from '@dealflow/types';
 import { Badge, Button, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import {
@@ -641,6 +642,9 @@ function CallHistory({ onLog, onPick }: { onLog: (id: string) => void; onPick: (
           ))}
         </Select>
         <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search calls')} aria-label={t('Search calls')} className="h-9 w-full sm:w-56" />
+        <span className="ms-auto">
+          <DeleteAllButton path="/calls" query={{ scope, outcome, q: debounced }} hasItems={!!list.data?.length} permission="activities:write" feature="interactions" invalidate={['calls', 'call-stats', 'interactions']} />
+        </span>
       </div>
       {list.isPending ? (
         <Skeleton className="h-32" />

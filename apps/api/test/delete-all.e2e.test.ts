@@ -94,6 +94,36 @@ describe('delete all on every other list', () => {
     expect((await http.get('/meeting-records').expect(200)).body).toHaveLength(0);
   }, 120_000);
 
+  it('deletes every interaction in a company log, every call in the history (logged too) and every voice note', async () => {
+    const cid = (await http.post('/companies', { name: 'Log Sweep Ltd', primaryPhone: '+44 20 7946 0000' }).expect(201)).body.id as string;
+    for (let i = 0; i < 12; i++) await http.post('/interactions', { companyId: cid, kind: 'EMAIL_SENT', subject: `Sweep note ${i}` }).expect(201);
+    const count = (await http.post(`/companies/${cid}/interactions/delete-all/count`, { query: {} }).expect(200)).body.count as number;
+    expect(count).toBe(12);
+    await http.post(`/companies/${cid}/interactions/delete-all`, { query: {}, expected: count }).expect(403);
+    expect((await http.postConfirmed(`/companies/${cid}/interactions/delete-all`, { query: {}, expected: count }).expect(200)).body).toEqual({ updated: 12, failed: [] });
+    expect((await http.get(`/companies/${cid}/interactions`).expect(200)).body).toHaveLength(0);
+
+    // Calls: one logged (which also logged an interaction), two left open.
+    const startRes = await http.post('/calls', { companyId: cid, numberSource: 'COMPANY' });
+    expect(startRes.status, JSON.stringify(startRes.body)).toBe(201);
+    const started = startRes.body.call.id as string;
+    await http.post(`/calls/${started}/log`, { outcome: 'CONNECTED', remarks: 'Spoke to reception' }).expect(200);
+    for (let i = 0; i < 2; i++) await http.post('/calls', { companyId: cid, numberSource: 'COMPANY' }).expect(201);
+    expect((await http.get(`/companies/${cid}/interactions`).expect(200)).body.length).toBeGreaterThanOrEqual(1);
+    const calls = (await http.post('/calls/delete-all/count', { query: { scope: 'mine' } }).expect(200)).body.count as number;
+    expect(calls).toBe(3);
+    expect((await http.postConfirmed('/calls/delete-all', { query: { scope: 'mine' }, expected: 3 }).expect(200)).body).toEqual({ updated: 3, failed: [] });
+    expect((await http.get('/calls?scope=mine').expect(200)).body).toHaveLength(0);
+    // The logged call's interaction went with it.
+    expect((await http.get(`/companies/${cid}/interactions?kind=CALL_OUTGOING`).expect(200)).body).toHaveLength(0);
+
+    for (let i = 0; i < 55; i++) await http.post('/voice-notes', { transcript: `Sweep voice ${i}` }).expect(201);
+    const notes = (await http.post('/voice-notes/delete-all/count', { query: {} }).expect(200)).body.count as number;
+    expect(notes).toBe(55);
+    expect((await http.postConfirmed('/voice-notes/delete-all', { query: {}, expected: 55 }).expect(200)).body.updated).toBe(55);
+    expect((await http.get('/voice-notes').expect(200)).body).toHaveLength(0);
+  }, 120_000);
+
   it('needs write access, and never reaches another workspace', async () => {
     const viewer = await inviteMember(app, owner, 'viewer');
     await api(viewer).postConfirmed('/rfqs/delete-all', { query: {}, expected: 1 }).expect(403);
