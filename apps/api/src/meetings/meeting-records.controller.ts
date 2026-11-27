@@ -27,7 +27,7 @@ export class MeetingRecordsController {
   }
 
   /** How many records "delete all" would delete for this list query, shown before the person confirms. */
-  @Post('delete-all/count')
+  @Post('count-all')
   @HttpCode(200)
   @RequirePermissions('activities:write')
   async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {

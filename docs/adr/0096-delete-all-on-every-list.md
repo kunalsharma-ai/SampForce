@@ -15,7 +15,7 @@ at a display cap (tasks 200, quotes 200, follow-ups 300, meeting notes 100), so 
 Each of those lists gets two routes on its own controller, so its feature, permission and workspace rules apply as they
 do to its single delete:
 
-- `POST <list>/delete-all/count` with `{ query }` returns `{ count }`: every record the list's query matches, with no
+- `POST <list>/count-all` with `{ query }` returns `{ count }`: every record the list's query matches, with no
   page or cap. The confirmation dialog shows this number.
 - `POST <list>/delete-all` with `{ query, expected }` needs the password (`@ConfirmPassword`) and the workspace Delete
   action. It finds the ids first, refuses with 409 `SELECTION_CHANGED` if their count is not `expected`, then deletes

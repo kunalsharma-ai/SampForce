@@ -26,7 +26,7 @@ describe('delete all on every other list', () => {
     for (let i = 0; i < 105; i++) await http.post('/rfqs', { companyId, projectName: `Sweep study ${i}` }).expect(201);
     await http.post('/rfqs', { companyId, projectName: 'Keeper study' }).expect(201);
     expect((await http.get('/rfqs?q=sweep').expect(200)).body.total).toBe(105);
-    expect((await http.post('/rfqs/delete-all/count', { query: { q: 'sweep' } }).expect(200)).body).toEqual({ count: 105 });
+    expect((await http.post('/rfqs/count-all', { query: { q: 'sweep' } }).expect(200)).body).toEqual({ count: 105 });
 
     // A password is required, and a stale count changes nothing.
     expect((await http.post('/rfqs/delete-all', { query: { q: 'sweep' }, expected: 105 }).expect(403)).body.error.code).toBe('PASSWORD_CONFIRMATION_REQUIRED');
@@ -47,7 +47,7 @@ describe('delete all on every other list', () => {
     const done = (await http.post('/tasks', { title: 'Done task' }).expect(201)).body.id as string;
     await http.patch(`/tasks/${done}`, { status: 'DONE' }).expect(200);
     // The count shown before confirming is every match, not the 200 the list shows.
-    const open = (await http.post('/tasks/delete-all/count', { query: { scope: 'mine', status: 'OPEN' } }).expect(200)).body.count as number;
+    const open = (await http.post('/tasks/count-all', { query: { scope: 'mine', status: 'OPEN' } }).expect(200)).body.count as number;
     expect((await http.get('/tasks?scope=mine&status=OPEN').expect(200)).body).toHaveLength(200);
     const tasksRes = await http.postConfirmed('/tasks/delete-all', { query: { scope: 'mine', status: 'OPEN' }, expected: open });
     expect(tasksRes.status, JSON.stringify(tasksRes.body)).toBe(200);
@@ -97,7 +97,7 @@ describe('delete all on every other list', () => {
   it('deletes every interaction in a company log, every call in the history (logged too) and every voice note', async () => {
     const cid = (await http.post('/companies', { name: 'Log Sweep Ltd', primaryPhone: '+44 20 7946 0000' }).expect(201)).body.id as string;
     for (let i = 0; i < 12; i++) await http.post('/interactions', { companyId: cid, kind: 'EMAIL_SENT', subject: `Sweep note ${i}` }).expect(201);
-    const count = (await http.post(`/companies/${cid}/interactions/delete-all/count`, { query: {} }).expect(200)).body.count as number;
+    const count = (await http.post(`/companies/${cid}/interactions/count-all`, { query: {} }).expect(200)).body.count as number;
     expect(count).toBe(12);
     await http.post(`/companies/${cid}/interactions/delete-all`, { query: {}, expected: count }).expect(403);
     expect((await http.postConfirmed(`/companies/${cid}/interactions/delete-all`, { query: {}, expected: count }).expect(200)).body).toEqual({ updated: 12, failed: [] });
@@ -110,7 +110,7 @@ describe('delete all on every other list', () => {
     await http.post(`/calls/${started}/log`, { outcome: 'CONNECTED', remarks: 'Spoke to reception' }).expect(200);
     for (let i = 0; i < 2; i++) await http.post('/calls', { companyId: cid, numberSource: 'COMPANY' }).expect(201);
     expect((await http.get(`/companies/${cid}/interactions`).expect(200)).body.length).toBeGreaterThanOrEqual(1);
-    const calls = (await http.post('/calls/delete-all/count', { query: { scope: 'mine' } }).expect(200)).body.count as number;
+    const calls = (await http.post('/calls/count-all', { query: { scope: 'mine' } }).expect(200)).body.count as number;
     expect(calls).toBe(3);
     expect((await http.postConfirmed('/calls/delete-all', { query: { scope: 'mine' }, expected: 3 }).expect(200)).body).toEqual({ updated: 3, failed: [] });
     expect((await http.get('/calls?scope=mine').expect(200)).body).toHaveLength(0);
@@ -118,7 +118,7 @@ describe('delete all on every other list', () => {
     expect((await http.get(`/companies/${cid}/interactions?kind=CALL_OUTGOING`).expect(200)).body).toHaveLength(0);
 
     for (let i = 0; i < 55; i++) await http.post('/voice-notes', { transcript: `Sweep voice ${i}` }).expect(201);
-    const notes = (await http.post('/voice-notes/delete-all/count', { query: {} }).expect(200)).body.count as number;
+    const notes = (await http.post('/voice-notes/count-all', { query: {} }).expect(200)).body.count as number;
     expect(notes).toBe(55);
     expect((await http.postConfirmed('/voice-notes/delete-all', { query: {}, expected: 55 }).expect(200)).body.updated).toBe(55);
     expect((await http.get('/voice-notes').expect(200)).body).toHaveLength(0);

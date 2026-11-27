@@ -46,7 +46,7 @@ export function DeleteAllButton({
     staleTime: 0,
     gcTime: 0,
     queryKey: ['delete-all-count', path, clean],
-    queryFn: () => api<{ count: number }>(`${path}/delete-all/count`, { method: 'POST', json: { query: clean } }),
+    queryFn: () => api<{ count: number }>(`${path}/count-all`, { method: 'POST', json: { query: clean } }),
   });
   const count = counted.data?.count ?? 0;
   const run = useMutation({

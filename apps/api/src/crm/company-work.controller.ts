@@ -43,7 +43,7 @@ export class CompanyDashboardController {
   }
 
   /** How many records "delete all" would delete for this list query, shown before the person confirms. */
-  @Post('interactions/delete-all/count')
+  @Post('interactions/count-all')
   @HttpCode(200)
   @AlsoRequireFeature('interactions')
   @RequirePermissions('activities:write')
@@ -115,7 +115,7 @@ export class FollowUpsController {
   }
 
   /** How many records "delete all" would delete for this list query, shown before the person confirms. */
-  @Post('delete-all/count')
+  @Post('count-all')
   @HttpCode(200)
   @RequirePermissions('activities:write')
   async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
@@ -188,7 +188,7 @@ export class RfqsController {
   }
 
   /** How many records "delete all" would delete for this list query, shown before the person confirms. */
-  @Post('delete-all/count')
+  @Post('count-all')
   @HttpCode(200)
   @RequirePermissions('companies:write')
   async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
