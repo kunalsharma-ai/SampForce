@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { signUp } from './helpers';
 
-/** Removing unwanted information from a company and a contact, and deleting employees (ADR 0097). Set PREVIEW_DIR for screenshots. */
+/** Deleting unwanted company and employee details from the Edit windows, and deleting employees (ADR 0097). Set PREVIEW_DIR for screenshots. */
 const ORIGIN = { origin: 'http://localhost:3000' };
 const PREVIEW_DIR = process.env.PREVIEW_DIR;
 
@@ -13,7 +13,7 @@ async function shot(page: Page, name: string, target?: ReturnType<Page['locator'
   else await page.screenshot({ path: `${PREVIEW_DIR}/${name}.png` });
 }
 
-test('removes single values from a company and a contact, and deletes employees', async ({ page }) => {
+test('deletes unwanted details only from Edit, and deletes employees', async ({ page }) => {
   test.setTimeout(180_000);
   await signUp(page, 'Tidy Data Research');
   const company = await page.request.post('/api/v1/companies', {
@@ -52,74 +52,75 @@ test('removes single values from a company and a contact, and deletes employees'
     if (i === 0) ashaId = (await res.json()).id;
   }
 
-  // Company: each saved value has its own ×; the first press asks, the second removes.
+  // Company: nothing can be deleted from the page itself; Edit opens the window where details are deleted.
   await page.goto(`/app/companies/${companyId}`);
   const info = page.locator('#business-information');
   await expect(info.getByText('Old service we dropped')).toBeVisible();
-  await shot(page, '01-company-values-removable', info);
-  await info.getByRole('button', { name: 'Remove Old service we dropped' }).click();
-  await shot(page, '02-company-remove-confirm', info);
-  await info.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(info.getByRole('button', { name: /^(Remove|Delete) / })).toHaveCount(0);
+  await shot(page, '01-company-page-no-delete-buttons', info);
+  await info.getByRole('button', { name: 'Edit', exact: true }).click();
+  const edit = page.getByRole('dialog', { name: 'Edit business information' });
+  await edit.getByRole('button', { name: 'Delete Legal name' }).click();
+  await expect(edit.getByRole('textbox', { name: 'Legal name' })).toHaveValue('');
+  await edit.getByRole('textbox', { name: 'Services' }).fill('Online panels');
+  await edit.getByRole('textbox', { name: 'Emails' }).fill('hello@northwind.example');
+  await edit.getByRole('button', { name: 'Delete Remarks' }).click();
+  await shot(page, '02-company-edit-delete', edit.locator('fieldset').first());
+  await edit.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(edit).toBeHidden();
   await expect(info.getByText('Old service we dropped')).toHaveCount(0);
-  await info.getByRole('button', { name: 'Remove old-inbox@northwind.example' }).click();
-  await info.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(info.getByText('old-inbox@northwind.example')).toHaveCount(0);
-  await info.getByRole('button', { name: /^Remove Legal name/ }).click();
-  await info.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(info.getByText('Northwind Panels Ltd')).toHaveCount(0);
   await expect(info.getByText('hello@northwind.example')).toBeVisible();
-  await shot(page, '03-company-after-removing', info);
+  await shot(page, '03-company-after-deleting', info);
   const saved = await (await page.request.get(`/api/v1/companies/${companyId}`)).json();
   expect(saved.services).toEqual(['Online panels']);
   expect(saved.legalName).toBeNull();
+  expect(saved.notes).toBeNull();
   expect(saved.emails.map((e: { value: string }) => e.value)).toEqual(['hello@northwind.example']);
 
-  // Employees: tick some and delete them, or one row's bin, or all of them.
+  // Employees: tick some and delete them together. A row has no delete button of its own.
   const employees = page.locator('#company-employees');
   await expect(employees.getByRole('link', { name: 'Farah Aziz' })).toBeVisible();
+  await expect(employees.getByRole('button', { name: 'Delete Dana Ortiz' })).toHaveCount(0);
   await employees.getByRole('checkbox', { name: 'Select Eli Novak' }).check();
   await employees.getByRole('checkbox', { name: 'Select Farah Aziz' }).check();
-  await employees.scrollIntoViewIfNeeded();
-  await shot(page, '04-employees-selected', employees);
   await employees.getByRole('button', { name: 'Delete selected (2)' }).click();
   await expect(employees.getByText('Delete 2 employees?')).toBeVisible();
-  await shot(page, '05-employees-delete-confirm', employees);
+  await employees.scrollIntoViewIfNeeded();
+  await shot(page, '04-employees-delete-selected', employees);
   await employees.getByRole('button', { name: 'Delete 2', exact: true }).click();
   await expect(employees.getByText('Deleted 2.')).toBeVisible();
   await expect(employees.getByRole('link', { name: 'Farah Aziz' })).toHaveCount(0);
-  await employees.getByRole('button', { name: 'Delete Dana Ortiz' }).click();
-  await employees.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(employees.getByRole('link', { name: 'Dana Ortiz' })).toHaveCount(0);
-  await expect(employees.getByRole('link', { name: 'Asha Rao' })).toBeVisible();
-  await shot(page, '06-employees-after-delete', employees);
 
-  // Contact: remove the designation, one email, the location and the remark.
-  await page.goto(`/app/contacts/${ashaId}`);
-  const main = page.getByRole('main');
-  const details = main.locator('dl').filter({ hasText: 'Employee remarks' }).first();
-  await expect(details.getByText('Old designation', { exact: true })).toBeVisible();
-  await shot(page, '07-contact-values-removable', details);
-  for (const name of ['Remove Designation', 'Remove asha.old@northwind.example', 'Remove Location', 'Remove Employee remarks']) {
-    await details.getByRole('button', { name, exact: true }).click();
-    await details.getByRole('button', { name: 'Remove', exact: true }).click();
-    // Saved: the confirm goes, and the value with its × goes too.
-    await expect(details.getByRole('button', { name: 'Remove', exact: true })).toHaveCount(0);
-    await expect(details.getByRole('button', { name, exact: true })).toHaveCount(0);
-  }
-  await expect(main.getByText(/Old designation/)).toHaveCount(0);
-  await expect(details.getByText('Unwanted remark')).toHaveCount(0);
-  await shot(page, '08-contact-after-removing', details);
+  // One employee: deleted from its Edit window.
+  await employees.getByRole('button', { name: 'Edit Dana Ortiz' }).click();
+  let person = page.getByRole('dialog', { name: 'Edit employee / POC' });
+  await person.getByRole('button', { name: 'Delete employee' }).click();
+  await shot(page, '05-employee-edit-delete', person.getByRole('alert'));
+  await person.getByRole('button', { name: 'Delete employee' }).click();
+  await expect(person).toBeHidden();
+  await expect(employees.getByRole('link', { name: 'Dana Ortiz' })).toHaveCount(0);
+
+  // An employee's details: designation, one email and the remark deleted in the same Edit window.
+  await employees.getByRole('button', { name: 'Edit Asha Rao' }).click();
+  person = page.getByRole('dialog', { name: 'Edit employee / POC' });
+  await expect(person.getByRole('textbox', { name: 'Designation' })).toHaveValue('Old designation');
+  await person.getByRole('textbox', { name: 'Designation' }).fill('');
+  await person.getByRole('button', { name: 'Remove asha.old@northwind.example' }).click();
+  await person.getByRole('textbox', { name: 'Employee remarks' }).fill('');
+  await shot(page, '06-employee-edit-details', person.getByRole('group', { name: 'Email IDs' }).or(person.locator('fieldset').filter({ hasText: 'Email IDs' })).first());
+  await person.getByRole('button', { name: 'Save changes' }).click();
+  await expect(person).toBeHidden();
   const contact = await (await page.request.get(`/api/v1/contacts/${ashaId}`)).json();
   expect(contact.jobTitle).toBeNull();
-  expect(contact.country).toBeNull();
   expect(contact.remarks).toBeNull();
   expect(contact.emails.map((e: { value: string }) => e.value)).toEqual(['asha@northwind.example']);
 
   // Delete all employees: every one left goes at once.
-  await page.goto(`/app/companies/${companyId}`);
   await employees.getByRole('button', { name: 'Delete all employees' }).click();
   await expect(employees.getByText('Delete 3 employees?')).toBeVisible();
   await employees.getByRole('button', { name: 'Delete 3', exact: true }).click();
   await expect(employees.getByText('No employees at this company yet.')).toBeVisible();
-  await shot(page, '09-employees-all-deleted', employees);
+  await shot(page, '07-employees-all-deleted', employees);
 });

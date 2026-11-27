@@ -372,7 +372,7 @@ type SortKey = 'name' | 'status' | 'emailsSent' | 'responsesReceived' | 'lastUpd
 /**
  * The company's employees / POCs with everything to manage them in place (ADR 0066): add a new one, add an existing
  * contact, edit, or take one off the company. Each is a contact record. Deleting (ADR 0097) removes the contact itself:
- * one row, the ticked rows or every employee shown, with the password asked once and each deletion audited.
+ * the ticked rows or every employee shown (or one person from its Edit window), with the password asked once.
  */
 export function CompanyEmployeeDirectory({ company, compact = false }: { company: CompanyRow; compact?: boolean }) {
   const t = useT();
@@ -653,11 +653,6 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
                             <Button size="sm" variant="ghost" aria-label={t('Remove {name} from this company', { name: r.name })} onClick={() => setRemoving(r.id)}>
                               <UserMinus aria-hidden />
                             </Button>
-                            {canDelete && (
-                              <Button size="sm" variant="ghost" className="text-critical" aria-label={t('Delete {name}', { name: r.name })} onClick={() => setConfirmDelete([r.id])}>
-                                <Trash2 aria-hidden />
-                              </Button>
-                            )}
                           </span>
                         )}
                       </td>
