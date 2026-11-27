@@ -25,6 +25,7 @@ import { MailerService } from '../mail/mailer.service';
 import { type OperatorContext, operatorContext } from './operator-auth';
 import { OperatorSessions } from './operator-sessions';
 import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
+import { OperatorPhotosService } from './operator-photos';
 
 /** An invited operator has no password until they open their link; `!` marks a hash that can never match. */
 const INVITED_HASH = '!invited';
@@ -42,8 +43,6 @@ type OperatorRecord = { id: string; email: string; name: string; role: 'ADMIN' |
  * switch them off, and keep custom roles. Nobody can give a permission they do not hold themselves, change their own
  * role or status, or leave the platform without an active Super Admin.
  */
-import { OperatorPhotosService } from './operator-photos';
-
 @Injectable()
 export class OperatorAdminService {
   private readonly logger = new Logger(OperatorAdminService.name);
