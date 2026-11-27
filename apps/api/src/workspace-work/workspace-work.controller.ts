@@ -55,6 +55,14 @@ export class TargetsController {
     return this.targets.update(auth, id, body, meta);
   }
 
+  /** Day-by-day progress and earlier periods (ADR 0096). */
+  @Get(':id/trend')
+  @RequireFeature('sales_target_management')
+  @OwnHierarchyRules()
+  trend(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.targets.trend(auth, id);
+  }
+
   @Post(':id/distribute')
   @RequireFeature('sales_target_management')
   @OwnHierarchyRules()

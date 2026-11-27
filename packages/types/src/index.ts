@@ -86,3 +86,5 @@ export * from './achievements';
 export * from './calls';
 export * from './profile';
 export * from './client-time';
+export * from './task-plans';
+export * from './performance';

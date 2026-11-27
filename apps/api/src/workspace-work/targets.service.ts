@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { type Prisma, transactionLock, type TenantTx } from '@dealflow/database';
 import {
+  METRIC_RULE,
+  MONEY_METRICS,
   TARGET_METRIC_LABEL,
   type TargetCreateInput,
   type TargetDistributeInput,
@@ -9,24 +11,48 @@ import {
   type TargetPeriod,
   type TargetRow,
   type TargetsView,
+  type TargetTrend,
   type TargetUpdateInput,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { Metrics, r2 } from '../command-center/metrics';
+import { r2 } from '../command-center/metrics';
 import { RevenueRecordsService } from '../crm/revenue-records.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { loadRates } from '../revenue/fx';
 import { branchUserIds, type NodeAccess, resolveOrganisation } from '../workspaces/access';
 import { HierarchyError } from '../workspaces/workspaces.service';
 import { assertAction, callerOf, handsDownTo, may, type Org, peopleIn, refOf, visibleNodeIds } from './hierarchy';
+import { Measures } from './measures';
 
 type Stored = Prisma.WorkspaceTargetGetPayload<object>;
 const FEATURE = 'sales_target_management' as const;
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Target not found.' });
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-const lastDay = (end: Date) => iso(new Date(end.getTime() - 86_400_000));
+const DAY = 86_400_000;
+const lastDay = (end: Date) => iso(new Date(end.getTime() - DAY));
+const RECONCILE = new Set(['REVENUE', 'DEALS_WON', 'CONVERSIONS']);
+
+/**
+ * Targets the caller may read (ADR 0096): everything for the Super Workspace; for a manager its own team, plus the
+ * other Manager Workspaces' own targets when the Super Workspace lets it see other managers; an executive its own.
+ */
+function readableNodeIds(me: NodeAccess, org: Org): Set<string> {
+  const ids = visibleNodeIds(me, org);
+  if (me.level === 'MANAGER' && me.node.canViewOtherManagers) for (const a of org.byId.values()) if (a.level === 'MANAGER' && !a.node.archivedAt) ids.add(a.node.id);
+  return ids;
+}
+
+/** People counted for a workspace's target: its branch, or everyone in the organisation for the organisation's own target. */
+async function countedUsers(tx: TenantTx, tenantId: string, org: Org, nodeId: string): Promise<string[]> {
+  if (nodeId === org.root.node.id) return (await tx.membership.findMany({ where: { tenantId, status: 'ACTIVE' }, select: { userId: true } })).map((m) => m.userId);
+  return branchUserIds(tx, tenantId, nodeId);
+}
+
+/** The Super Workspace may also set targets for the organisation as a whole (its own root workspace). */
+function settable(me: NodeAccess, node: NodeAccess, org: Org): boolean {
+  return handsDownTo(me, node, org) || (me.level === 'SUPER' && node === org.root);
+}
 
 /**
  * Sales targets down the workspace hierarchy (ADR 0071, part 4). The Super Workspace sets targets for any workspace
@@ -48,12 +74,14 @@ export class TargetsService {
       const org = await resolveOrganisation(tx, auth.tenantId);
       const me = callerOf(auth, org);
       assertAction(me, FEATURE, 'view');
-      const visible = visibleNodeIds(me, org);
+      const visible = readableNodeIds(me, org);
       const rows = await tx.workspaceTarget.findMany({ where: { tenantId: auth.tenantId, archivedAt: null, workspaceNodeId: { in: [...visible] } }, orderBy: [{ startsAt: 'desc' }, { createdAt: 'asc' }], take: 500 });
       const ctx = await this.context(tx, auth);
-      const assignable = may(me, FEATURE, 'assign') ? [...org.byId.values()].filter((a) => handsDownTo(me, a, org)) : [];
+      const assignable = may(me, FEATURE, 'assign') ? [...org.byId.values()].filter((a) => settable(me, a, org)) : [];
       return {
         targets: await this.rows(tx, auth, org, me, rows, ctx),
+        scope: me.level === 'SUPER' ? 'ORGANISATION' : me.level === 'MANAGER' ? 'TEAM' : 'SELF',
+        myWorkspaceId: me.node.id,
         assignable: assignable.map((a) => ({ ...refOf(a, org, ctx.orgName), parentId: a.node.parentId })),
         currency: ctx.currency,
       };
@@ -106,11 +134,28 @@ export class TargetsService {
           if (siblings + input.amount > parent.amount + 1e-9) throw new ConflictException({ code: 'TARGET_OVER_DISTRIBUTED', message: 'The parts handed down cannot add up to more than the target they come from.' });
         }
       }
-      const updated = await tx.workspaceTarget.update({ where: { id }, data: { ...(input.amount !== undefined ? { amount: input.amount } : {}), ...(input.note !== undefined ? { note: input.note || null } : {}) } });
+      let endsAt: Date | undefined;
+      if (input.endsOn !== undefined) {
+        if (input.endsOn < iso(row.startsAt)) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The period must end on or after its first day.' });
+        endsAt = new Date(Date.parse(`${input.endsOn}T00:00:00Z`) + DAY);
+        if (endsAt.getTime() - row.startsAt.getTime() > 367 * DAY) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'A target can run for at most a year.' });
+      }
+      const changed = endsAt && endsAt.getTime() !== row.endsAt.getTime();
+      const updated = await tx.workspaceTarget.update({
+        where: { id },
+        data: {
+          ...(input.amount !== undefined ? { amount: input.amount } : {}),
+          ...(input.note !== undefined ? { note: input.note || null } : {}),
+          ...(changed ? { endsAt, period: 'CUSTOM' } : {}),
+        },
+      });
+      // Parts handed down from it follow the new deadline.
+      if (changed) await tx.workspaceTarget.updateMany({ where: { tenantId: auth.tenantId, parentTargetId: id, archivedAt: null }, data: { endsAt, period: 'CUSTOM' } });
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'target.updated', entityType: 'workspace_target', entityId: id,
-        metadata: { amountFrom: row.amount, amountTo: updated.amount, ...(input.note !== undefined ? { note: updated.note } : {}) }, meta,
+        metadata: { amountFrom: row.amount, amountTo: updated.amount, ...(input.note !== undefined ? { note: updated.note } : {}), ...(changed ? { endsOnFrom: lastDay(row.endsAt), endsOnTo: lastDay(updated.endsAt) } : {}) }, meta,
       });
+      await this.tellChange(tx, auth, org, org.byId.get(row.workspaceNodeId)!, row, updated);
       const ctx = await this.context(tx, auth);
       return (await this.rows(tx, auth, org, me, [updated], ctx))[0]!;
     });
@@ -182,7 +227,7 @@ export class TargetsService {
     const node = org.byId.get(nodeId);
     if (!node || !visibleNodeIds(me, org).has(nodeId)) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
     assertAction(me, FEATURE, 'assign');
-    if (!handsDownTo(me, node, org)) throw new HierarchyError('WORKSPACE_ADMIN_FORBIDDEN', 'Only the workspace above this one can manage it.');
+    if (!settable(me, node, org)) throw new HierarchyError('WORKSPACE_ADMIN_FORBIDDEN', 'Only the workspace above this one can manage it.');
     return node;
   }
 
@@ -199,7 +244,7 @@ export class TargetsService {
 
   private async context(tx: TenantTx, auth: AuthContext) {
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true, defaultCurrency: true } });
-    return { orgName: tenant.name, currency: tenant.defaultCurrency, rates: null as Awaited<ReturnType<typeof loadRates>> | null };
+    return { orgName: tenant.name, currency: tenant.defaultCurrency, measures: new Measures(tx, auth.tenantId) };
   }
 
   /** Tells the people of each workspace that it has a new target. */
@@ -217,85 +262,113 @@ export class TargetsService {
     }
   }
 
+  /** Tells the people of a workspace that its target changed: a new amount or a new deadline. */
+  private async tellChange(tx: TenantTx, auth: AuthContext, org: Org, node: NodeAccess, before: Stored, after: Stored): Promise<void> {
+    if (before.amount === after.amount && before.endsAt.getTime() === after.endsAt.getTime()) return;
+    const people = (await peopleIn(tx, auth.tenantId, node, org)).map((p) => p.id).filter((u) => u !== auth.userId);
+    await this.notifications.send(tx, auth.tenantId, people, {
+      type: 'target.updated',
+      title: 'Your target changed',
+      body: `${TARGET_METRIC_LABEL[after.metric as TargetMetric]}: ${after.amount}, ${iso(after.startsAt)} to ${lastDay(after.endsAt)}.`,
+      link: '/app/targets',
+      eventId: `target:${after.id}:${after.amount}:${iso(after.endsAt)}`,
+      senderId: auth.userId,
+    });
+  }
+
+  /** Day-by-day progress of one target with the pace line, and how the same measure did in earlier periods. */
+  trend(auth: AuthContext, id: string): Promise<TargetTrend> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const me = callerOf(auth, org);
+      assertAction(me, FEATURE, 'view');
+      const row = await this.find(tx, auth, id);
+      if (!readableNodeIds(me, org).has(row.workspaceNodeId)) throw notFound();
+      if (RECONCILE.has(row.metric)) await this.revenue.reconcile(tx, auth.tenantId);
+      const users = await countedUsers(tx, auth.tenantId, org, row.workspaceNodeId);
+      const m = new Measures(tx, auth.tenantId);
+      const metric = row.metric as TargetMetric;
+      const days = Math.max(1, Math.round((row.endsAt.getTime() - row.startsAt.getTime()) / DAY));
+      const now = Date.now();
+      // At most 31 points: one a day for a month, evenly spread over longer periods; none in the future.
+      const n = Math.min(days, 31);
+      const points: TargetTrend['points'] = [];
+      for (let i = 1; i <= n; i++) {
+        const d = Math.round((i * days) / n);
+        const upTo = new Date(row.startsAt.getTime() + d * DAY);
+        if (upTo.getTime() - (days / n) * DAY > now) break;
+        const achieved = await m.count(metric, users, row.startsAt, new Date(Math.min(upTo.getTime(), now)));
+        points.push({ date: lastDay(upTo), achieved, pace: r2((row.amount * d) / days) });
+      }
+      const span = row.endsAt.getTime() - row.startsAt.getTime();
+      const history: TargetTrend['history'] = [];
+      for (let k = 1; k <= 6; k++) {
+        const start = new Date(row.startsAt.getTime() - k * span);
+        const end = new Date(start.getTime() + span);
+        const achieved = await m.count(metric, users, start, end);
+        history.push({ startsOn: iso(start), endsOn: lastDay(end), achieved, percent: row.amount > 0 ? Math.round((achieved / row.amount) * 1000) / 10 : 0 });
+      }
+      return { id: row.id, points, history };
+    });
+  }
+
   private async rows(tx: TenantTx, auth: AuthContext, org: Org, me: NodeAccess, rows: Stored[], ctx: Awaited<ReturnType<TargetsService['context']>>): Promise<TargetRow[]> {
     if (!rows.length) return [];
-    if (rows.some((r) => r.metric === 'REVENUE' || r.metric === 'DEALS_WON' || r.metric === 'CONVERSIONS')) await this.revenue.reconcile(tx, auth.tenantId);
+    if (rows.some((r) => RECONCILE.has(r.metric))) await this.revenue.reconcile(tx, auth.tenantId);
     const setters = await tx.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.setById).filter((x): x is string => !!x))] } }, select: { id: true, name: true } });
     const setterName = new Map(setters.map((u) => [u.id, u.name]));
     const parts = await tx.workspaceTarget.findMany({ where: { tenantId: auth.tenantId, parentTargetId: { in: rows.map((r) => r.id) }, archivedAt: null }, select: { parentTargetId: true, amount: true } });
     const partsOf = new Map<string, number>();
     for (const p of parts) partsOf.set(p.parentTargetId!, (partsOf.get(p.parentTargetId!) ?? 0) + p.amount);
     const usersOf = new Map<string, string[]>();
-    const achieved = new Map<string, number>();
+    const counted = new Map<string, number>();
     const canAssign = may(me, FEATURE, 'assign');
+    const now = new Date();
+    const count = async (nodeId: string, metric: TargetMetric, start: Date, end: Date) => {
+      const key = `${nodeId}|${metric}|${start.getTime()}|${end.getTime()}`;
+      if (!counted.has(key)) counted.set(key, await ctx.measures.count(metric, usersOf.get(nodeId)!, start, end));
+      return counted.get(key)!;
+    };
+    const pct = (got: number, amount: number) => (amount > 0 ? Math.round((got / amount) * 1000) / 10 : 0);
 
     const out: TargetRow[] = [];
     for (const r of rows) {
       const node = org.byId.get(r.workspaceNodeId);
       if (!node) continue;
-      if (!usersOf.has(node.node.id)) usersOf.set(node.node.id, await branchUserIds(tx, auth.tenantId, node.node.id));
-      const key = `${node.node.id}|${r.metric}|${r.startsAt.getTime()}|${r.endsAt.getTime()}`;
-      if (!achieved.has(key)) achieved.set(key, await this.achievement(tx, auth, ctx, usersOf.get(node.node.id)!, r.metric as TargetMetric, r.startsAt, r.endsAt));
-      const got = achieved.get(key)!;
+      if (!usersOf.has(node.node.id)) usersOf.set(node.node.id, await countedUsers(tx, auth.tenantId, org, node.node.id));
+      const metric = r.metric as TargetMetric;
+      const got = await count(node.node.id, metric, r.startsAt, r.endsAt);
+      const span = r.endsAt.getTime() - r.startsAt.getTime();
+      const state = now < r.startsAt ? 'UPCOMING' : now >= r.endsAt ? 'ENDED' : 'RUNNING';
+      const before = state === 'UPCOMING' ? null : await count(node.node.id, metric, new Date(r.startsAt.getTime() - span), r.startsAt);
       const hasExecutives = [...org.byId.values()].some((a) => a.level === 'EXECUTIVE' && a.node.parentId === node.node.id && !a.node.archivedAt);
+      const mine = handsDownTo(me, node, org) || (me.level === 'SUPER' && node === org.root);
       out.push({
         id: r.id,
-        metric: r.metric as TargetMetric,
+        metric,
         period: r.period as TargetPeriod,
         startsOn: iso(r.startsAt),
         endsOn: lastDay(r.endsAt),
         amount: r.amount,
-        currency: r.metric === 'REVENUE' ? ctx.currency : null,
+        currency: MONEY_METRICS.has(metric) ? ctx.currency : null,
         note: r.note,
         workspace: refOf(node, org, ctx.orgName),
         setBy: r.setById ? { id: r.setById, name: setterName.get(r.setById) ?? '' } : null,
         source: r.setByLevel === 'SUPER' ? 'SUPER' : 'MANAGER',
         parentTargetId: r.parentTargetId,
         achieved: got,
-        percent: r.amount > 0 ? Math.round((got / r.amount) * 1000) / 10 : 0,
+        percent: pct(got, r.amount),
+        remaining: r2(Math.max(0, r.amount - got)),
+        state,
+        daysLeft: state === 'RUNNING' ? Math.max(1, Math.ceil((r.endsAt.getTime() - now.getTime()) / DAY)) : null,
+        previous: before === null ? null : { achieved: before, percent: pct(before, r.amount) },
+        rule: METRIC_RULE[metric],
         distributed: r2(partsOf.get(r.id) ?? 0),
-        editable: canAssign && handsDownTo(me, node, org),
+        editable: canAssign && mine,
         canDistribute: canAssign && node.level === 'MANAGER' && hasExecutives && (me.level === 'SUPER' || me.node.id === node.node.id),
         createdAt: r.createdAt.toISOString(),
       });
     }
     return out;
-  }
-
-  /** What the people counted reached in [start, end): companies they created, calls they logged, deals and revenue credited to them. */
-  private async achievement(tx: TenantTx, auth: AuthContext, ctx: Awaited<ReturnType<TargetsService['context']>>, users: string[], metric: TargetMetric, start: Date, end: Date): Promise<number> {
-    if (!users.length) return 0;
-    if (metric === 'CALLS') {
-      return tx.activity.count({
-        where: {
-          tenantId: auth.tenantId, deletedAt: null, ownerId: { in: users }, occurredAt: { gte: start, lt: end },
-          OR: [{ interaction: { in: ['CALL_OUTGOING', 'CALL_INCOMING'] } }, { AND: [{ OR: [{ interaction: null }, { interaction: { isSet: false } }] }, { type: 'CALL' }] }],
-        },
-      });
-    }
-    ctx.rates ??= await loadRates(tx, auth.tenantId);
-    const now = new Date();
-    const m = new Metrics(tx, { tenantId: auth.tenantId, users, start, end, now, todayStart: now, tomorrowStart: now }, ctx.currency, ctx.rates);
-    if (metric === 'LEADS') return (await m.leadsGenerated()).length;
-    // Redesign R7 (ADR 0091): counted by the same Metrics as the dashboards, so the numbers agree.
-    if (metric === 'EMAILS_SENT') {
-      const e = await m.emailsSent();
-      return e.logged.length + e.synced.length;
-    }
-    if (metric === 'RFQS') return (await m.rfqsReceived()).length;
-    if (metric === 'CONVERSIONS') return (await m.clientsConverted()).length;
-    if (metric === 'FOLLOW_UPS_DONE') {
-      return tx.task.count({ where: { tenantId: auth.tenantId, deletedAt: null, followUpType: { not: null }, status: 'DONE', assigneeId: { in: users }, completedAt: { gte: start, lt: end } } });
-    }
-    if (metric === 'MEETINGS') {
-      return tx.activity.count({
-        where: {
-          tenantId: auth.tenantId, deletedAt: null, ownerId: { in: users }, occurredAt: { gte: start, lt: end },
-          OR: [{ interaction: 'MEETING' }, { AND: [{ OR: [{ interaction: null }, { interaction: { isSet: false } }] }, { type: 'MEETING' }] }],
-        },
-      });
-    }
-    const rev = await m.revenue();
-    return metric === 'REVENUE' ? r2(rev.amount) : rev.deals;
   }
 }

@@ -830,9 +830,9 @@ model WorkspaceTarget {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
   workspaceNodeId String    @map("workspace_node_id")
-  /// LEADS, CALLS, DEALS_WON or REVENUE.
+  /// TARGET_METRICS in packages/types/src/workspace-work.ts (LEADS = companies created).
   metric          String
-  /// DAILY, WEEKLY, MONTHLY, QUARTERLY or CUSTOM.
+  /// DAILY, WEEKLY, MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY or CUSTOM.
   period          String
   startsAt        DateTime  @map("starts_at")
   /// The day after the last day (periods are [startsAt, endsAt)).
@@ -851,6 +851,89 @@ model WorkspaceTarget {
   @@index([tenantId, workspaceNodeId])
   @@index([tenantId, parentTargetId])
   @@map("workspace_targets")
+}
+
+/// A recurring task (ADR 0096): what to reach per day, week or month, for whom, from when to when. SampForce makes the
+/// instances itself and counts them from real records.
+model TaskPlan {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  title           String
+  note            String?
+  /// [{ metric, amount, per: DAY | WEEK | MONTH }]
+  requirements    Json
+  /// ONE_DAY, TWO_DAYS, ONE_WEEK, ONE_MONTH, ONE_QUARTER, SIX_MONTHS, ONE_YEAR or CUSTOM.
+  duration        String
+  /// First and last day (both included), YYYY-MM-DD in the organisation's time zone.
+  startsOn        String    @map("starts_on")
+  endsOn          String    @map("ends_on")
+  /// ISO weekdays with a daily instance (1 = Monday).
+  workingDays     Int[]     @map("working_days")
+  /// Holidays: no daily instance on these days.
+  skipDates       String[]  @map("skip_dates")
+  assigneeIds     String[]  @map("assignee_ids")
+  /// ACTIVE, PAUSED or CANCELLED (ENDED is worked out from endsOn).
+  status          String    @default("ACTIVE")
+  pausedAt        DateTime? @map("paused_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancelReason    String?   @map("cancel_reason")
+  createdById     String    @map("created_by_id")
+  createdByNodeId String?   @map("created_by_node_id")
+  /// Every change: [{ at, byId, kind, changes: [{ field, from, to }] }], newest last.
+  revisions       Json      @default("[]")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@index([tenantId, assigneeIds])
+  @@map("task_plans")
+}
+
+/// One day, week or month of a recurring task for one person (ADR 0096). It keeps the numbers it was measured against,
+/// so a later change to the task never rewrites history.
+model TaskPlanInstance {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  planId       String    @map("plan_id")
+  userId       String    @map("user_id")
+  /// DAY, WEEK or MONTH.
+  cadence      String
+  /// The first day of the period, YYYY-MM-DD.
+  periodKey    String    @map("period_key")
+  startsAt     DateTime  @map("starts_at")
+  /// Exclusive.
+  endsAt       DateTime  @map("ends_at")
+  /// [{ metric, amount, done }]
+  requirements Json
+  percent      Float     @default(0)
+  /// OPEN while its period runs (unless completed), then COMPLETED, PARTIALLY_COMPLETED, NOT_COMPLETED or CANCELLED.
+  status       String    @default("OPEN")
+  completedAt  DateTime? @map("completed_at")
+  finalizedAt  DateTime? @map("finalized_at")
+  /// Notifications already sent for it (today, r12, r16, half, done, missed), so none is sent twice.
+  notified     String[]
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([planId, userId, cadence, periodKey])
+  @@index([tenantId, userId, endsAt])
+  @@index([tenantId, status, endsAt])
+  @@map("task_plan_instances")
+}
+
+/// Organisation-wide settings for rankings and task notices (ADR 0096), set by the Super Workspace.
+model PerformanceSettings {
+  id               String   @id @default(uuid()) @map("_id")
+  tenantId         String   @unique @map("tenant_id")
+  weights          Json     @default("{}")
+  showTeamPosition Boolean  @default(true) @map("show_team_position")
+  /// ALL, MISSED_ONLY or OFF.
+  superTaskNotices String   @default("ALL") @map("super_task_notices")
+  updatedById      String?  @map("updated_by_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("performance_settings")
 }
 
 model Team {

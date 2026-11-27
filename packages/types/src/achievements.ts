@@ -46,6 +46,10 @@ export const ACHIEVEMENT_KINDS = [
   'MAJOR_DEAL',
   /** A steady working day: checked in and out, no unplanned interruption, every task due today done. */
   'CONSISTENCY',
+  /** Every requirement of a recurring task instance (today's, this week's or this month's) was reached (ADR 0096). */
+  'TASK_PLAN_DONE',
+  /** Half of everything a recurring task instance asks for is done (ADR 0096). */
+  'TASK_PLAN_HALF',
 ] as const;
 export type AchievementKind = (typeof ACHIEVEMENT_KINDS)[number];
 
@@ -61,6 +65,8 @@ export const ACHIEVEMENT_CATEGORY_OF: Record<AchievementKind, AchievementCategor
   DEALS_WON_MILESTONE: 'sales',
   MAJOR_DEAL: 'sales',
   CONSISTENCY: 'consistency',
+  TASK_PLAN_DONE: 'tasks',
+  TASK_PLAN_HALF: 'tasks',
 };
 
 /** Percentages of the daily lead target that get a small celebration before the target itself. */
@@ -115,6 +121,10 @@ export interface AchievementDetails {
   workedMinutes?: number;
   breakMinutes?: number;
   breaks?: number;
+  /** Recurring tasks (ADR 0096): the cadence of the instance, what it asked and what was done, and the streak. */
+  cadence?: 'DAY' | 'WEEK' | 'MONTH';
+  items?: { metric: string; amount: number; done: number }[];
+  streak?: number;
 }
 
 export interface AchievementRow {

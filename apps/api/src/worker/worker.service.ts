@@ -1,5 +1,6 @@
 import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
+import { TaskPlansService } from '../task-plans/task-plans.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
@@ -61,6 +62,8 @@ export interface WorkerTick {
   clientHealth: number;
   /** SampBidx chat messages tried again (ADR 0078). */
   sampbidxChat: number;
+  /** Recurring task instances made, counted, closed and reminded (ADR 0096). */
+  taskPlans: number;
 }
 
 /**
@@ -93,6 +96,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly prospects: ProspectsService,
     private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
+    private readonly taskPlans: TaskPlansService,
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
     private readonly autofill: CompanyEnrichmentService,
@@ -163,6 +167,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const pushes = await this.pushes.sendDue();
     const erasures = await this.closures.eraseDue();
     const sampbidxChat = await this.sampbidxChat.sweep();
+    const taskPlans = await this.taskPlans.sweep();
     // Console notifications once a minute: they read across every client, so not on every tick.
     // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
     let consoleNotifications = 0;
@@ -174,7 +179,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
