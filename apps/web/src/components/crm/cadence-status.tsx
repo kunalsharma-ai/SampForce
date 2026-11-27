@@ -2,7 +2,7 @@
 
 import type { ContactCadence } from '@dealflow/types';
 import { cn } from '@dealflow/ui';
-import { CircleCheck, CircleSlash, MailCheck, MailQuestion, Repeat } from 'lucide-react';
+import { CircleCheck, CircleSlash, Hourglass, MailCheck, MailQuestion, Repeat } from 'lucide-react';
 import { formatDate } from '@/lib/crm';
 import { useMarkInitialEmail } from '@/lib/follow-up-cadence';
 import { type MessageKey, useT } from '@/lib/i18n';
@@ -16,6 +16,7 @@ const STOP_REASON: Record<string, MessageKey> = {
   'a meeting took place': 'a meeting took place',
   'negotiation started': 'negotiation started',
   'an RFQ arrived': 'an RFQ arrived',
+  'other activity after the first email': 'other activity after the first email',
 };
 
 /**
@@ -33,6 +34,8 @@ export function CadenceStatus({ cadence, contactId, companyId, canMark, classNam
       case 'FRESH':
         return { icon: MailQuestion, tone: 'text-cyan-700 dark:text-cyan-300', text: t('Initial email pending') };
       case 'ACTIVE':
+        // Waiting after the first email for the follow-up period (ADR 0096).
+        if (!c.next && c.movesAt) return { icon: Hourglass, tone: 'text-sky-700 dark:text-sky-300', text: t('First email sent, follow-up 1 on {date}', { date: formatDate(c.movesAt) }) };
         return c.next
           ? { icon: Repeat, tone: c.next.overdue ? 'font-semibold text-critical' : 'text-foreground', text: t('Follow-up {step} of {total}, due {date}', { step: c.next.step, total: c.total, date: formatDate(c.next.dueAt) }) }
           : { icon: Repeat, tone: 'text-foreground', text: t('{done} of {total} follow-ups done', { done: c.completed, total: c.total }) };

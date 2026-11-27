@@ -2,11 +2,14 @@
 
 import { FOLLOW_UP_BUCKETS, type FollowUpBucket } from '@dealflow/types';
 import { cn, Skeleton } from '@dealflow/ui';
+import { ListChecks, Send } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
+import { FirstEmailPending } from '@/components/crm/first-email-pending';
 import { FollowUpItem } from '@/components/crm/follow-ups';
 import { BUCKET_LABEL } from '@/components/crm/work-labels';
 import { browserTimeZone, useFollowUpCounts, useFollowUps } from '@/lib/company-work';
+import { useFirstEmails } from '@/lib/follow-up-cadence';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { DeleteAllButton } from '@/components/delete-all-button';
 
@@ -24,7 +27,17 @@ const BUCKET_TONE: Record<FollowUpBucket, string> = {
   cancelled: 'bg-muted text-muted-foreground',
 };
 
-/** Follow-ups by category, for me, my team (everyone reporting to me) or the whole workspace. */
+/** The two parts of the page: new contacts waiting for their first email, and the follow-ups themselves. */
+const VIEWS = [
+  { value: 'first-email', label: 'First email pending', hint: 'New contacts not emailed yet', icon: Send, tone: 'from-amber-500 to-rose-600' },
+  { value: 'follow-ups', label: 'Follow-ups', hint: 'Due today and overdue', icon: ListChecks, tone: 'from-sky-500 to-indigo-600' },
+] as const satisfies readonly { value: 'first-email' | 'follow-ups'; label: MessageKey; hint: MessageKey; icon: typeof Send; tone: string }[];
+
+/**
+ * The Follow-ups section: First Email Pending (ADR 0096), new contacts whose first email has not gone out, and the
+ * follow-ups by category, for me, my team (everyone reporting to me) or the whole workspace. ?view=first-email opens
+ * the first list.
+ */
 export function FollowUpsWorkspace() {
   const t = useT();
   // The dashboard's cards open the exact list: ?bucket=overdue&scope=team (redesign R6).
@@ -33,10 +46,48 @@ export function FollowUpsWorkspace() {
   const askedBucket = params.get('bucket');
   const [scope, setScope] = React.useState<'mine' | 'team' | 'all'>(SCOPES.some((x) => x.value === askedScope) ? (askedScope as 'mine' | 'team' | 'all') : 'mine');
   const [bucket, setBucket] = React.useState<FollowUpBucket>((FOLLOW_UP_BUCKETS as readonly string[]).includes(askedBucket ?? '') ? (askedBucket as FollowUpBucket) : 'today');
+  const [view, setView] = React.useState<'first-email' | 'follow-ups'>(params.get('view') === 'first-email' ? 'first-email' : 'follow-ups');
   const counts = useFollowUpCounts({ scope });
   const list = useFollowUps({ scope, bucket });
+  // The tab shows how many first emails are pending, for the same people.
+  const firstEmail = useFirstEmails({ scope, limit: 1 });
+  const pending = firstEmail.data ? firstEmail.data.counts.PENDING + firstEmail.data.counts.NO_EMAIL + firstEmail.data.counts.INVALID_EMAIL : null;
+  const pick = (v: 'first-email' | 'follow-ups') => {
+    setView(v);
+    const url = new URL(window.location.href);
+    if (v === 'first-email') url.searchParams.set('view', 'first-email');
+    else url.searchParams.delete('view');
+    window.history.replaceState(null, '', url);
+  };
   return (
     <div className="space-y-4">
+      <div className="grid gap-2 sm:grid-cols-2" role="tablist" aria-label={t('Follow-up sections')}>
+        {VIEWS.map((v) => {
+          const Icon = v.icon;
+          const active = view === v.value;
+          const n = v.value === 'first-email' ? pending : counts.data ? counts.data.today + counts.data.overdue : null;
+          return (
+            <button
+              key={v.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              data-view={v.value}
+              onClick={() => pick(v.value)}
+              className={cn('flex min-w-0 items-center gap-3 rounded-2xl border p-3 text-start transition', active ? 'border-primary bg-surface shadow-md ring-2 ring-primary/30' : 'border-border bg-surface hover:border-primary/40')}
+            >
+              <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow', v.tone)} aria-hidden>
+                <Icon className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{t(v.label)}</span>
+                <span className="block truncate text-xs text-muted-foreground">{t(v.hint)}</span>
+              </span>
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-sm font-bold tabular-nums">{n ?? '…'}</span>
+            </button>
+          );
+        })}
+      </div>
       <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t('Whose follow-ups')}>
         {SCOPES.map((s) => (
           <button
@@ -51,6 +102,10 @@ export function FollowUpsWorkspace() {
           </button>
         ))}
       </div>
+      {view === 'first-email' ? (
+        <FirstEmailPending scope={scope} />
+      ) : (
+        <>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" role="tablist" aria-label={t('Follow-up categories')}>
         {FOLLOW_UP_BUCKETS.map((b) => (
           <button
@@ -89,6 +144,8 @@ export function FollowUpsWorkspace() {
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }

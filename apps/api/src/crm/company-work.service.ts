@@ -334,7 +334,7 @@ export class CompanyWorkService {
       if (!opts.attempt) await this.stages.interactionLogged(tx, auth, input);
       // The follow-up cadence (ADR 0083): the first email starts it, any answer from the employee stops it.
       if (input.contactId && !opts.attempt) {
-        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'INTERACTION');
+        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'LOGGED');
         else if (CADENCE_STOPPERS[input.kind]) await this.cadence.stop(tx, auth.tenantId, input.contactId, CADENCE_STOPPERS[input.kind]!);
       }
       if (input.followUpAt) {

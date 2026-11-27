@@ -134,7 +134,8 @@ export const followUpUpdateSchema = followUpInputSchema.omit({ companyId: true }
 export const followUpCompleteSchema = z.object({ outcome: optionalText(500) });
 export const followUpRescheduleSchema = z.object({ dueAt: isoDateTime, reason: optionalText(500) });
 
-const timeZone = z
+/** An IANA time zone name, checked against the runtime's list. */
+export const timeZone = z
   .string()
   .max(64)
   .refine((tz) => {

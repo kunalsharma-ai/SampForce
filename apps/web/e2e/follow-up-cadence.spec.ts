@@ -4,8 +4,8 @@ import { signUp } from './helpers';
 
 /*
  * The follow-up cadence (redesign R3, ADR 0083) in the browser: the Super Workspace sets how many follow-ups and how
- * far apart, new employees start in Fresh Email Pending, marking the initial email plans follow-up 1, each completed
- * follow-up plans the next, and a reply stops it.
+ * far apart, new employees start in Fresh Email Pending, after the initial email they wait for the follow-up period
+ * (ADR 0096) and then get follow-up 1, each completed follow-up plans the next, and a reply stops it.
  */
 
 const ORIGIN = { origin: 'http://localhost:3000' };
@@ -47,13 +47,14 @@ test('the Super Workspace sets the cadence, and each employee moves from Fresh E
   const days = form.getByLabel('Days between follow-ups');
   await expect(count).toHaveValue('5');
   await expect(days).toHaveValue('7');
-  await expect(form.locator('[data-cadence-summary]')).toContainText('the last one is due 35 days after the initial email');
+  await expect(form.getByLabel('Days after the first email before follow-up 1')).toHaveValue('7');
+  await expect(form.locator('[data-cadence-summary]')).toContainText('the last one 35 days after the first email');
   await count.fill('0');
   await expect(form.getByRole('alert')).toContainText('Choose 1 to 20 follow-ups');
   await expect(form.getByRole('button', { name: 'Save' })).toBeDisabled();
   await count.fill('3');
   await days.fill('2');
-  await expect(form.locator('[data-cadence-summary]')).toContainText('3 follow-ups, one every 2 days: the last one is due 6 days after the initial email.');
+  await expect(form.locator('[data-cadence-summary]')).toContainText('Follow-up 1 comes 2 days after the first email, then one every 2 days: 3 follow-ups, the last one 6 days after the first email.');
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form.getByRole('status')).toHaveText('Saved.');
   await expect(form).toContainText('Last changed by');
@@ -68,10 +69,11 @@ test('the Super Workspace sets the cadence, and each employee moves from Fresh E
     employees: [
       { firstName: 'Priya', lastName: 'Nair', jobTitle: 'Head of Insights', emails: [{ value: 'priya@northwind.example' }] },
       { firstName: 'Tom', lastName: 'Hale', jobTitle: 'Procurement Manager', emails: [{ value: 'tom@northwind.example' }] },
+      { firstName: 'Lena', lastName: 'Ortiz', jobTitle: 'Fieldwork Lead', emails: [{ value: 'lena@northwind.example' }] },
     ],
   });
   const companyId = lead.company.id as string;
-  const [priya, tom] = lead.employeeIds as string[];
+  const [priya, tom, lena] = lead.employeeIds as string[];
   await page.goto(`/app/companies/${companyId}`);
   const section = page.locator('#employee-activity');
   for (const name of ['Priya Nair', 'Tom Hale']) {
@@ -79,25 +81,30 @@ test('the Super Workspace sets the cadence, and each employee moves from Fresh E
     await expect(row(section, name)).toContainText('Initial email pending');
   }
 
-  // The initial email went out from Outlook: mark it, and follow-up 1 is planned 2 days later.
+  // The initial email went out from Outlook: mark it. Priya waits 2 days for an answer before follow-up 1 (ADR 0096).
   await row(section, 'Priya Nair').getByRole('button', { name: 'Mark initial email as sent' }).click();
   await expect(row(section, 'Priya Nair')).toContainText('Initial Email Sent');
-  await expect(row(section, 'Priya Nair')).toContainText('Follow-up 1 of 3, due');
+  await expect(row(section, 'Priya Nair')).toContainText('First email sent, follow-up 1 on');
+  // Lena was emailed three days ago with no answer: the period has passed, so follow-up 1 exists already.
+  await call(page, 'post', `/contacts/${lena}/initial-email`, { sentAt: new Date(Date.now() - 3 * 86_400_000).toISOString() });
+  await page.reload();
+  await expect(row(section, 'Lena Ortiz')).toContainText('Follow-up 1 of 3, due');
   await expect(row(section, 'Priya Nair').getByRole('button', { name: 'Mark initial email as sent' })).toHaveCount(0);
   await expect(row(section, 'Tom Hale')).toContainText('Initial email pending');
   await axe(page);
   await shotOf(page, section, '02-employees-cadence');
 
-  // Follow-up 1 done: Priya moves to Follow-up 1 and follow-up 2 is planned.
-  const c1 = await call(page, 'get', `/contacts/${priya}/cadence`);
+  // Follow-up 1 done: Lena moves to Follow-up 1 and follow-up 2 is planned.
+  expect((await call(page, 'get', `/contacts/${priya}/cadence`)).next).toBeNull();
+  const c1 = await call(page, 'get', `/contacts/${lena}/cadence`);
   await call(page, 'post', `/follow-ups/${c1.next.taskId}/complete`, { outcome: 'Sent the reminder' });
   await page.reload();
-  await expect(row(section, 'Priya Nair')).toContainText('Follow-up 2 of 3, due');
+  await expect(row(section, 'Lena Ortiz')).toContainText('Follow-up 2 of 3, due');
 
   // It is a real follow-up task on the Follow-ups page, for the employee owner.
   await page.goto('/app/follow-ups');
   await page.getByRole('tab', { name: /Upcoming follow-ups/ }).click();
-  await expect(page.getByText('Follow-up 2 of 3: Priya Nair').first()).toBeVisible();
+  await expect(page.getByText('Follow-up 2 of 3: Lena Ortiz').first()).toBeVisible();
   await axe(page);
   if (PREVIEW_DIR) await page.screenshot({ path: `${PREVIEW_DIR}/03-follow-ups-page.png` });
 

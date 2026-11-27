@@ -1852,6 +1852,30 @@ export const organizationHelp = {
       'يعني «فريقي» أنت وكل من يتبع لك. تظهر المواعيد بمنطقتك الزمنية.',
     ],
   },
+  'followUps.firstEmail': {
+    title: 'First email pending',
+    what: [
+      'Every new contact whose first email has not gone out, however it was created. Contacts with no email address, or one that bounced, are flagged to complete.',
+      'Cada contacto nuevo cuyo primer correo no ha salido, se haya creado como se haya creado. Los que no tienen correo, o cuyo correo rebotó, se marcan para completarlos.',
+      'Chaque nouveau contact dont le premier e-mail n’est pas parti, quelle que soit sa création. Ceux sans adresse e-mail, ou dont l’adresse a rebondi, sont à compléter.',
+      'Jeder neue Kontakt, dessen erste E-Mail noch aussteht, egal wie er angelegt wurde. Kontakte ohne oder mit unzustellbarer E-Mail-Adresse werden zum Ergänzen markiert.',
+      'كل جهة اتصال جديدة لم يُرسل إليها البريد الأول، أيًا كانت طريقة إنشائها. تُعلَّم جهات الاتصال بلا بريد إلكتروني أو التي ارتد بريدها لاستكمالها.',
+    ],
+    how: [
+      'Send first email sends from your mailbox and counts only once your provider accepts it; a failed send leaves the contact here. Filter by creation date, employee, company or status.',
+      'Enviar primer correo envía desde tu buzón y solo cuenta cuando tu proveedor lo acepta; un envío fallido deja el contacto aquí. Filtra por fecha, empleado, empresa o estado.',
+      'Envoyer le premier e-mail part de votre boîte et ne compte qu’une fois accepté par le fournisseur ; un échec laisse le contact ici. Filtrez par date, employé, entreprise ou statut.',
+      'Erste E-Mail senden verschickt aus Ihrem Postfach und zählt erst, wenn der Anbieter sie annimmt; ein Fehlschlag lässt den Kontakt hier. Filtern nach Datum, Mitarbeiter, Unternehmen oder Status.',
+      '«إرسال البريد الأول» يرسل من صندوقك ولا يُحتسب إلا بعد قبول المزود له، وإذا فشل تبقى جهة الاتصال هنا. صفِّ حسب التاريخ أو الموظف أو الشركة أو الحالة.',
+    ],
+    where: [
+      'After the first email the contact waits the follow-up period set by the Super Workspace (7 days by default). With no answer, follow-up 1 is created and it moves into Follow-ups.',
+      'Tras el primer correo el contacto espera el periodo que fijó el espacio Super (7 días por defecto). Sin respuesta, se crea el seguimiento 1 y pasa a Seguimientos.',
+      'Après le premier e-mail, le contact attend le délai fixé par l’espace Super (7 jours par défaut). Sans réponse, la relance 1 est créée et il passe dans Relances.',
+      'Nach der ersten E-Mail wartet der Kontakt die Frist des Super-Arbeitsbereichs ab (standardmäßig 7 Tage). Ohne Antwort entsteht Nachverfolgung 1 und er wechselt zu den Nachverfolgungen.',
+      'بعد البريد الأول تنتظر جهة الاتصال المدة التي حددتها مساحة المدير الأعلى (7 أيام افتراضيًا). دون رد تُنشأ المتابعة 1 وتنتقل إلى المتابعات.',
+    ],
+  },
   'page.calls': {
     title: 'Calls',
     what: [
@@ -2246,11 +2270,11 @@ export const organizationHelp = {
       'عدد المتابعات التي يحصل عليها كل جهة اتصال جديدة بعد البريد الأول، وعدد الأيام بينها. تبدأ جهات الاتصال الجديدة في مرحلة البريد الأول قيد الانتظار.',
     ],
     how: [
-      'The first email sent, synced or logged moves the contact to Initial Email Sent and plans follow-up 1. Completing one plans the next. A reply, a call or an RFQ stops it.',
-      'El primer correo enviado, sincronizado o registrado pasa el contacto a Correo inicial enviado y planifica el seguimiento 1. Completar uno planifica el siguiente. Una respuesta, una llamada o una RFQ lo detienen.',
-      'Le premier e-mail envoyé, synchronisé ou consigné passe le contact en E-mail initial envoyé et planifie la relance 1. En terminer une planifie la suivante. Une réponse, un appel ou une RFQ l’arrête.',
-      'Die erste gesendete, synchronisierte oder erfasste E-Mail setzt den Kontakt auf Erste E-Mail gesendet und plant Nachverfolgung 1. Wer eine erledigt, plant die nächste. Eine Antwort, ein Anruf oder eine RFQ stoppt sie.',
-      'أول بريد يُرسل أو يُزامن أو يُسجّل ينقل جهة الاتصال إلى البريد الأول مُرسل ويخطط للمتابعة 1. إكمال متابعة يخطط للتالية. الرد أو المكالمة أو طلب عرض السعر يوقفها.',
+      'After the first email, follow-up 1 comes once the follow-up period passes with no answer; each one done plans the next. A reply, a call or an RFQ stops it. Companies and teams can have their own period.',
+      'Tras el primer correo, el seguimiento 1 llega al pasar el periodo sin respuesta; cada uno hecho planifica el siguiente. Una respuesta, llamada o RFQ lo detiene. Empresas y equipos pueden tener su periodo.',
+      'Après le premier e-mail, la relance 1 arrive une fois le délai écoulé sans réponse ; chaque relance faite planifie la suivante. Réponse, appel ou RFQ l’arrête. Entreprises et équipes peuvent avoir leur délai.',
+      'Nach der ersten E-Mail folgt Nachverfolgung 1, wenn die Frist ohne Antwort abläuft; jede erledigte plant die nächste. Antwort, Anruf oder RFQ stoppt sie. Unternehmen und Teams können eigene Fristen haben.',
+      'بعد البريد الأول تأتي المتابعة 1 عند انقضاء المدة دون رد، وكل متابعة تُنجز تخطط للتالية. الرد أو المكالمة أو طلب عرض السعر يوقفها. يمكن للشركات والفرق أن تكون لها مدة خاصة.',
     ],
     where: [
       'Only the Super Workspace changes it. Everyone gets a morning summary of follow-ups due today and overdue.',

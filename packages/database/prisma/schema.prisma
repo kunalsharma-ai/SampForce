@@ -1084,6 +1084,11 @@ model Contact {
   initialEmailAt     DateTime?       @map("initial_email_at")
   cadenceStoppedAt   DateTime?       @map("cadence_stopped_at")
   cadenceStopReason  String?         @map("cadence_stop_reason")
+  /// How the first email was confirmed (ADR 0096): SENT, MAILBOX, LOGGED or MANUAL (INITIAL_EMAIL_SOURCES).
+  initialEmailSource String?         @map("initial_email_source")
+  /// While the contact waits after the first email: when follow-up 1 is created and it moves into Follow-ups (ADR 0096).
+  /// Cleared when it moves or the cadence stops.
+  cadenceMovesAt     DateTime?       @map("cadence_moves_at")
   createdById       String?          @map("created_by_id")
   updatedById       String?          @map("updated_by_id")
   /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
@@ -1113,6 +1118,8 @@ model Contact {
   @@index([tenantId, phoneIntl])
   @@index([tenantId, companyId])
   @@index([tenantId, matchKeys])
+  @@index([cadenceMovesAt])
+  @@index([tenantId, createdAt])
   @@index([tenantId, statusId])
   @@index([tenantId, stageId])
   /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
