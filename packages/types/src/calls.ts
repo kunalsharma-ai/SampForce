@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { CompanyLogoRef, PersonRef } from './crm';
 
 /*
- * Calls (ADR 0088) and the universal dialer (ADR 0089).
+ * Calls (ADR 0088) and the universal dialer (ADR 0101).
  *
  * A salesperson dials any company or employee through a dialer of their own. Every dialer goes through one SampForce
  * calling interface (an adapter per kind on the server), so changing phone provider never changes the Calls section:
@@ -642,6 +642,8 @@ export const callStartSchema = z
     countryCode: z.string().trim().regex(/^\+[1-9]\d{0,3}$/).nullable().optional(),
     /** null or missing: the person's default dialer (the phone app when they have none). */
     dialerId: uuidRef,
+    /** true: the phone app on this device, even when the person has a default dialer. */
+    phoneApp: z.boolean().optional(),
     /** One of the dialer's caller ids; missing: its first. */
     callerId: z.string().trim().max(40).nullable().optional(),
     /** The deal this call is about, when started from one. */
@@ -663,6 +665,7 @@ export const callFollowUpSchema = z.object({
   at: isoDateTime,
   note: optionalText(500),
 });
+export type CallFollowUpInput = z.infer<typeof callFollowUpSchema>;
 
 export const callLogSchema = z.object({
   outcome: callOutcomeKey,
@@ -786,6 +789,8 @@ export interface CallRow {
   muted: boolean;
   onHold: boolean;
   recordingActive: boolean;
+  /** The caller confirmed the other person agreed to be recorded. */
+  recordingConsent: boolean;
   error: string | null;
   by: PersonRef | null;
 }

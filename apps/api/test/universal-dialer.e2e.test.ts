@@ -17,7 +17,7 @@ const AUDIO = Buffer.from('ID3' + 'sampforce-test-audio-'.repeat(40));
 const basic = (u: string, p: string) => `Basic ${Buffer.from(`${u}:${p}`).toString('base64')}`;
 
 /**
- * The universal dialer (ADR 0089): any cloud provider with a click-to-call API, tested against a stand-in provider that
+ * The universal dialer (ADR 0101): any cloud provider with a click-to-call API, tested against a stand-in provider that
  * behaves like Exotel (form request, Basic keys, status callbacks, recordings) and a generic OAuth 2 provider.
  */
 describe('universal dialer', () => {
@@ -189,6 +189,10 @@ describe('universal dialer', () => {
     // A typed number without its country code gets the dialer's.
     const typed = (await api(rep).post('/calls', { numberSource: 'OTHER', number: '098111 99999' }).expect(201)).body as CallStarted;
     expect(typed.call.number).toBe('+91 98111 99999');
+    // Choosing the phone app uses it, even with a default dialer.
+    const phone = (await api(rep).post('/calls', { numberSource: 'OTHER', number: '+44 20 7946 0018', phoneApp: true }).expect(201)).body as CallStarted;
+    expect(phone.call.dialer).toMatchObject({ id: null, kind: 'LINK' });
+    await api(rep).del(`/calls/${phone.call.id}`).expect(204);
     // The provider's own failure fails the call, recorded as such, and the dialer shows it.
     await api(rep).put(`/calls/dialers/${exotel.id}`, { ...exotelInput(), config: { ...exotelInput().config, apiUser: 'nobody' } }).expect(200);
     const refused = await api(rep).post('/calls', { companyId, contactId: priyaId, numberSource: 'EMPLOYEE' }).expect(400);

@@ -77,7 +77,7 @@ export class TwilioClient {
     const x = (v: string) => v.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
     const leg = (name: string) => `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=${name}`;
     const party = leg('party');
-    // Recording (ADR 0089): both sides, from when the person answers; Twilio posts the recording to leg=recording.
+    // Recording (ADR 0101): both sides, from when the person answers; Twilio posts the recording to leg=recording.
     const record = input.record ? ` record="record-from-answer-dual" recordingStatusCallback="${x(leg('recording'))}" recordingStatusCallbackEvent="completed"` : '';
     const twiml =
       `<Response><Say>Connecting your SampForce call.</Say>` +

@@ -999,7 +999,7 @@ model Company {
   /// Normalised keys for duplicate checks, kept by the API: lower-case name without legal suffixes, domains,
   /// lower-case emails, last ten phone digits, LinkedIn paths.
   nameKey           String?   @map("name_key")
-  /// Calls (ADR 0089): the last call, how many, and the company number flagged for checking (wrong number).
+  /// Calls (ADR 0101): the last call, how many, and the company number flagged for checking (wrong number).
   lastCallAt        DateTime? @map("last_call_at")
   lastCallOutcome   String?   @map("last_call_outcome")
   callCount         Int       @default(0) @map("call_count")
@@ -1090,7 +1090,7 @@ model Contact {
   rfqContributorById String?         @map("rfq_contributor_by_id")
   /// The follow-up cadence (ADR 0083): when the first email reached the employee, and when and why it stopped.
   initialEmailAt     DateTime?       @map("initial_email_at")
-  /// Calls (ADR 0089): the last call, how many, a number flagged for checking (wrong number), and not interested from a call.
+  /// Calls (ADR 0101): the last call, how many, a number flagged for checking (wrong number), and not interested from a call.
   lastCallAt         DateTime?       @map("last_call_at")
   lastCallOutcome    String?         @map("last_call_outcome")
   callCount          Int             @default(0) @map("call_count")
@@ -5619,7 +5619,7 @@ model Dialer {
   tenantId               String    @map("tenant_id")
   userId                 String    @map("user_id")
   name                   String
-  /// LINK, API, TWILIO, SIP or SIM (ADR 0089)
+  /// LINK, API, TWILIO, SIP or SIM (ADR 0101)
   kind                   String
   /// The DIALER_PROVIDERS key it was set up from (phone, exotel, api, sip-browser...).
   provider               String?
@@ -5716,7 +5716,7 @@ model PhoneCall {
   @@map("phone_calls")
 }
 
-/// A call's recording (ADR 0089): fetched from the provider, uploaded, or recorded in the browser. Audio is kept here
+/// A call's recording (ADR 0101): fetched from the provider, uploaded, or recorded in the browser. Audio is kept here
 /// (like company files) or, for a provider that keeps it, fetched from the provider when played.
 model CallRecording {
   id           String    @id @default(uuid()) @map("_id")
@@ -5745,7 +5745,7 @@ model CallRecording {
   @@map("call_recordings")
 }
 
-/// A dialer's integration log: tests, calls placed and ended, events received, recordings fetched (ADR 0089).
+/// A dialer's integration log: tests, calls placed and ended, events received, recordings fetched (ADR 0101).
 model DialerLog {
   id          String   @id @default(uuid()) @map("_id")
   tenantId    String   @map("tenant_id")

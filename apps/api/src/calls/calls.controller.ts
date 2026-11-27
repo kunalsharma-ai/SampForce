@@ -326,7 +326,7 @@ export class CallsController {
 }
 
 /**
- * A cloud dialer's events address (ADR 0089): the provider posts call status, talk time, recordings and incoming calls
+ * A cloud dialer's events address (ADR 0101): the provider posts call status, talk time, recordings and incoming calls
  * here, as JSON or a form. The secret part of the address proves it is the dialer's provider.
  */
 @Controller('calls/events')

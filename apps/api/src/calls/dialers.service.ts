@@ -29,14 +29,14 @@ import { configOf, type DialContext, DialerAdapters, type LogFn, signWebhook } f
 export const PHONE_APP = DIALER_PRESETS[0];
 export const callError = (message: string) => new BadRequestException({ code: 'CALL_ERROR', message });
 
-/** Kinds people can add now. SIP (browser phone) and SIM (phone app) come with part 2 of ADR 0089. */
+/** Kinds people can add now. SIP (browser phone) and SIM (phone app) come with part 2 of ADR 0101. */
 export const ADDABLE_KINDS = new Set(['LINK', 'API', 'TWILIO']);
 
 /** A sample call, for testing a dialer without calling anyone. */
 const SAMPLE = { phone: '+44 20 7946 0018', phoneE164: '+442079460018', phoneDigits: '442079460018', phoneNational: '2079460018', companyName: 'Sample Company', companyPhone: '+44 20 7946 0000', employeeName: 'Sam Sample', designation: 'Buyer', email: 'sam@example.com', employeePhone: '+44 20 7946 0018', callId: '00000000-0000-4000-8000-000000000000', companyUrl: null, providerCallId: 'sample' };
 
 /**
- * Dialers (ADR 0088, universal dialer ADR 0089): each person's dialers with their settings, sealed secrets, connection
+ * Dialers (ADR 0088, universal dialer ADR 0101): each person's dialers with their settings, sealed secrets, connection
  * status, test and integration log. Placing calls goes through the adapters (dialer-adapters.ts).
  */
 @Injectable()

@@ -22,7 +22,7 @@ import { PrismaService } from '../common/prisma.service';
 import { TwilioClient, TwilioError, type TwilioKeys } from '../apps/twilio';
 
 /*
- * The universal dialer's adapters (ADR 0089). Every dialer kind implements one interface, so the Calls section asks
+ * The universal dialer's adapters (ADR 0101). Every dialer kind implements one interface, so the Calls section asks
  * "place this call", "end it", "test the connection" the same way whatever the provider is:
  * - LinkAdapter: builds the link the browser opens (and posts the signed webhook, when set).
  * - ApiAdapter: an HTTP request built from the dialer's settings, with Basic, Bearer, header-key or OAuth 2 sign-in.

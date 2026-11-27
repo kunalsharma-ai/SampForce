@@ -7,7 +7,7 @@ import { ApiAdapter, DialerAdapters, TwilioAdapter } from './dialer-adapters';
 import { DialersService } from './dialers.service';
 
 /**
- * The Calls section (ADR 0088) and the universal dialer (ADR 0089): dialers of any provider through one adapter
+ * The Calls section (ADR 0088) and the universal dialer (ADR 0101): dialers of any provider through one adapter
  * interface, placing and logging calls, provider events, recordings and the call history.
  */
 @Module({

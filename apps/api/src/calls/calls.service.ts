@@ -52,7 +52,7 @@ const LIVE: CallStatus[] = ['OPEN', 'REQUESTED', 'RINGING', 'IN_PROGRESS', 'ON_H
 const TWILIO_STATUS: Record<string, CallStatus> = { queued: 'RINGING', initiated: 'RINGING', ringing: 'RINGING', 'in-progress': 'IN_PROGRESS', answered: 'IN_PROGRESS', completed: 'ENDED', busy: 'FAILED', 'no-answer': 'FAILED', failed: 'FAILED', canceled: 'FAILED' };
 
 /**
- * The Calls section (ADR 0088, universal dialer ADR 0089): the call card with everything about the company and employee
+ * The Calls section (ADR 0088, universal dialer ADR 0101): the call card with everything about the company and employee
  * being called, placing a call through the chosen dialer's adapter, in-call controls the dialer supports, logging the
  * outcome (with the follow-up it suggests, and the company and contact updated), the provider's status and recording
  * events, recordings, favourites, outcomes and the call history. A call is always the caller's own; managers see their
@@ -324,7 +324,9 @@ export class CallsService {
       const d = input.companyId || input.contactId ? await this.detailsIn(tx, auth, input) : null;
       const dialer = input.dialerId
         ? await this.dialers.own(tx, auth, input.dialerId)
-        : await tx.dialer.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, deletedAt: null, isDefault: true, active: true } });
+        : input.phoneApp
+          ? null
+          : await tx.dialer.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, deletedAt: null, isDefault: true, active: true } });
       if (dialer && !dialer.active) throw callError(`${dialer.name} is switched off. Switch it on in Dialer settings, or choose another dialer.`);
       const config = dialer ? configOf(dialer) : null;
       const written = input.numberSource === 'EMPLOYEE' ? d?.employee?.phone : input.numberSource === 'COMPANY' ? d?.company?.phone : input.number;
@@ -1031,6 +1033,7 @@ export class CallsService {
         muted: c.muted,
         onHold: c.onHold,
         recordingActive: c.recordingActive,
+        recordingConsent: c.recordingConsent,
         error: c.error,
         by: people.get(c.userId) ?? null,
       };
