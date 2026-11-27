@@ -297,13 +297,17 @@ test('the AI email assistant writes for your own organisation from its sales pro
 test('Find people lists the people a company publishes and adds the ticked ones as employees', async ({ page }) => {
   test.setTimeout(90_000);
   await signUp(page, 'Autofill People Org');
-  const res = await page.request.post('/api/v1/companies', { data: { name: 'Ashgrove Research', website: 'https://ashgrove-research.example' }, headers: ORIGIN });
+  const res = await page.request.post('/api/v1/companies', { data: { name: 'Ashgrove Research', website: 'https://ashgrove-research.example', employeeCount: 21 }, headers: ORIGIN });
   expect(res.ok(), await res.text()).toBe(true);
   const { id } = await res.json();
 
   await page.goto(`/app/companies/${id}`);
   const employees = page.locator('#company-employees');
-  await employees.getByRole('button', { name: 'Find people' }).click();
+  // The Employees tile in Business Information is the company's headcount; it leads to the people themselves.
+  const info = page.locator('#business-information');
+  await expect(info.getByText('Company headcount')).toBeVisible();
+  await expect(info.getByRole('button', { name: 'View 0 saved employees' })).toBeVisible();
+  await info.getByRole('button', { name: 'Find people' }).click();
   const dialog = page.getByRole('dialog', { name: 'Find people at Ashgrove Research' });
   const found = dialog.getByRole('group', { name: /People found/ });
   await expect(found).toBeVisible({ timeout: 30_000 });
@@ -321,6 +325,9 @@ test('Find people lists the people a company publishes and adds the ticked ones 
   await page.keyboard.press('Escape');
   await expect(employees.getByRole('row').filter({ hasText: /Marsh|Lowe|Desai/ })).toHaveCount(count);
   await shot(page, '07-employees-added', employees);
+  await info.getByRole('button', { name: `View ${count} saved employees` }).click();
+  await expect(employees).toBeInViewport();
+  await shot(page, '08-headcount-tile', info.getByText('Company headcount'));
   const rows = (await (await page.request.get(`/api/v1/companies/${id}/employees`)).json()) as { remarks: string | null }[];
   expect(rows.length).toBe(count);
   for (const r of rows) expect(r.remarks).toMatch(/^Found by auto-fill on https:\/\/ashgrove-research\.example\//);

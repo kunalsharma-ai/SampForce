@@ -398,6 +398,7 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
   const [status, setStatus] = React.useState('');
   const [sort, setSort] = React.useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false });
   useCompanyAction('addEmployee', canWrite ? () => setAdding(true) : null);
+  useCompanyAction('findPeople', canWrite && enrichment ? () => setFinding(true) : null);
   const statuses = [...new Map((rows.data ?? []).filter((r) => r.status).map((r) => [r.status!.id, r.status!])).values()];
   const list = React.useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -463,7 +464,14 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
         {rows.isPending ? (
           <Skeleton className="h-16" />
         ) : !rows.data?.length ? (
-          <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
+            {canWrite && enrichment && (
+              <Button size="sm" variant="outline" onClick={() => setFinding(true)}>
+                <UserSearch aria-hidden /> {t('Find people on their website')}
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="relative -mx-2 overflow-x-auto">
             <table className={cn('w-full text-sm', compact ? 'min-w-[760px]' : 'min-w-[960px]')} aria-label={t('Employees / POCs')}>
