@@ -49,6 +49,8 @@ import { TeamStatusBoard } from '@/components/availability/team-status-board';
 import { count, money } from '@/components/command-center/tier-parts';
 import { STAGE_CHIP, stageStyle } from '@/components/crm/stage-chip';
 import { InfoTip } from '@/components/info-tip';
+import { EmployeeOfMonthCard } from '@/components/recognition/employee-of-month-card';
+import { PipDashboardCard } from '@/components/recognition/pip-card';
 import { ErrorText } from '@/components/revenue/tabs';
 import { useAvailabilityTeam } from '@/lib/availability';
 import { useFollowUps } from '@/lib/company-work';
@@ -90,6 +92,8 @@ export function RoleDashboard({ level }: { level: Level }) {
   return (
     <div className="space-y-5" data-role-dashboard={level}>
       <Greeting level={level} picker={picker} />
+      <PipDashboardCard />
+      <EmployeeOfMonthCard manageLink={level !== 'EXECUTIVE'} own={level !== 'SUPER'} />
       {q.isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (

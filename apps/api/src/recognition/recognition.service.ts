@@ -20,6 +20,7 @@ import {
 } from '@dealflow/types';
 import { AchievementsService } from '../achievements/achievements.service';
 import { AuditService } from '../audit/audit.service';
+import { tr } from '../common/request-language';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -561,7 +562,7 @@ export class RecognitionService {
     const teamNode = teamNodeId ? dir.org.byId.get(teamNodeId) : null;
     const canSelect = !award && (teamNodeId ? dir.isSuper || (dir.me.node.id === teamNodeId && dir.policy.managersSelectTeamWinner) : dir.isSuper) && candidates.length > 0;
     let notice: string | null = null;
-    if (!award && candidates.length > 1 && candidates[0]!.tiedWithNext) notice = `Tie: ${candidates.filter((c) => c.rank === 1).map((c) => c.target.person.name).join(' and ')} have the same ranking.`;
+    if (!award && candidates.length > 1 && candidates[0]!.tiedWithNext) notice = tr('Tie: {names} have the same ranking. Choose the winner.', { names: candidates.filter((c) => c.rank === 1).map((c) => c.target.person.name).join(', ') });
     return {
       scope: teamNodeId ? 'TEAM' : 'ORGANISATION',
       team: teamNode ? (refOf(teamNode, dir.org, dir.orgName) as WorkspaceRef) : null,
@@ -582,7 +583,7 @@ export class RecognitionService {
     const awards = existing ? [existing] : [];
     if (existing) return this.scope(tx, dir, counter, evaluated, awards, null, actorId ?? '');
     const candidates = await this.rank(counter, dir, evaluated.filter((e) => this.inScope(dir, e, null)));
-    if (!candidates.length) return { scope: 'ORGANISATION', team: null, award: null, candidates: [], canSelect: false, notice: 'Nobody is eligible yet, so there is no Employee of the Month to name.' };
+    if (!candidates.length) return { scope: 'ORGANISATION', team: null, award: null, candidates: [], canSelect: false, notice: tr('Nobody is eligible yet, so there is no Employee of the Month to name.') };
     let top = candidates[0]!;
     if (top.tiedWithNext) {
       const tied = candidates.filter((c) => c.rank === 1);
@@ -598,7 +599,7 @@ export class RecognitionService {
   }
 
   private async tie(tx: TenantTx, dir: Directory, month: string, tied: RecognitionCandidate[], candidates: RecognitionCandidate[]): Promise<RecognitionScopeView> {
-    const names = tied.map((c) => c.target.person.name).join(' and ');
+    const names = tied.map((c) => c.target.person.name).join(', ');
     await this.notifications.send(tx, dir.org.root.node.tenantId, dir.superAdmins, {
       type: 'recognition.tie',
       title: `Employee of the Month ${month}: a tie to decide`,
@@ -608,7 +609,7 @@ export class RecognitionService {
       priority: 'HIGH',
       eventId: `recognition:tie:${month}:${tied.map((c) => c.target.id).sort().join(',')}`,
     });
-    return { scope: 'ORGANISATION', team: null, award: null, candidates, canSelect: dir.isSuper, notice: `Tie: ${names} have the same ranking.` };
+    return { scope: 'ORGANISATION', team: null, award: null, candidates, canSelect: dir.isSuper, notice: tr('Tie: {names} have the same ranking. Choose the winner.', { names }) };
   }
 
   /** Stores an award with the figures it was decided on, celebrates it, and tells the people concerned. */

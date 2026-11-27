@@ -567,6 +567,7 @@ export class PipsService {
       requiredLevel: plan.requiredLevel,
       goals: progress,
       requiredPercent: plan.requiredPercent,
+      currency: await ctx.counter.measures.baseCurrency(),
       percent: open ? averagePercent(progress, true) : plan.percent,
       goalsMet: open ? progress.filter((g) => g.met).length : plan.goalsMet,
       startsOn: plan.startsOn,

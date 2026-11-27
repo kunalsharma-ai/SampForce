@@ -1,7 +1,7 @@
 'use client';
 
 import type { AchievementLevel, AchievementRow } from '@dealflow/types';
-import { Briefcase, Building2, Check, Crown, Gem, Handshake, Leaf, ListChecks, Medal, Send, Sparkles, Target, Trophy, UserPlus } from 'lucide-react';
+import { Award, Briefcase, Building2, Check, ClipboardCheck, Crown, Gem, Handshake, Leaf, ListChecks, Medal, Send, Sparkles, Target, Trophy, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ConfettiStyle } from './confetti';
 
@@ -71,6 +71,12 @@ export function sceneFor(a: Pick<AchievementRow, 'kind' | 'level' | 'details'>):
       return spec('sweep', 'card', a.level === 'DAILY' ? 'light' : 'ribbons', 8000, ListChecks);
     case 'TASK_PLAN_HALF':
       return spec('milestone', 'compact', null, 5500, Target);
+    case 'EMPLOYEE_OF_THE_MONTH':
+      return spec('target', 'stage', 'gold', 11_000, Crown);
+    case 'RECOGNITION_ELIGIBLE':
+      return spec('medal', 'card', 'light', 8000, Award);
+    case 'PIP_COMPLETED':
+      return spec('prospect', 'card', 'ribbons', 8500, ClipboardCheck);
   }
 }
 
@@ -367,6 +373,15 @@ export function SceneArt({ a, still }: { a: Pick<AchievementRow, 'kind' | 'level
         </div>
       );
     }
+    case 'EMPLOYEE_OF_THE_MONTH':
+      return <MedalScene count={100} still={still} />;
+    case 'RECOGNITION_ELIGIBLE':
+    case 'PIP_COMPLETED':
+      return (
+        <div className="grid place-items-center py-1">
+          <ProgressRing percent={Math.min(100, d.percent ?? 100)} from={60} still={still} label={`${Math.round(d.percent ?? 100)}%`} />
+        </div>
+      );
   }
 }
 

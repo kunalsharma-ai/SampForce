@@ -114,7 +114,19 @@ export const recognition = {
     'In Anerkennung herausragender Leistung: {achievement} % der Auszeichnungsziele und ein Leistungswert von {score}.',
     'تقديرًا لأداء متميز: {achievement}% من أهداف التكريم ودرجة أداء {score}.',
   ],
-  'Reward: {reward}': ['Recompensa: {reward}', 'Récompense : {reward}', 'Prämie: {reward}', 'المكافأة: {reward}'],
+  'Tie: {names} have the same ranking. Choose the winner.': [
+    'Empate: {names} tienen la misma clasificación. Elige al ganador.',
+    'Égalité : {names} ont le même classement. Choisissez le gagnant.',
+    'Gleichstand: {names} haben dasselbe Ranking. Wählen Sie den Gewinner.',
+    'تعادل: {names} لديهم الترتيب نفسه. اختر الفائز.',
+  ],
+  'Nobody is eligible yet, so there is no Employee of the Month to name.': [
+    'Todavía nadie es elegible, así que no hay Empleado del Mes que nombrar.',
+    'Personne n’est encore éligible, il n’y a donc pas d’Employé du mois à désigner.',
+    'Noch niemand ist berechtigt, daher gibt es keinen Mitarbeiter des Monats zu benennen.',
+    'لا أحد مؤهل بعد، لذا لا يوجد موظف الشهر لتسميته.',
+  ],
+  'Reward: {reward}': ['Premio: {reward}', 'Récompense : {reward}', 'Belohnung: {reward}', 'المكافأة: {reward}'],
   'Selected automatically by ranking': ['Seleccionado automáticamente por clasificación', 'Sélectionné automatiquement selon le classement', 'Automatisch nach Ranking ausgewählt', 'اختير تلقائيًا حسب الترتيب'],
   'Selected by': ['Seleccionado por', 'Sélectionné par', 'Ausgewählt von', 'اختاره'],
   'Issued with SampForce from the organisation’s recorded results. Reference {id}': [

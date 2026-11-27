@@ -473,6 +473,8 @@ export interface PipRow {
   requiredLevel: string | null;
   goals: GoalProgress[];
   requiredPercent: number;
+  /** The organisation's currency, for money goals. */
+  currency: string;
   /** Average of the goals' percentages, each up to 100. */
   percent: number;
   goalsMet: number;
