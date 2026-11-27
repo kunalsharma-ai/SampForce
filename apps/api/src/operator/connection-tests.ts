@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { pingWebsite } from '../website-enquiries/website-api';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { explainNetworkError, hostAndPort, networkCode } from '../common/network-error';
 import { publicFetch } from '../common/net-guard';
@@ -202,6 +203,16 @@ export class ConnectionTests {
     const res = await publicFetch(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT) }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
     if (res.status >= 200 && res.status < 400) return `The invite link opens (HTTP ${res.status}).`;
     throw new Error(`The invite link answered HTTP ${res.status}. Copy it again from Zapier's developer platform.`);
+  }
+
+  /** The website's GET /ping (ADR 0095): the key's name and rights. Nothing is read or changed. */
+  async websiteEnquiries(): Promise<string> {
+    const ping = await pingWebsite(this.env);
+    const needed = ['leads:read', 'leads:write'].filter((s) => !ping.key.scopes.includes(s));
+    const name = ping.key.name ? `"${ping.key.name}" (${ping.key.prefix}...)` : 'The key';
+    return needed.length
+      ? `${name} works but lacks ${needed.join(' and ')}: ${needed.includes('leads:read') ? 'leads cannot be read' : 'statuses cannot be sent back to the website'}. Rights: ${ping.key.scopes.join(', ') || 'none'}.`
+      : `${name} works with the rights ${ping.key.scopes.join(', ')}.`;
   }
 
   /** GET /v1/balance reads the account balance: no charge, no customer, no change. */

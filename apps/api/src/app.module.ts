@@ -23,6 +23,7 @@ import { CallsModule } from './calls/calls.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
+import { WebsiteEnquiriesModule } from './website-enquiries/website-enquiries.module';
 import { OperatorModule } from './operator/operator.module';
 import { MobileModule } from './mobile/mobile.module';
 import { MobileRecordsModule } from './mobile/records/mobile-records.module';
@@ -39,7 +40,6 @@ import { SequencesModule } from './sequences/sequences.module';
 import { ExtensionModule } from './extension/extension.module';
 import { FinderModule } from './finder/finder.module';
 import { GamificationModule } from './gamification/gamification.module';
-import { VisitorsModule } from './visitors/visitors.module';
 import { ProspectsModule } from './prospects/prospects.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
@@ -108,7 +108,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     ExtensionModule,
     FinderModule,
     GamificationModule,
-    VisitorsModule,
+    WebsiteEnquiriesModule,
     ProspectsModule,
     IntelligenceModule,
     PortalModule,

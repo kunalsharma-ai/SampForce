@@ -8,7 +8,7 @@ const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
 const CROSS_SITE = 'dealflow:crossSite';
 
 /**
- * Marks public, cookie-less endpoints that other websites may call (the visitor tracking script). They read no
+ * Marks public, cookie-less endpoints that other origins may call (the browser extension's sign-in). They read no
  * session, so cross-site requests cannot act as a signed-in user; they check their own allowed origins instead.
  */
 export const CrossSite = () => SetMetadata(CROSS_SITE, true);

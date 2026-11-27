@@ -14,7 +14,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
 import { GamificationService } from '../gamification/gamification.service';
-import { VisitorsService } from '../visitors/visitors.service';
+import { WebsiteEnquirySync } from '../website-enquiries/website-enquiry-sync.service';
 import { ProspectsService } from '../prospects/prospects.service';
 import { DealHealthService } from '../intelligence/deal-health.service';
 import { SequenceRunner } from '../sequences/sequence-runner.service';
@@ -40,8 +40,8 @@ export interface WorkerTick {
   sequences: number;
   /** Badges awarded by the hourly gamification sweep. */
   badges: number;
-  /** Website tracking rows deleted under each workspace's retention period. */
-  visitorRetention: number;
+  /** Website enquiries pulled from the website API, and SampForce statuses sent back to it (ADR 0095). */
+  websiteEnquiries: number;
   prospectImports: number;
   /** Zoom transcripts imported into meeting notes. */
   zoomTranscripts: number;
@@ -89,7 +89,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly billing: BillingService,
     private readonly sequences: SequenceRunner,
     private readonly gamification: GamificationService,
-    private readonly visitors: VisitorsService,
+    private readonly websiteEnquiries: WebsiteEnquirySync,
     private readonly prospects: ProspectsService,
     private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
@@ -153,7 +153,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const billing = await this.billing.runDue();
     const sequences = await this.sequences.runDue();
     const badges = await this.gamification.sweep();
-    const visitorRetention = await this.visitors.sweep();
+    const websiteEnquiries = await this.websiteEnquiries.sweep();
     const prospectImports = await this.prospects.sweep();
     const zoomTranscripts = await this.zoom.importDue();
     const reminders = await this.reminders.sweep();
@@ -174,7 +174,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

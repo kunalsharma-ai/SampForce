@@ -38,7 +38,7 @@ export const FEATURE_KEYS = [
   'browser_extension',
   'marketing',
   'campaigns',
-  'website_visitors',
+  'website_enquiries',
   'meeting_intelligence',
   'voice_notes',
   // Intelligence
@@ -169,7 +169,9 @@ export const FEATURES: FeatureDef[] = [
   { key: 'browser_extension', group: 'Engage', label: 'Browser extension', description: 'The SampForce browser extension for capturing leads from web pages.', defaultFrom: 'launch', paths: [] },
   { key: 'marketing', group: 'Engage', label: 'Segments and lead forms', description: 'Segments and hosted lead forms with recorded consent.', defaultFrom: 'launch', paths: ['/app/marketing'] },
   { key: 'campaigns', group: 'Engage', label: 'Campaigns', description: 'Campaign tracking with first-touch attribution.', defaultFrom: 'launch', paths: ['/app/campaigns'] },
-  { key: 'website_visitors', group: 'Engage', label: 'Website visitors', description: 'Consent-aware website tracking and enquiries.', defaultFrom: 'professional', paths: ['/app/website-visitors'] },
+  // ADR 0095: replaces Website visitors (ADR 0029, removed). The Console Admin switches it on for the organisation that
+  // receives the company website's enquiries (Providers > Website enquiries does it when it names the workspace).
+  { key: 'website_enquiries', group: 'Engage', label: 'Website enquiries', description: 'Every enquiry, download form, live chat lead, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.', defaultFrom: 'free', paths: ['/app/website-enquiries'], since: 6, optIn: true },
   { key: 'meeting_intelligence', group: 'Engage', label: 'Meeting recordings', description: 'Meeting recordings, transcripts and AI summaries.', defaultFrom: 'growth', paths: ['/app/meetings/records'] },
   { key: 'voice_notes', group: 'Engage', label: 'Voice to CRM', description: 'Voice notes turned into suggested CRM updates.', defaultFrom: 'professional', paths: [] },
 
@@ -245,7 +247,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
-export const FEATURE_CATALOG_VERSION = 5;
+export const FEATURE_CATALOG_VERSION = 6;
 
 /** Subfeatures of a feature, in catalogue order. */
 export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {

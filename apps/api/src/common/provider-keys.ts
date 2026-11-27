@@ -47,6 +47,8 @@ export const MANAGED_KEYS = {
   MAIL_FROM: { secret: false },
   ZAPIER_INVITE_URL: { secret: false },
   EXPO_ACCESS_TOKEN: { secret: true },
+  WEBSITE_API_KEY: { secret: true },
+  WEBSITE_WEBHOOK_SECRET: { secret: true },
   STRIPE_SECRET_KEY: { secret: true },
   STRIPE_WEBHOOK_SECRET: { secret: true },
   RAZORPAY_KEY_ID: { secret: true },
@@ -71,6 +73,8 @@ export const MANAGED_KEYS = {
   RAZORPAY_PLANS: { secret: false },
   PRICING_PUBLISHED: { secret: false },
   SALES_CONTACT_EMAIL: { secret: false },
+  WEBSITE_API_BASE_URL: { secret: false },
+  WEBSITE_ENQUIRY_WORKSPACE: { secret: false },
 } as const satisfies Partial<Record<keyof ApiEnv, { secret: boolean }>>;
 
 export type ManagedKeyName = keyof typeof MANAGED_KEYS;

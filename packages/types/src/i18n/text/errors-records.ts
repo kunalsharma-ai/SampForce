@@ -2,7 +2,7 @@ import type { TextTable } from '../catalogue';
 
 /**
  * API error messages about records: the "… not found." sentences, CRM records, pipelines, territories, imports,
- * reports, revenue, gamification, marketing, visitors, automation and the AI features.
+ * reports, revenue, gamification, marketing, automation and the AI features.
  */
 export const errorsRecords = {
   // "… not found." (written whole, so each language can use its own grammar)
@@ -36,7 +36,6 @@ export const errorsRecords = {
   'Dashboard not found.': ['No se encontró el panel.', 'Tableau de bord introuvable.', 'Dashboard nicht gefunden.', 'لم يُعثر على لوحة المعلومات.'],
   'Campaign not found.': ['No se encontró la campaña.', 'Campagne introuvable.', 'Kampagne nicht gefunden.', 'لم يُعثر على الحملة.'],
   'Webhook not found.': ['No se encontró el webhook.', 'Webhook introuvable.', 'Webhook nicht gefunden.', 'لم يُعثر على الويب هوك.'],
-  'Visitor not found.': ['No se encontró el visitante.', 'Visiteur introuvable.', 'Besucher nicht gefunden.', 'لم يُعثر على الزائر.'],
   'Territory not found.': ['No se encontró el territorio.', 'Territoire introuvable.', 'Gebiet nicht gefunden.', 'لم يُعثر على المنطقة.'],
   'Request not found.': ['No se encontró la solicitud.', 'Demande introuvable.', 'Anfrage nicht gefunden.', 'لم يُعثر على الطلب.'],
   'Price book not found.': ['No se encontró la lista de precios.', 'Grille tarifaire introuvable.', 'Preisliste nicht gefunden.', 'لم يُعثر على قائمة الأسعار.'],
@@ -132,7 +131,7 @@ export const errorsRecords = {
   'A team challenge needs at least one team with members. Add teams in Settings, Teams first.': ['Un reto por equipos necesita al menos un equipo con miembros. Añade primero equipos en Configuración, Equipos.', 'Un défi d’équipe nécessite au moins une équipe avec des membres. Ajoutez d’abord des équipes dans Paramètres, Équipes.', 'Eine Team-Challenge braucht mindestens ein Team mit Mitgliedern. Fügen Sie zuerst unter Einstellungen, Teams Teams hinzu.', 'يحتاج تحدي الفرق إلى فريق واحد على الأقل يضم أعضاء. أضف فرقًا أولًا من الإعدادات، الفرق.'],
   'This competition is already cancelled.': ['Esta competición ya está cancelada.', 'Cette compétition est déjà annulée.', 'Dieser Wettbewerb ist bereits abgesagt.', 'أُلغيت هذه المنافسة بالفعل.'],
 
-  // Marketing and website visitors
+  // Marketing
   'A campaign with this name already exists.': ['Ya existe una campaña con este nombre.', 'Une campagne portant ce nom existe déjà.', 'Eine Kampagne mit diesem Namen existiert bereits.', 'توجد حملة بهذا الاسم بالفعل.'],
   'A segment with this name already exists.': ['Ya existe un segmento con este nombre.', 'Un segment portant ce nom existe déjà.', 'Ein Segment mit diesem Namen existiert bereits.', 'توجد شريحة بهذا الاسم بالفعل.'],
   'Your role cannot read leads.': ['Tu rol no puede leer leads.', 'Votre rôle ne peut pas lire les prospects.', 'Ihre Rolle kann keine Leads lesen.', 'لا يمكن لدورك قراءة العملاء المحتملين.'],

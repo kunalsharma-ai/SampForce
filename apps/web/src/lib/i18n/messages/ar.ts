@@ -52,7 +52,7 @@ export const ar: Messages = {
   'module.sequences': 'تسلسلات البريد',
   'module.finder': 'البحث عن البريد',
   'module.prospects': 'قوائم العملاء المستهدفين',
-  'module.website-visitors': 'زوار الموقع',
+  'module.website-enquiries': 'استفسارات الموقع',
   'module.meetings': 'الاجتماعات',
   'module.agents': 'وكلاء الذكاء الاصطناعي',
   'module.automation': 'استوديو الأتمتة',

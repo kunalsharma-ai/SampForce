@@ -90,7 +90,6 @@ export const LOOKUP_FIELDS = {
   ScimToken: { fields: ['tokenHash'], extra: { revokedAt: null } },
   SsoConnection: { fields: ['loginSlug'], extra: { enabled: true } },
   Subscription: { fields: ['providerCustomerId', 'providerSubscriptionId'], extra: {} },
-  VisitorSettings: { fields: ['siteKey'], extra: {} },
 } as const;
 export type LookupModel = keyof typeof LOOKUP_FIELDS;
 
@@ -115,7 +114,7 @@ const WORKER_ALL = new Set([
 // ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
-const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'VisitorSettings', 'ZoomMeeting']);
+const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'ZoomMeeting']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

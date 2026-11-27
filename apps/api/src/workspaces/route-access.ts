@@ -24,7 +24,7 @@ export const RESOURCE_FEATURE: Partial<Record<string, FeatureKey>> = {
   reports: 'reports',
   sequences: 'sequences',
   gamification: 'gamification',
-  visitors: 'website_visitors',
+  enquiries: 'website_enquiries',
   prospects: 'prospect_lists',
   ai: 'ai_assistant',
   automation: 'automation',

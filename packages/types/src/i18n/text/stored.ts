@@ -2,7 +2,7 @@ import type { TextTable } from '../catalogue';
 
 /**
  * Text the API stores in English when something happens and shows later in the reader's language (ADR 0052):
- * notification titles and bodies, lead score and deal and customer health signals, website visitor signals, and why
+ * notification titles and bodies, lead score and deal and customer health signals, and why
  * a sequence paused. Values carried in the stored text (names, references, dates) are matched by the placeholders.
  */
 export const stored = {
@@ -150,15 +150,6 @@ export const stored = {
     '{n} Verkaufschancen mit ihnen in den letzten 90 Tagen verloren.',
     '{n} صفقات معهم خُسرت خلال آخر 90 يومًا.',
   ],
-
-  // Website visitor signals
-  'Sent an enquiry': ['Envió una consulta', 'A envoyé une demande', 'Hat eine Anfrage gesendet', 'أرسل استفسارًا'],
-  'Sent {n} enquiries': ['Envió {n} consultas', 'A envoyé {n} demandes', 'Hat {n} Anfragen gesendet', 'أرسل {n} استفسارات'],
-  'Visited {n} times': ['Visitó {n} veces', 'A visité {n} fois', '{n}-mal besucht', 'زار {n} مرات'],
-  'Viewed {page}': ['Vio {page}', 'A consulté {page}', 'Hat {page} angesehen', 'شاهد {page}'],
-  'Viewed {page} ({n} times)': ['Vio {page} ({n} veces)', 'A consulté {page} ({n} fois)', 'Hat {page} angesehen ({n}-mal)', 'شاهد {page} ({n} مرات)'],
-  '{n} minutes on the site': ['{n} minutos en el sitio', '{n} minutes sur le site', '{n} Minuten auf der Website', '{n} دقائق على الموقع'],
-  'Last visit {n} days ago': ['Última visita hace {n} días', 'Dernière visite il y a {n} jours', 'Letzter Besuch vor {n} Tagen', 'آخر زيارة قبل {n} أيام'],
 
   // Why a sequence enrollment paused or stopped
   'The address is on the do-not-email list.': ['La dirección está en la lista de no enviar correos.', 'L’adresse figure sur la liste d’exclusion des e-mails.', 'Die Adresse steht auf der Sperrliste für E-Mails.', 'العنوان مدرج في قائمة عدم المراسلة.'],

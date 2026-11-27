@@ -59,7 +59,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.finder': 'outreach',
   'page.prospects': 'outreach',
   'page.prospectList': 'outreach',
-  'page.websiteVisitors': 'outreach',
+  'page.websiteEnquiries': 'outreach',
   'page.marketing': 'outreach',
   'page.campaigns': 'outreach',
   'page.quotes': 'documents',
@@ -149,6 +149,7 @@ const GUIDE_RULES: Readonly<Partial<Record<HelpId, { permission?: Permission; le
   'page.campaigns': { permission: 'marketing:read' },
   'page.prospects': { permission: 'prospects:read' },
   'page.prospectList': { permission: 'prospects:read' },
+  'page.websiteEnquiries': { permission: 'enquiries:read', feature: 'website_enquiries' },
 };
 
 /** The routes each page topic explains (`page.dealRecord` → `/app/deals/[id]`). */
@@ -199,7 +200,7 @@ const SECTION_PAGES: Readonly<Record<string, HelpId[]>> = {
   activities: ['page.activities'],
   sequences: ['page.sequenceEditor'],
   prospects: ['page.prospectList'],
-  visitors: ['page.websiteVisitors'],
+  enquiries: ['page.websiteEnquiries'],
   marketing: ['page.marketing'],
   quotes: ['page.quotes'],
   quote: ['page.quoteEditor'],

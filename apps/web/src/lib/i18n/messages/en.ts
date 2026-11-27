@@ -57,7 +57,7 @@ export const en = {
   'module.sequences': 'Email Sequences',
   'module.finder': 'Email Finder',
   'module.prospects': 'Prospect Lists',
-  'module.website-visitors': 'Website Visitors',
+  'module.website-enquiries': 'Website Enquiry',
   'module.meetings': 'Meetings',
   'module.agents': 'AI Agents',
   'module.automation': 'Automation Studio',

@@ -23,6 +23,12 @@ export const notifications = {
   'Your query #{number} is waiting for your reply': ['Tu consulta n.º {number} espera tu respuesta', 'Votre demande n° {number} attend votre réponse', 'Ihre Anfrage #{number} wartet auf Ihre Antwort', 'استفسارك رقم {number} بانتظار ردك'],
   'Your query #{number} is resolved': ['Tu consulta n.º {number} está resuelta', 'Votre demande n° {number} est résolue', 'Ihre Anfrage #{number} ist gelöst', 'تم حل استفسارك رقم {number}'],
   'Your query #{number} was opened again': ['Tu consulta n.º {number} se ha vuelto a abrir', 'Votre demande n° {number} a été rouverte', 'Ihre Anfrage #{number} wurde wieder geöffnet', 'أُعيد فتح استفسارك رقم {number}'],
+  // Website Enquiry (ADR 0095)
+  'New website enquiry from {name}': ['Nueva consulta del sitio web de {name}', 'Nouvelle demande du site web de {name}', 'Neue Website-Anfrage von {name}', 'استفسار جديد من الموقع من {name}'],
+  'New review from {name}': ['Nueva reseña de {name}', 'Nouvel avis de {name}', 'Neue Bewertung von {name}', 'مراجعة جديدة من {name}'],
+  'New newsletter sign-up from {name}': ['Nueva suscripción al boletín de {name}', 'Nouvelle inscription à la newsletter de {name}', 'Neue Newsletter-Anmeldung von {name}', 'اشتراك جديد في النشرة من {name}'],
+  'New live chat lead from {name}': ['Nuevo lead del chat en vivo de {name}', 'Nouveau prospect du chat en direct de {name}', 'Neuer Live-Chat-Lead von {name}', 'عميل محتمل جديد من الدردشة المباشرة من {name}'],
+  'New download from {name}': ['Nueva descarga de {name}', 'Nouveau téléchargement de {name}', 'Neuer Download von {name}', 'تنزيل جديد من {name}'],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
@@ -178,7 +184,7 @@ export const notifications = {
   'A webhook was switched off': ['Se desactivó un webhook', 'Un webhook a été désactivé', 'Ein Webhook wurde ausgeschaltet', 'أُوقف خطاف ويب'],
   '{url} failed {n} times in a row.': ['{url} falló {n} veces seguidas.', '{url} a échoué {n} fois d’affilée.', '{url} ist {n}-mal hintereinander fehlgeschlagen.', 'فشل {url} {n} مرات متتالية.'],
 
-  // Deal and customer health, visitors
+  // Deal and customer health
   '{deal} is at high risk': ['{deal} está en riesgo alto', '{deal} présente un risque élevé', '{deal} hat ein hohes Risiko', '{deal} في خطر مرتفع'],
   'Health {score}/100: {signals}.': ['Salud {score}/100: {signals}.', 'Santé {score}/100 : {signals}.', 'Zustand {score}/100: {signals}.', 'الصحة {score}/100: {signals}.'],
   '{company} is at risk': ['{company} está en riesgo', '{company} est à risque', '{company} ist gefährdet', '{company} معرّض للخطر'],
@@ -186,8 +192,6 @@ export const notifications = {
   'medium escalation: {company}': ['escalado medio: {company}', 'escalade moyenne : {company}', 'mittlere Eskalation: {company}', 'تصعيد متوسط: {company}'],
   'high escalation: {company}': ['escalado alto: {company}', 'escalade élevée : {company}', 'hohe Eskalation: {company}', 'تصعيد مرتفع: {company}'],
   'critical escalation: {company}': ['escalado crítico: {company}', 'escalade critique : {company}', 'kritische Eskalation: {company}', 'تصعيد حرج: {company}'],
-  '{name} is showing high intent on your website': ['{name} muestra una intención alta en tu sitio web', '{name} montre une forte intention sur votre site', '{name} zeigt hohes Kaufinteresse auf Ihrer Website', 'يُظهر {name} نية شراء عالية على موقعك'],
-  'Intent score {score}/100.': ['Puntuación de intención {score}/100.', 'Score d’intention {score}/100.', 'Interessenwert {score}/100.', 'درجة النية {score}/100.'],
 
   // Client portal
   'Portal request {ref} assigned to you': ['Solicitud del portal {ref} asignada a ti', 'Demande du portail {ref} qui vous est attribuée', 'Portalanfrage {ref} wurde Ihnen zugewiesen', 'طلب البوابة {ref} مسند إليك'],

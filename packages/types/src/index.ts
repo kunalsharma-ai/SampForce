@@ -29,7 +29,7 @@ export * from './meetings';
 export * from './portal';
 export * from './voice';
 export * from './gamification';
-export * from './visitors';
+export * from './website-enquiries';
 export * from './prospects';
 export * from './apps';
 export * from './api-keys';

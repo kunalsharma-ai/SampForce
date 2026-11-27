@@ -123,7 +123,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'messages', label: 'Incoming SMS, WhatsApp and inbox', types: ['sms.received', 'whatsapp.received', 'inbox.'] },
   { key: 'portal', label: 'Client portal activity', types: ['portal.'] },
   { key: 'sequences', label: 'Sequence updates', types: ['sequence.'] },
-  { key: 'visitors', label: 'High-intent website visitors', types: ['visitor.'] },
+  { key: 'website_enquiries', label: 'New website enquiries', types: ['website_enquiry.'] },
   { key: 'gamification', label: 'Badges and competitions', types: ['gamification.'] },
   { key: 'workflows', label: 'Workflow notifications', types: ['workflow.notify'] },
 ] as const;

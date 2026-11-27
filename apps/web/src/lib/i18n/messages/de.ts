@@ -51,7 +51,7 @@ export const de: Messages = {
   'module.sequences': 'E-Mail-Sequenzen',
   'module.finder': 'E-Mail-Suche',
   'module.prospects': 'Interessentenlisten',
-  'module.website-visitors': 'Website-Besucher',
+  'module.website-enquiries': 'Website-Anfragen',
   'module.meetings': 'Meetings',
   'module.agents': 'KI-Agenten',
   'module.automation': 'Automatisierungsstudio',

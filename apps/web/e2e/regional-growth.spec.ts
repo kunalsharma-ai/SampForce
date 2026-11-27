@@ -87,27 +87,13 @@ test('German builds a prospect list from a CSV file, with German counts and Mock
   await axe(page);
 });
 
-test('Arabic sets up website tracking and a lead form, right to left', async ({ page }) => {
+test('Arabic sets up a lead form, right to left', async ({ page }) => {
   test.setTimeout(90_000);
   await signUp(page, 'Zuwar');
   await chooseLanguage(page, 'ar');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-  await page.goto('/app/website-visitors');
   const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { level: 1, name: 'زوار الموقع' })).toBeVisible();
-  await expect(main.getByText('تتبّع الموقع متوقف.')).toBeVisible();
-  await expect(main.getByRole('tab', { name: 'التثبيت والإعدادات' })).toHaveAttribute('aria-selected', 'true');
-  await expect(main.getByLabel('السؤال أولًا (موصى به).', { exact: false })).toBeChecked();
-  await axe(page);
-
-  await main.getByLabel('المواقع المسموح لها بإرسال البيانات').fill('shop.example.test');
-  await main.getByLabel('تسجيل زيارات الموقع').check();
-  await main.getByRole('button', { name: 'حفظ الإعدادات' }).click();
-  await expect(main.getByText('تم الحفظ.')).toBeVisible();
-  await expect(main.getByText('تتبّع الموقع متوقف.')).toBeHidden();
-  await axe(page);
-
   await page.goto('/app/marketing');
   await expect(main.getByRole('heading', { level: 1, name: 'التسويق' })).toBeVisible();
   await main.getByRole('tab', { name: 'نماذج العملاء المحتملين' }).click();

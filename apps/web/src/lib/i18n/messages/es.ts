@@ -51,7 +51,7 @@ export const es: Messages = {
   'module.sequences': 'Secuencias de correo',
   'module.finder': 'Buscador de correos',
   'module.prospects': 'Listas de prospectos',
-  'module.website-visitors': 'Visitantes del sitio web',
+  'module.website-enquiries': 'Consultas del sitio web',
   'module.meetings': 'Reuniones',
   'module.agents': 'Agentes de IA',
   'module.automation': 'Estudio de automatización',
