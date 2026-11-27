@@ -160,7 +160,8 @@ export function DealBulkBar({
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ ids, archived: !archived }, archived ? 'Restored {count}.' : 'Archived {count}.')}>
         {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />} {archived ? t('Restore') : t('Archive')}
       </Button>
-      <SampBidxBulkSlot dealIds={ids} onDone={onClear} />
+      {/* In the table the shared bulk bar already shows the SampBidx button for deals, so only the board renders it here. */}
+      {!compact && <SampBidxBulkSlot dealIds={ids} onDone={onClear} />}
       {!compact && canDelete && (
         <Button type="button" size="sm" variant="outline" className="text-critical" disabled={busy} onClick={() => setConfirmDelete(true)}>
           <Trash2 aria-hidden /> {t('Delete')}
