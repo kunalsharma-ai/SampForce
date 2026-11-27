@@ -73,12 +73,15 @@ export class TwilioClient {
    * from the workspace number, and when they answer it dials `to` with the workspace number as caller id. Both legs
    * report their status to `statusCallback` (with ?leg=agent or ?leg=party added).
    */
-  async placeCall(keys: TwilioKeys, input: { agentPhone: string; to: string; statusCallback: string }): Promise<{ sid: string; status: string }> {
+  async placeCall(keys: TwilioKeys, input: { agentPhone: string; to: string; statusCallback: string; record?: boolean }): Promise<{ sid: string; status: string }> {
     const x = (v: string) => v.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
-    const party = `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=party`;
+    const leg = (name: string) => `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=${name}`;
+    const party = leg('party');
+    // Recording (ADR 0101): both sides, from when the person answers; Twilio posts the recording to leg=recording.
+    const record = input.record ? ` record="record-from-answer-dual" recordingStatusCallback="${x(leg('recording'))}" recordingStatusCallbackEvent="completed"` : '';
     const twiml =
       `<Response><Say>Connecting your SampForce call.</Say>` +
-      `<Dial callerId="${x(keys.fromNumber)}" answerOnBridge="true"><Number statusCallbackEvent="answered completed" statusCallback="${x(party)}">${x(input.to)}</Number></Dial></Response>`;
+      `<Dial callerId="${x(keys.fromNumber)}" answerOnBridge="true"${record}><Number statusCallbackEvent="answered completed" statusCallback="${x(party)}">${x(input.to)}</Number></Dial></Response>`;
     const agent = `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=agent`;
     const r = await this.call<{ sid?: string; status?: string }>(keys, 'POST', `/2010-04-01/Accounts/${keys.accountSid}/Calls.json`, [
       ['To', input.agentPhone],
@@ -92,6 +95,38 @@ export class TwilioClient {
     ]);
     if (!r.sid) throw new TwilioError('no_sid', 'Twilio did not return a call id.');
     return { sid: r.sid, status: r.status ?? 'queued' };
+  }
+
+  /** Ends a call (both legs: the bridge ends with the caller's leg). */
+  async hangup(keys: TwilioKeys, sid: string): Promise<void> {
+    await this.call(keys, 'POST', `/2010-04-01/Accounts/${keys.accountSid}/Calls/${encodeURIComponent(sid)}.json`, { Status: 'completed' });
+  }
+
+  /** Starts recording a call in progress (both sides), or pauses and resumes the current recording. */
+  async startRecording(keys: TwilioKeys, sid: string, statusCallback: string): Promise<void> {
+    await this.call(keys, 'POST', `/2010-04-01/Accounts/${keys.accountSid}/Calls/${encodeURIComponent(sid)}/Recordings.json`, [
+      ['RecordingChannels', 'dual'],
+      ['RecordingStatusCallback', statusCallback],
+      ['RecordingStatusCallbackEvent', 'completed'],
+    ]);
+  }
+
+  async stopRecording(keys: TwilioKeys, sid: string): Promise<void> {
+    await this.call(keys, 'POST', `/2010-04-01/Accounts/${keys.accountSid}/Calls/${encodeURIComponent(sid)}/Recordings/Twilio.CURRENT.json`, { Status: 'stopped' });
+  }
+
+  /** A recording's audio (MP3), read with the account's keys. Only Twilio's own addresses. */
+  async recordingAudio(keys: TwilioKeys, url: string): Promise<{ data: Buffer; contentType: string }> {
+    const base = this.env.TWILIO_API_BASE_URL.replace(/\/$/, '');
+    if (!url.startsWith(`${base}/`)) throw new TwilioError('recording', 'This recording is not on Twilio.');
+    let res: Response;
+    try {
+      res = await fetch(`${url.replace(/\.(json|mp3|wav)$/, '')}.mp3`, { headers: { authorization: `Basic ${Buffer.from(`${keys.accountSid}:${keys.authToken}`).toString('base64')}` }, redirect: 'follow', signal: AbortSignal.timeout(30_000) });
+    } catch {
+      throw new TwilioError('unavailable', 'Twilio could not be reached. Try again shortly.');
+    }
+    if (!res.ok) throw new TwilioError('recording', `Twilio did not return the recording (${res.status}).`);
+    return { data: Buffer.from(await res.arrayBuffer()), contentType: res.headers.get('content-type') ?? 'audio/mpeg' };
   }
 
   /**

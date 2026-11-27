@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CALL_OUTCOME_LABELS, CALL_WINDOW_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS, ENQUIRY_CATEGORY_LABELS, ENQUIRY_STATUS_LABELS, ENQUIRY_TYPE_LABELS, METRIC_RULE, RANKING_METRIC_LABEL, SUPER_TASK_NOTICES_LABEL, TARGET_METRIC_LABEL, TASK_CADENCE_LABEL, TASK_PLAN_DURATION_LABEL, TASK_PLAN_STATUS_LABEL, TASK_STATUS_LABEL, WEEKDAY_SHORT } from '@dealflow/types';
+import { CALL_OUTCOME_LABELS, CALL_STATUS_LABELS, CALL_WINDOW_LABELS, DIALER_AUTH_LABELS, DIALER_CAPABILITIES, DIALER_CATEGORY_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS, DIALER_PROVIDERS, ENQUIRY_CATEGORY_LABELS, ENQUIRY_STATUS_LABELS, ENQUIRY_TYPE_LABELS, METRIC_RULE, OUTCOME_ACTION_LABELS, RANKING_METRIC_LABEL, RECORDING_SOURCE_LABELS, SUPER_TASK_NOTICES_LABEL, TARGET_METRIC_LABEL, TASK_CADENCE_LABEL, TASK_PLAN_DURATION_LABEL, TASK_PLAN_STATUS_LABEL, TASK_STATUS_LABEL, WEEKDAY_SHORT } from '@dealflow/types';
 import {
   ENRICH_FIELD_LABELS,
   COMPANY_EMAIL_CTA_LABELS,
@@ -216,7 +216,26 @@ describe('page phrases', () => {
     ],
     // Calls (ADR 0088): outcomes, the good-time-to-call check and its weekdays, call states, dialer presets and placeholders.
     ['website enquiry labels', [...Object.values(ENQUIRY_TYPE_LABELS), ...Object.values(ENQUIRY_CATEGORY_LABELS), ...Object.values(ENQUIRY_STATUS_LABELS)]],
-    ['call labels', [...Object.values(CALL_OUTCOME_LABELS), ...Object.values(CALL_WINDOW_LABELS), ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]), ...Object.values(DIALER_PLACEHOLDERS), 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', ...[...source('../../app/app/calls/calls-workspace.tsx').match(/const STATUS_LABEL[^\n]*/)![0].matchAll(/: '([^']+)'/g)].map((m) => m[1]!)]],
+    // The universal dialer (ADR 0101): providers (not their brand names), what they can do, sign-in kinds, call states,
+    // outcome actions, recording sources and the connection-test steps the server reports.
+    [
+      'call labels',
+      [
+        ...Object.values(CALL_OUTCOME_LABELS),
+        ...Object.values(CALL_WINDOW_LABELS),
+        ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]),
+        ...Object.values(DIALER_PLACEHOLDERS),
+        'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+        ...DIALER_PROVIDERS.flatMap((p) => [p.description, ...(p.setupHelp ? [p.setupHelp] : []), ...Object.values(p.labels ?? {}).filter((l) => !/^API ID$/.test(l!))]) as string[],
+        ...Object.values(DIALER_CAPABILITIES),
+        ...Object.values(DIALER_CATEGORY_LABELS),
+        ...Object.values(DIALER_AUTH_LABELS),
+        ...Object.values(CALL_STATUS_LABELS),
+        ...Object.values(OUTCOME_ACTION_LABELS),
+        ...Object.values(RECORDING_SOURCE_LABELS),
+        'The call request is complete', 'The keys are saved', 'The provider accepted the keys', 'Signed in to the provider', 'The webhook answered', 'The link is complete',
+      ],
+    ],
     // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
     // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
     // retention plan's cadences and steps.
