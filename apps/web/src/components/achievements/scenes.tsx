@@ -67,6 +67,10 @@ export function sceneFor(a: Pick<AchievementRow, 'kind' | 'level' | 'details'>):
       return spec('diamond', 'stage', 'stars', 10_000, Gem);
     case 'CONSISTENCY':
       return spec('rhythm', 'card', null, 8000, Leaf);
+    case 'TASK_PLAN_DONE':
+      return spec('sweep', 'card', a.level === 'DAILY' ? 'light' : 'ribbons', 8000, ListChecks);
+    case 'TASK_PLAN_HALF':
+      return spec('milestone', 'compact', null, 5500, Target);
   }
 }
 
@@ -353,6 +357,16 @@ export function SceneArt({ a, still }: { a: Pick<AchievementRow, 'kind' | 'level
       return <Rhythm />;
     case 'TASK_IMPORTANT':
       return <DrawnCheck />;
+    case 'TASK_PLAN_DONE':
+    case 'TASK_PLAN_HALF': {
+      const items = d.items ?? [];
+      const done = items.filter((i) => i.done >= i.amount).length;
+      return (
+        <div className="grid place-items-center py-1">
+          <ProgressRing percent={a.kind === 'TASK_PLAN_DONE' ? 100 : (d.percent ?? 50)} from={a.kind === 'TASK_PLAN_DONE' ? 60 : 0} still={still} label={`${done}/${items.length}`} />
+        </div>
+      );
+    }
   }
 }
 

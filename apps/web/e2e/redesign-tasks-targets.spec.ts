@@ -79,7 +79,7 @@ test('the executive says where a task stands, the manager hears it, comments get
   );
 
   // ── Rahul sees it blocked, with the reason, and answers; Priya reacts ──
-  await manager.goto('/app/tasks');
+  await manager.goto('/app/tasks?tab=oneoff');
   await manager.getByRole('tab', { name: /Assigned by me/ }).click();
   const row = manager.locator('[data-task="Send the panel book to Kantar"]');
   await expect(row.locator('[data-progress]')).toHaveText('Blocked');

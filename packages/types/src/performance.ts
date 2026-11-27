@@ -116,6 +116,8 @@ export interface RankingRow {
 
 export interface PerformanceView {
   period: { kind: PerformancePeriod; offset: number; startsOn: string; endsOn: string; previousStartsOn: string; previousEndsOn: string };
+  /** How many were ranked in each list, so "2 of 5" is right even when the caller sees only its own row. */
+  rankedAmong: { managers: number; executives: number };
   /** The measures that count, with their weight (weights above 0 only). */
   method: { metric: RankingMetric; weight: number; relative: boolean }[];
   /** Manager rankings: everyone for the Super Workspace, the caller's own row (and others when allowed) for a manager. */

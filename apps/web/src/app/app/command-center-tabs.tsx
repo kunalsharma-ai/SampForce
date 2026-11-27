@@ -11,6 +11,7 @@ import { HomeNotifications } from '@/components/notifications/home-notifications
 import { PageHeader } from '@/components/page-header';
 import { YourTargets } from '@/components/workspace-work/targets';
 import { TasksForYou } from '@/components/workspace-work/tasks';
+import { TodayTasksStrip } from '@/components/task-plans/task-plans';
 import { LevelDashboard } from '@/components/workspace-dashboard/level-dashboards';
 import { RoleDashboard } from '@/components/workspace-dashboard/role-dashboards';
 import { useHasFeature } from '@/lib/features';
@@ -112,6 +113,7 @@ export function CommandCenter() {
         <div className={view === 'workspace' || view === 'overview' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
           {/* The home dashboard's way to notifications (ADR 0075). The role dashboard draws its own target rings. */}
           {hasNotifications && <HomeNotifications />}
+          {hasTasks && <TodayTasksStrip />}
           {hasTasks && <TasksForYou />}
           {hasTargets && view !== 'workspace' && <YourTargets />}
         </div>

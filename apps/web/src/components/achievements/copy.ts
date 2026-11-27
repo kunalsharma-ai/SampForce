@@ -1,4 +1,4 @@
-import type { AchievementRow } from '@dealflow/types';
+import { type AchievementRow, TARGET_METRIC_LABEL, type TargetMetric } from '@dealflow/types';
 import type { Translator } from '@/lib/i18n';
 
 /** What a celebration says: every figure comes from the stored achievement, which was read from the records. */
@@ -107,6 +107,21 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
         facts,
         linkLabel: t('View deal'),
       };
+    case 'TASK_PLAN_DONE': {
+      for (const i of d.items ?? []) add(t.maybe(TARGET_METRIC_LABEL[i.metric as TargetMetric] ?? i.metric), t('{actual} of {target}', { actual: num(i.done), target: num(i.amount) }));
+      if ((d.streak ?? 0) > 1) add(t('Streak'), t('{n} in a row', { n: num(d.streak) }));
+      const first = d.items?.[0];
+      const one = d.items?.length === 1 && first ? t.maybe(TARGET_METRIC_LABEL[first.metric as TargetMetric] ?? first.metric).toLowerCase() : null;
+      return {
+        title: d.cadence === 'WEEK' ? t('This week’s task completed!') : d.cadence === 'MONTH' ? t('This month’s task completed!') : t('Today’s task completed!'),
+        message: one ? t('Great work! You completed your {measure} target: {title}.', { measure: one, title: d.taskTitle ?? '' }) : t('Great work! You achieved 100% of {title}.', { title: d.taskTitle ?? '' }),
+        facts,
+        linkLabel: t('View tasks'),
+      };
+    }
+    case 'TASK_PLAN_HALF':
+      for (const i of d.items ?? []) add(t.maybe(TARGET_METRIC_LABEL[i.metric as TargetMetric] ?? i.metric), t('{actual} of {target}', { actual: num(i.done), target: num(i.amount) }));
+      return { title: t('Halfway there!'), message: t('{title} is {percent}% done. Keep going.', { title: d.taskTitle ?? '', percent: d.percent ?? 50 }), facts, linkLabel: t('View tasks') };
     case 'CONSISTENCY':
       add(t('Working time'), hours(d.workedMinutes ?? 0, t));
       add(t('Breaks taken'), d.breaks ? t('{n} ({time})', { n: num(d.breaks), time: hours(d.breakMinutes ?? 0, t) }) : t('None'));

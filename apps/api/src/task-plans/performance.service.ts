@@ -177,12 +177,13 @@ export class PerformanceService {
         if (!group.length) return [];
         const cur = await score(group, now);
         const prev = await score(group, before);
-        const prevOf = new Map(prev.rows.map((r) => [r.e, r]));
+        // A previous period where nobody scored anything is not a ranking: no place to compare with.
+        const prevOf = prev.rows.some((r) => r.score > 0) ? new Map(prev.rows.map((r) => [r.e, r])) : new Map<Entrant, (typeof prev.rows)[number]>();
         return cur.rows
           .filter((r) => keep(r.e))
           .map((r) => ({
             rank: cur.ranks.get(r)!,
-            previousRank: prev.ranks.get(prevOf.get(r.e)!) ?? null,
+            previousRank: prevOf.has(r.e) ? (prev.ranks.get(prevOf.get(r.e)!) ?? null) : null,
             kind: r.e.kind,
             people: r.e.people,
             workspace: refOf(r.e.node, org, tenant.name),
@@ -203,6 +204,7 @@ export class PerformanceService {
       const execRows = me.level === 'EXECUTIVE' ? await rowsFor(s.showTeamPosition ? myExecs : myExecs.filter(isMe), isMe) : await rowsFor(myExecs, () => true);
       return {
         period: { kind: q.period, offset: q.offset, startsOn: now.first, endsOn: now.last, previousStartsOn: before.first, previousEndsOn: before.last },
+        rankedAmong: { managers: managers.length, executives: me.level === 'EXECUTIVE' && !s.showTeamPosition ? 1 : myExecs.length },
         method,
         managers: managerRows,
         executives: execRows,

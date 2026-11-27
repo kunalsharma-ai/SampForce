@@ -34,7 +34,7 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
 
   // ── The daily work first, in this order ──
   const primary = nav.locator('[data-nav-section="modules"]').first().getByRole('link');
-  await expect(primary).toHaveText(['Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', /^Team chat/, 'My achievements', 'Team status']);
+  await expect(primary).toHaveText(['Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'Performance', 'RFQs', /^Team chat/, 'My achievements', 'Team status']);
   await expect(nav.getByRole('link', { name: /^Leads/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: /^Accounts/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();

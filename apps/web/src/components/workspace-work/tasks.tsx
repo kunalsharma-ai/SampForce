@@ -88,7 +88,7 @@ export function TasksBoard() {
   const tasks = useAssignedTasks();
   const [tab, setTab] = useState<'forMe' | 'byMe'>('forMe');
   const [creating, setCreating] = useState(false);
-  const show = (id: string | null) => router.replace(id ? `/app/tasks?task=${id}` : '/app/tasks', { scroll: false });
+  const show = (id: string | null) => router.replace(id ? `/app/tasks?tab=oneoff&task=${id}` : '/app/tasks?tab=oneoff', { scroll: false });
 
   if (tasks.isPending) return <Skeleton className="h-64" />;
   if (tasks.error) return <ErrorText error={tasks.error} />;
@@ -154,7 +154,7 @@ export function TasksForYou() {
           <CardTitle>{t('Tasks for you')}</CardTitle>
           <CardDescription>{t('Handed down by the workspace above yours. Open one to comment or mark it done.')}</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => router.push('/app/tasks')}>
+        <Button size="sm" variant="outline" onClick={() => router.push('/app/tasks?tab=oneoff')}>
           {t('All tasks')}
         </Button>
       </CardHeader>
