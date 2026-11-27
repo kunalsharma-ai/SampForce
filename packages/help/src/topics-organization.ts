@@ -770,6 +770,30 @@ export const organizationHelp = {
       'يرى Super Workspace الجميع؛ ويرى المدير فريقه، والمديرين الآخرين إن سُمح له؛ ويرى التنفيذي أرقامه، ومرتبته في الفريق إن سُمح بذلك.',
     ],
   },
+  'page.recognition': {
+    title: 'Recognition',
+    what: [
+      'Employee of the Month targets and winners, and performance improvement plans. Progress is counted from records; no AI is involved and nothing is chosen at random.',
+      'Objetivos y ganadores del Empleado del Mes, y planes de mejora del desempeño. El progreso se cuenta a partir de los registros; no interviene la IA y nada se elige al azar.',
+      'Objectifs et lauréats de l’Employé du mois, et plans d’amélioration des performances. La progression se compte à partir des fiches ; aucune IA n’intervient et rien n’est tiré au sort.',
+      'Ziele und Gewinner des Mitarbeiters des Monats sowie Leistungsverbesserungspläne. Der Fortschritt wird aus den Datensätzen gezählt; keine KI, nichts wird zufällig gewählt.',
+      'أهداف موظف الشهر والفائزون، وخطط تحسين الأداء. يُحتسب التقدم من السجلات؛ لا يدخل الذكاء الاصطناعي ولا يُختار شيء عشوائيًا.',
+    ],
+    how: [
+      'Set a target with several goals per person. Reaching it makes them eligible; a person or the automatic ranking then picks the winner. Plans get goals, reviews and a final decision.',
+      'Fija un objetivo con varias metas por persona. Alcanzarlo la hace elegible; luego una persona o la clasificación automática elige al ganador. Los planes tienen metas, revisiones y una decisión final.',
+      'Fixez un objectif à plusieurs buts par personne. L’atteindre rend éligible ; une personne ou le classement automatique choisit ensuite le lauréat. Les plans ont des buts, des examens et une décision.',
+      'Legen Sie pro Person ein Ziel mit mehreren Teilzielen fest. Wer es erreicht, ist berechtigt; dann wählt eine Person oder das Ranking den Gewinner. Pläne haben Ziele, Prüfungen und eine Entscheidung.',
+      'حدد لكل شخص هدفًا بعدة أهداف فرعية. بلوغه يجعله مؤهلًا؛ ثم يختار شخص أو الترتيب التلقائي الفائز. للخطط أهداف ومراجعات وقرار نهائي.',
+    ],
+    where: [
+      'The Super Workspace acts for everyone and sets the rules; a manager acts for its executives as far as the rules allow; an executive sees its own target and plans on the dashboard.',
+      'El Super Workspace actúa para todos y fija las reglas; un gerente actúa para sus ejecutivos en la medida en que las reglas lo permiten; un ejecutivo ve su objetivo y sus planes en el panel.',
+      'Le Super Workspace agit pour tous et fixe les règles ; un manager agit pour ses commerciaux dans la limite des règles ; un commercial voit son objectif et ses plans sur le tableau de bord.',
+      'Der Super Workspace handelt für alle und legt die Regeln fest; ein Manager handelt für seine Mitarbeiter, soweit die Regeln es erlauben; ein Mitarbeiter sieht sein Ziel und seine Pläne im Dashboard.',
+      'يتصرف Super Workspace للجميع ويضع القواعد؛ ويتصرف المدير لتنفيذييه بقدر ما تسمح القواعد؛ ويرى التنفيذي هدفه وخططه في لوحته.',
+    ],
+  },
   'page.teamStatus': {
     title: 'Team status',
     what: [
