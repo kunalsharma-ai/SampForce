@@ -47,6 +47,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.calls': 'work',
   'page.tasks': 'work',
   'page.targets': 'work',
+  'page.performance': 'work',
   'page.teamStatus': 'work',
   'page.achievements': 'work',
   'page.approvals': 'work',
