@@ -52,6 +52,7 @@ export const reports = {
     'سمِّ لوحة أعلاه، ثم أضف إليها تقارير محفوظة.',
   ],
   'updated {date}': ['actualizado el {date}', 'mis à jour le {date}', 'aktualisiert am {date}', 'حُدّث في {date}'],
+  'Pipeline flow diagram': ['Diagrama de flujo del embudo', 'Diagramme du flux du pipeline', 'Pipeline-Flussdiagramm', 'مخطط تدفق مسار المبيعات'],
   'Forward moves arc above the stages, moves back arc below.': [
     'Los avances se dibujan sobre las etapas y los retrocesos debajo.',
     'Les avancées passent au-dessus des étapes, les retours en dessous.',

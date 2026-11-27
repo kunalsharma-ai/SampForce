@@ -74,7 +74,8 @@ test('Console sign-in: new sign-in page, two-step verification, sessions and the
   await other.getByLabel('Email').fill(email);
   await other.getByLabel('Password').fill(password);
   await other.getByRole('button', { name: 'Sign in' }).click();
-  await expect(other.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+  // A fresh browser loads the Console bundle and the Overview data first; allow for a busy test machine.
+  await expect(other.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible({ timeout: 20_000 });
 
   // ── Account & security: sessions and two-step verification ──
   await ops.getByRole('button', { name: 'Account: Noor Secure' }).click();

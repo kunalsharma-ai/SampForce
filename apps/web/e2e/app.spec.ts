@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Revenue Intelligence', 'Forecasting',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
@@ -36,6 +36,8 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
 });
 
 test('every sidebar entry leads to a working page', async ({ page }) => {
+  // 36 pages, each opened and checked: more than the default 30 s when the suite runs in parallel.
+  test.setTimeout(120_000);
   await signUp(page);
   // Module sections only: Favourites repeats some of the same links.
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');

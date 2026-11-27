@@ -52,7 +52,8 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
           <CardTitle className="text-base">{f.pipelineName}</CardTitle>
           <p className="text-sm text-muted-foreground">{total === 0 ? t.plural('count.noStageChangesInDays', days) : `${t.plural('count.stageChanges', total)} ${t.plural('count.inLastDays', days)} ${t('Forward moves arc above the stages, moves back arc below.')}`}</p>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        {/* Focusable, so the diagram can be scrolled sideways with the keyboard when the page is narrow. */}
+        <CardContent className="overflow-x-auto" tabIndex={0} role="region" aria-label={t('Pipeline flow diagram')}>
           <svg viewBox={`-10 0 ${width + 20} ${height}`} style={{ minWidth: Math.min(width, 900) }} className="h-auto w-full" role="img" aria-label={t('Pipeline flow diagram for {name}. The tables below hold the same figures.', { name: f.pipelineName })}>
             <style>{'@keyframes df-flow{to{stroke-dashoffset:-28}} .df-moving{animation:df-flow 1.4s linear infinite}'}</style>
             {f.transitions.map((tr) => {
