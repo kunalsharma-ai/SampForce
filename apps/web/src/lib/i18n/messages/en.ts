@@ -50,6 +50,7 @@ export const en = {
   'module.targets': 'Targets',
   'module.approvals': 'Approvals',
   'module.performance': 'Performance',
+  'module.recognition': 'Recognition',
   'module.rfqs': 'RFQs',
   'module.chat': 'Team chat',
   'module.achievements': 'My achievements',

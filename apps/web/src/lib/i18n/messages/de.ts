@@ -44,6 +44,7 @@ export const de: Messages = {
   'module.targets': 'Ziele',
   'module.approvals': 'Freigaben',
   'module.performance': 'Leistung',
+  'module.recognition': 'Anerkennung',
   'module.rfqs': 'RFQs',
   'module.chat': 'Team-Chat',
   'module.achievements': 'Meine Erfolge',

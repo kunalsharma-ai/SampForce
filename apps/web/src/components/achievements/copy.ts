@@ -1,5 +1,6 @@
 import { type AchievementRow, TARGET_METRIC_LABEL, type TargetMetric } from '@dealflow/types';
 import type { Translator } from '@/lib/i18n';
+import { monthLabel } from '@/lib/recognition';
 
 /** What a celebration says: every figure comes from the stored achievement, which was read from the records. */
 export interface AchievementCopy {
@@ -122,6 +123,24 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
     case 'TASK_PLAN_HALF':
       for (const i of d.items ?? []) add(t.maybe(TARGET_METRIC_LABEL[i.metric as TargetMetric] ?? i.metric), t('{actual} of {target}', { actual: num(i.done), target: num(i.amount) }));
       return { title: t('Halfway there!'), message: t('{title} is {percent}% done. Keep going.', { title: d.taskTitle ?? '', percent: d.percent ?? 50 }), facts, linkLabel: t('View tasks') };
+    case 'EMPLOYEE_OF_THE_MONTH': {
+      const month = d.month ? monthLabel(d.month, loc) : '';
+      add(t('Month'), month);
+      if (d.scope === 'TEAM' && d.teamName) add(t('Team'), d.teamName);
+      add(t('Goals achieved'), `${num(d.percent)}%`);
+      add(t('Performance score'), num(Math.round(d.score ?? 0)));
+      add(t('Reward'), d.reward);
+      return { title: t('Employee of the Month – {month}', { month }), message: t('Congratulations! You have been selected as Employee of the Month for {month}.', { month }), facts, linkLabel: t('View on the dashboard') };
+    }
+    case 'RECOGNITION_ELIGIBLE': {
+      const month = d.month ? monthLabel(d.month, loc) : '';
+      add(t('Goals achieved'), `${num(d.percent)}%`);
+      add(t('Reward'), d.reward);
+      return { title: t('Congratulations! You have achieved your Employee of the Month target.'), message: t('You are eligible for Employee of the Month – {month}. The winner is chosen from the eligible people.', { month }), facts, linkLabel: t('View on the dashboard') };
+    }
+    case 'PIP_COMPLETED':
+      add(t('Plan'), d.planNumber ? `${d.planNumber} · ${d.planTitle ?? ''}` : d.planTitle);
+      return { title: t('Improvement plan completed!'), message: t('Well done! You completed improvement plan {number}.', { number: d.planNumber ?? '' }), facts, linkLabel: t('View on the dashboard') };
     case 'CONSISTENCY':
       add(t('Working time'), hours(d.workedMinutes ?? 0, t));
       add(t('Breaks taken'), d.breaks ? t('{n} ({time})', { n: num(d.breaks), time: hours(d.breakMinutes ?? 0, t) }) : t('None'));

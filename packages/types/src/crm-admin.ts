@@ -131,6 +131,9 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'calls', label: 'Calls completed by your team', types: ['call.'] },
   { key: 'approval_decisions', label: 'Approval granted or rejected', types: ['approval.approved', 'approval.rejected', 'approval.granted', 'approval.cancelled'] },
   { key: 'sampbidx', label: 'SampBidx transfers and updates', types: ['sampbidx.'] },
+  // Employee of the Month and improvement plans (ADR 0102).
+  { key: 'recognition', label: 'Employee of the Month targets and awards', types: ['recognition.'] },
+  { key: 'pip', label: 'Performance improvement plans', types: ['pip.'] },
 ] as const;
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORIES)[number]['key'];
 const CATEGORY_KEYS = NOTIFICATION_CATEGORIES.map((c) => c.key) as [NotificationCategoryKey, ...NotificationCategoryKey[]];

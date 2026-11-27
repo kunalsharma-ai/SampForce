@@ -90,3 +90,4 @@ export * from './special-days';
 export * from './team-approvals';
 export * from './task-plans';
 export * from './performance';
+export * from './recognition';

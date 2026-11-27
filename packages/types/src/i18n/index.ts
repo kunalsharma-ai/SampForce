@@ -10,6 +10,7 @@ import { features } from './text/features';
 import { mobile } from './text/mobile';
 import { notifications } from './text/notifications';
 import { RENAMED_TEXT } from './text/renamed';
+import { recognition, recognitionNotifications } from './text/recognition';
 import { stored } from './text/stored';
 import { validation } from './text/validation';
 import { workspaces } from './text/workspaces';
@@ -17,9 +18,9 @@ import { workspaces } from './text/workspaces';
 export { pickLanguage, placeholdersOf, TextCatalogue, type TextRow, type TextTable, type TextVars } from './catalogue';
 
 /** Every table of text the server writes, by area. A phrase lives in one table (i18n.test.ts checks for repeats). */
-export const SERVER_TEXT_TABLES = { validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, notifications, composed, crmAdmin, crmAdminNotifications, workspaces, mobile, consoleAdmin } as const;
+export const SERVER_TEXT_TABLES = { validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, notifications, composed, crmAdmin, crmAdminNotifications, workspaces, mobile, consoleAdmin, recognition, recognitionNotifications } as const;
 
-const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, crmAdmin, workspaces, mobile, consoleAdmin];
+const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, crmAdmin, workspaces, mobile, consoleAdmin, recognition];
 
 /**
  * The server's text in Spanish, French, German and Arabic, for translating finished English text: the API's error and
@@ -30,7 +31,7 @@ const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProvid
 export const SERVER_TEXT = /* @__PURE__ */ new TextCatalogue(broad, RENAMED_TEXT);
 
 /** For notifications, which are stored in English and translated when someone opens them. */
-export const NOTIFICATION_TEXT = /* @__PURE__ */ new TextCatalogue([...broad, notifications, crmAdminNotifications], RENAMED_TEXT);
+export const NOTIFICATION_TEXT = /* @__PURE__ */ new TextCatalogue([...broad, notifications, crmAdminNotifications, recognitionNotifications], RENAMED_TEXT);
 
 /** Every phrase, for `tr(key)` in the API, which writes a known phrase by its key. */
 export const ALL_SERVER_TEXT = /* @__PURE__ */ new TextCatalogue(Object.values(SERVER_TEXT_TABLES));
