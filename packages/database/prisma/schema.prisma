@@ -613,6 +613,7 @@ model Tenant {
   sampbidxAttachments    SampbidxAttachment[]
   contactStageChanges    ContactStageChange[]
   sampbidxClients        SampbidxClient[]
+  sampbidxBatches        SampbidxBatch[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
@@ -1277,6 +1278,10 @@ model SampbidxTransfer {
   title           String
   rfqId           String?   @map("rfq_id")
   companyId       String?   @map("company_id")
+  /// The deal sent (kind DEAL, ADR 0095).
+  dealId          String?   @map("deal_id")
+  /// The bulk send it belongs to, if any (sampbidx_batches).
+  batchId         String?   @map("batch_id")
   emailMessageId  String?   @map("email_message_id")
   emailFrom       String?   @map("email_from")
   emailDate       DateTime? @map("email_date")
@@ -1327,6 +1332,8 @@ model SampbidxTransfer {
   @@index([tenantId, emailMessageId])
   @@index([tenantId, remoteId])
   @@index([tenantId, emailTextHash])
+  @@index([tenantId, dealId])
+  @@index([tenantId, batchId])
   @@map("sampbidx_transfers")
 }
 
@@ -1371,6 +1378,29 @@ model SampbidxClient {
 
   @@unique([tenantId, companyId])
   @@map("sampbidx_clients")
+}
+
+/// A bulk send of deals or won companies to SampBidx (ADR 0095): one row per press of "Send", with every record's
+/// outcome (pending, sent, failed with SampBidx's reason, or skipped with why), so progress and history survive reloads.
+model SampbidxBatch {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  /// DEALS or WON_COMPANIES.
+  kind        String
+  /// RUNNING or DONE.
+  status      String    @default("RUNNING")
+  resend      Boolean   @default(false)
+  /// [{ recordId, label, sub, outcome, reason, warnings, remoteId, remoteUrl, transferIds }]
+  items       Json      @default("[]")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  finishedAt  DateTime? @map("finished_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("sampbidx_batches")
 }
 
 /// A file added next to pasted RFQ email text, kept so the send (and any retry) carries it to SampBidx (ADR 0061).

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, type RawBodyRequest } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, type RawBodyRequest } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import {
@@ -21,13 +21,26 @@ import {
   sampbidxSendCompanySchema,
   type SampbidxTransferListQuery,
   sampbidxTransferListQuerySchema,
+  sampbidxBatchInputSchema,
+  sampbidxDiagnoseSchema,
+  type SampbidxDiagnoseInput,
 } from '@dealflow/types';
 import type { z } from 'zod';
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { NoPasswordConfirmation } from '../common/password-confirmation';
 import { AppError } from './apps.service';
+import { SampbidxBulkService } from './sampbidx-bulk.service';
 import { SampbidxService } from './sampbidx.service';
+
+type BatchBody = z.output<typeof sampbidxBatchInputSchema>;
+
+/** Deals need deals:write and won companies companies:write, besides contacts:write for typed-in details. */
+function assertBatchAllowed(auth: AuthContext, body: Pick<BatchBody, 'kind'>) {
+  const need = [body.kind === 'DEALS' ? 'deals:write' : 'companies:write', 'contacts:write'];
+  const missing = need.filter((p) => !auth.permissions.includes(p));
+  if (missing.length) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role does not allow this action.', details: missing.map((p) => ({ path: 'permission', message: p })) });
+}
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 
@@ -60,7 +73,68 @@ async function readEmailFile(req: Request, max = SAMPBIDX_EMAIL_FILE_MAX_BYTES, 
 @Controller('apps/sampbidx')
 @RequireFeature('sampbidx')
 export class SampbidxController {
-  constructor(private readonly sampbidx: SampbidxService) {}
+  constructor(
+    private readonly sampbidx: SampbidxService,
+    private readonly bulk: SampbidxBulkService,
+  ) {}
+
+  // ─── Settings page and bulk sends (ADR 0095) ───
+
+  /** The settings page: the saved connection as it is, sync counts, recent errors and bulk sends. Never the key. */
+  @Get('overview')
+  @RequirePermissions('integrations:manage')
+  overview(@Auth() auth: AuthContext) {
+    return this.bulk.overview(auth);
+  }
+
+  /** Test connection, step by step. Typed-in values are tried and not saved; with none, the saved connection is tested. */
+  @Post('diagnose')
+  @HttpCode(200)
+  @Throttle({ default: { limit: () => Number(process.env.SAMPBIDX_KEYS_PER_MINUTE ?? 10), ttl: 60_000 } })
+  @RequirePermissions('integrations:manage')
+  diagnose(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxDiagnoseSchema)) body: SampbidxDiagnoseInput) {
+    return this.bulk.diagnose(auth, body);
+  }
+
+  /** Checks the chosen deals or won companies: ready, needs a detail typed in, or skipped with the reason. Sends nothing. */
+  @Post('batches/preview')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  preview(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxBatchInputSchema)) body: BatchBody) {
+    assertBatchAllowed(auth, body);
+    return this.bulk.preview(auth, body);
+  }
+
+  /** Saves the typed details and starts sending in the background; poll GET batches/:id for progress. */
+  @Post('batches')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  start(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxBatchInputSchema)) body: BatchBody, @Meta() meta: RequestMeta) {
+    assertBatchAllowed(auth, body);
+    return this.bulk.start(auth, body, meta);
+  }
+
+  @Get('batches')
+  @RequirePermissions('companies:read')
+  batches(@Auth() auth: AuthContext) {
+    return this.bulk.list(auth, 20);
+  }
+
+  @Get('batches/:id')
+  @SkipThrottle()
+  @RequirePermissions('companies:read')
+  batch(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    return this.bulk.get(auth, id);
+  }
+
+  /** Sends the failed items again, with the same Idempotency-Keys. */
+  @Post('batches/:id/retry')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @RequirePermissions('companies:read')
+  retryBatch(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.bulk.retry(auth, id, meta);
+  }
 
   /** Saves the API address and key after GET /v1/ping accepts them. Sends no RFQ. */
   @Post('keys')

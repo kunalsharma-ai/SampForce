@@ -16,6 +16,8 @@ export interface SampbidxSettings {
   callbackUrl: string;
   /** When the first correctly signed status update arrived. */
   lastCallbackAt: string | null;
+  /** The last "Test connection" of the saved connection (ADR 0095): when, and the failed step's message if it failed. */
+  lastCheck?: { at: string; ok: boolean; message: string | null } | null;
 }
 
 export const sampbidxConnectSchema = z.object({
@@ -30,7 +32,7 @@ export const sampbidxConnectSchema = z.object({
 export type SampbidxConnectInput = z.infer<typeof sampbidxConnectSchema>;
 
 /** How a transfer started: a filled-in RFQ, an email from the synced mailbox, an uploaded email file, or email text pasted on a company. */
-export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE', 'PASTED_EMAIL', 'CLIENT'] as const;
+export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE', 'PASTED_EMAIL', 'CLIENT', 'DEAL'] as const;
 export type SampbidxTransferKind = (typeof SAMPBIDX_TRANSFER_KINDS)[number];
 
 /** SampForce's side: is it with SampBidx yet. SENT means SampBidx accepted it and returned its id. */
@@ -464,3 +466,178 @@ export interface SampbidxCompanySendResult {
   client: SampbidxTransferRow;
   rfq: SampbidxTransferRow | null;
 }
+
+// ─── Connection check, settings page and bulk transfers (ADR 0095) ───
+
+/** The steps of "Test connection", in order. Each passes, fails with the real reason, or is not reached. */
+export const SAMPBIDX_CHECK_STEPS = ['address', 'network', 'reachable', 'api', 'key', 'callback'] as const;
+export type SampbidxCheckStepKey = (typeof SAMPBIDX_CHECK_STEPS)[number];
+
+export interface SampbidxCheckStep {
+  key: SampbidxCheckStepKey;
+  /** true passed, false failed, null not reached (an earlier step failed) or only advice. */
+  ok: boolean | null;
+  /** What was found, in plain words. */
+  message: string;
+  /** What to do about it, when it failed. */
+  hint: string | null;
+}
+
+export interface SampbidxDiagnosis {
+  ok: boolean;
+  steps: SampbidxCheckStep[];
+  /** The account SampBidx named in its answer to the ping, when it answered. */
+  accountName: string | null;
+  /** Milliseconds SampBidx took to answer the ping. */
+  latencyMs: number | null;
+  checkedAt: string;
+  /** Whether the saved connection was checked (its state was updated) or typed-in values were tried without saving. */
+  saved: boolean;
+}
+
+/** Test typed-in values (nothing is saved) or, with both left out, the saved connection. */
+export const sampbidxDiagnoseSchema = z.object({
+  baseUrl: z.string().trim().max(500).optional(),
+  apiKey: z.string().trim().max(500).optional(),
+});
+export type SampbidxDiagnoseInput = z.infer<typeof sampbidxDiagnoseSchema>;
+
+export const SAMPBIDX_BATCH_KINDS = ['DEALS', 'WON_COMPANIES'] as const;
+export type SampbidxBatchKind = (typeof SAMPBIDX_BATCH_KINDS)[number];
+export const SAMPBIDX_BATCH_MAX = 200;
+
+export const sampbidxBatchInputSchema = z
+  .object({
+    kind: z.enum(SAMPBIDX_BATCH_KINDS),
+    ids: z.array(z.string().uuid()).max(SAMPBIDX_BATCH_MAX).default([]),
+    /** Every won company the person can see (WON_COMPANIES only), instead of a list of ids. */
+    allWon: z.boolean().default(false),
+    /** Send again even when SampBidx already has the record and nothing changed since. */
+    resend: z.boolean().default(false),
+    /** Details typed on the check screen. They are saved to the SampForce records first (audited), so they are typed once. */
+    completion: z
+      .object({
+        companies: z.record(z.string().uuid(), z.object({ country: countryCode.optional(), timeZone: timeZone.optional() }).partial()).optional(),
+        contacts: z.record(z.string().uuid(), z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email').optional(), country: countryCode.optional(), timeZone: timeZone.optional() }).partial()).optional(),
+        deals: z.record(z.string().uuid(), z.object({ amount: z.number().positive('Enter an amount above 0').max(1e12).optional() }).partial()).optional(),
+      })
+      .optional(),
+  })
+  .refine((v) => v.ids.length > 0 || (v.kind === 'WON_COMPANIES' && v.allWon), { message: 'Pick at least one record', path: ['ids'] });
+export type SampbidxBatchInput = z.input<typeof sampbidxBatchInputSchema>;
+export type SampbidxBatchCompletion = NonNullable<z.output<typeof sampbidxBatchInputSchema>['completion']>;
+
+/** A detail the check screen asks for before an item can go. It is saved to the record it belongs to. */
+export interface SampbidxBulkFix {
+  record: 'company' | 'contact' | 'deal';
+  recordId: string;
+  /** Whose detail it is, such as the employee's name. */
+  recordLabel: string;
+  field: 'email' | 'country' | 'timeZone' | 'amount';
+}
+
+/** READY goes as it is; NEEDS_FIX goes once the fixes are typed; SKIP will not go (the reason says why). */
+export interface SampbidxBulkPreviewItem {
+  recordId: string;
+  label: string;
+  sub: string | null;
+  status: 'READY' | 'NEEDS_FIX' | 'SKIP';
+  reason: string | null;
+  warnings: string[];
+  fixes: SampbidxBulkFix[];
+  /** SampBidx already has it (it goes again only when it changed, or with "send again"). */
+  inSampbidx: boolean;
+}
+
+export interface SampbidxBulkPreview {
+  kind: SampbidxBatchKind;
+  items: SampbidxBulkPreviewItem[];
+  counts: Record<'ready' | 'needsFix' | 'skip', number>;
+  /** Null when SampBidx is connected and usable; otherwise the real reason nothing can be sent. */
+  connectionProblem: string | null;
+}
+
+/** PENDING waits its turn; SKIPPED was not sent (the reason says why); SENT and FAILED are SampBidx's real answer. */
+export const SAMPBIDX_ITEM_OUTCOMES = ['PENDING', 'SENDING', 'SENT', 'FAILED', 'SKIPPED'] as const;
+export type SampbidxItemOutcome = (typeof SAMPBIDX_ITEM_OUTCOMES)[number];
+
+export interface SampbidxBatchItem {
+  /** The deal or company. */
+  recordId: string;
+  label: string;
+  /** Deal number and company, or the company's lead number. */
+  sub: string | null;
+  outcome: SampbidxItemOutcome;
+  reason: string | null;
+  /** Things that went but are worth knowing, such as an employee left out for missing details. */
+  warnings: string[];
+  remoteId: string | null;
+  remoteUrl: string | null;
+  /** The transfers made for it (the client, then the deal). */
+  transferIds: string[];
+}
+
+export interface SampbidxBatchRow {
+  id: string;
+  kind: SampbidxBatchKind;
+  /** RUNNING while items are being sent; DONE when every item has an answer. */
+  status: 'RUNNING' | 'DONE';
+  resend: boolean;
+  total: number;
+  counts: Record<'pending' | 'sent' | 'failed' | 'skipped', number>;
+  items: SampbidxBatchItem[];
+  createdBy: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+/** Everything the SampBidx settings page shows. The state is the saved connection's, never assumed. */
+export interface SampbidxOverview {
+  state: 'NOT_CONNECTED' | 'CONNECTED' | 'ERROR';
+  baseUrl: string | null;
+  accountName: string | null;
+  /** The last four characters of the saved key; the key itself never leaves the server. */
+  keyHint: string | null;
+  connectedAt: string | null;
+  connectedBy: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+  callbackUrl: string | null;
+  lastCallbackAt: string | null;
+  /** Per transfer kind: how many SampBidx accepted, how many failed and how many are on their way. */
+  sync: { kind: SampbidxTransferKind; sent: number; failed: number; sending: number; lastSentAt: string | null }[];
+  /** Recent failed sends with SampBidx's reason, newest first. */
+  errors: SampbidxTransferRow[];
+  /** Recent bulk sends, newest first. */
+  batches: SampbidxBatchRow[];
+  /** Whether the person can change the connection (integrations:manage). */
+  canManage: boolean;
+}
+
+/** What goes where: each SampForce field and the SampBidx field it fills. Shown on the settings page and in the API doc. */
+export const SAMPBIDX_FIELD_MAP: { object: 'Client' | 'Contact' | 'RFQ' | 'Deal'; sampforce: string; sampbidx: string; required: boolean }[] = [
+  { object: 'Client', sampforce: 'Company id', sampbidx: 'externalId', required: true },
+  { object: 'Client', sampforce: 'Company name', sampbidx: 'company.name', required: true },
+  { object: 'Client', sampforce: 'Website', sampbidx: 'company.website', required: false },
+  { object: 'Client', sampforce: 'Industry', sampbidx: 'company.industry', required: false },
+  { object: 'Client', sampforce: 'Lead number', sampbidx: 'company.leadNumber', required: false },
+  { object: 'Client', sampforce: 'Head office country, city, address', sampbidx: 'offices[0]', required: false },
+  { object: 'Client', sampforce: 'Won date and won deal', sampbidx: 'relationship', required: false },
+  { object: 'Contact', sampforce: 'Employee id', sampbidx: 'contacts[].externalId', required: true },
+  { object: 'Contact', sampforce: 'Name', sampbidx: 'contacts[].name', required: true },
+  { object: 'Contact', sampforce: 'Email', sampbidx: 'contacts[].email', required: true },
+  { object: 'Contact', sampforce: 'Country (else the company’s)', sampbidx: 'contacts[].country', required: true },
+  { object: 'Contact', sampforce: 'Time zone (else the company’s)', sampbidx: 'contacts[].timeZone', required: true },
+  { object: 'Contact', sampforce: 'Designation', sampbidx: 'contacts[].jobTitle', required: false },
+  { object: 'Contact', sampforce: 'Phone', sampbidx: 'contacts[].phone', required: false },
+  { object: 'RFQ', sampforce: 'RFQ number and project name', sampbidx: 'rfq.number, rfq.projectName', required: true },
+  { object: 'RFQ', sampforce: 'Methodology, market, sample size, deadline', sampbidx: 'rfq.methodology, rfq.market, rfq.sampleSize, rfq.deadlineAt', required: true },
+  { object: 'RFQ', sampforce: 'Country rows', sampbidx: 'rfq.lines[]', required: false },
+  { object: 'Deal', sampforce: 'Deal id', sampbidx: 'externalId', required: true },
+  { object: 'Deal', sampforce: 'Deal number and name', sampbidx: 'deal.number, deal.name', required: true },
+  { object: 'Deal', sampforce: 'Amount and currency', sampbidx: 'deal.amount, deal.currency', required: true },
+  { object: 'Deal', sampforce: 'Status, pipeline and stage', sampbidx: 'deal.status, deal.pipeline, deal.stage', required: true },
+  { object: 'Deal', sampforce: 'Expected close, closed date, loss reason', sampbidx: 'deal.expectedCloseDate, deal.closedAt, deal.lossReason', required: false },
+  { object: 'Deal', sampforce: 'Company (sent as the client first)', sampbidx: 'client.id, client.externalId', required: true },
+  { object: 'Deal', sampforce: 'Deal contact', sampbidx: 'contact', required: false },
+];

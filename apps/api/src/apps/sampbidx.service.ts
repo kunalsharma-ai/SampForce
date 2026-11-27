@@ -671,7 +671,7 @@ export class SampbidxService {
   }
 
   /** Saves what the person typed on the preview into the company and employee records (audited like any edit). */
-  private async saveCompletion(auth: AuthContext, input: z.output<typeof sampbidxSendCompanySchema>, contactIds: string[], meta: RequestMeta) {
+  async saveCompletion(auth: AuthContext, input: z.output<typeof sampbidxSendCompanySchema>, contactIds: string[], meta: RequestMeta) {
     const done = input.completion;
     if (!done) return;
     await this.prisma.run(auth, async (tx) => {
@@ -703,7 +703,7 @@ export class SampbidxService {
   }
 
   /** The company, its link to a SampBidx client, its employees, and the chosen ones as SampBidx contacts. */
-  private async companyContext(auth: AuthContext, companyId: string, contactId: string | null, extra: string[]) {
+  async companyContext(auth: AuthContext, companyId: string, contactId: string | null, extra: string[]) {
     return this.prisma.run(auth, async (tx) => {
       const company = await tx.company.findFirst({ where: { id: companyId, tenantId: auth.tenantId, deletedAt: null } });
       if (!company) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Company not found.' });
@@ -813,7 +813,7 @@ export class SampbidxService {
 
   // ─── Sending ───
 
-  private async deliver(auth: AuthContext, conn: AppConnection, t: SampbidxTransfer | Omit<SampbidxTransfer, 'emailFileData'>): Promise<SampbidxTransferRow> {
+  async deliver(auth: AuthContext, conn: AppConnection, t: SampbidxTransfer | Omit<SampbidxTransfer, 'emailFileData'>): Promise<SampbidxTransferRow> {
     const keys = this.keys(conn);
     await this.prisma.run(auth, (tx) => tx.sampbidxTransfer.update({ where: { id: t.id }, data: { delivery: 'SENDING', attempts: { increment: 1 } } }));
     let accepted: { id: string; url: string | null; status: string | null; contacts?: { externalId: string; id: string }[] } | null = null;
@@ -850,7 +850,7 @@ export class SampbidxService {
           update: { remoteId: accepted.id, remoteUrl: accepted.url ?? prev?.remoteUrl ?? null, contacts, lastSyncedAt: new Date() },
         });
       }
-      if (accepted && t.kind !== 'CLIENT') {
+      if (accepted && t.kind !== 'CLIENT' && t.kind !== 'DEAL') {
         // SampBidx confirmed it: the employee who shared the RFQ moves to "RFQ Sent to SampBidx" (ADR 0080).
         const contactId = t.contactId ?? (t.rfqId ? (await tx.rfq.findFirst({ where: { id: t.rfqId, tenantId: auth.tenantId }, select: { contactId: true } }))?.contactId : null);
         await this.stages.advance(tx, auth, contactId, 'RFQ_SENT_SAMPBIDX', { source: 'SAMPBIDX', rfqId: t.rfqId, note: `SampBidx reference ${accepted.id}` });
@@ -884,7 +884,45 @@ export class SampbidxService {
       const ctx = await this.companyContext(auth, t.companyId!, ids[0] ?? null, ids.slice(1));
       const gap = ctx.chosen.find((p) => missingContactFields(p).length);
       if (gap) throw new SampbidxError('invalid_local', `${gap.name.value || 'An employee'} is missing ${missingContactFields(gap).map((f) => CONTACT_FIELD_LABEL[f as keyof typeof CONTACT_FIELD_LABEL]).join(', ')}.`);
-      return this.client.upsertClient(keys, t.companyId!, t.id, { ...clientPayload({ workspace: tenant.name, transferId: t.id, company: ctx.company, contacts: ctx.chosen, mayReceiveQuotes: saved.mayReceiveQuotes ?? true }), sentBy: team.sentBy, clientTeam: team.clientTeam, note: t.note });
+      return this.client.upsertClient(keys, t.companyId!, t.id, {
+        ...clientPayload({ workspace: tenant.name, transferId: t.id, company: ctx.company, contacts: ctx.chosen, mayReceiveQuotes: saved.mayReceiveQuotes ?? true }),
+        relationship: await this.relationship(auth, ctx.company),
+        sentBy: team.sentBy,
+        clientTeam: team.clientTeam,
+        note: t.note,
+      });
+    }
+    if (t.kind === 'DEAL') {
+      const deal = await this.prisma.run(auth, (tx) =>
+        tx.opportunity.findFirst({ where: { id: t.dealId!, tenantId: auth.tenantId, deletedAt: null }, include: { pipeline: { select: { name: true } }, stage: { select: { name: true } } } }),
+      );
+      if (!deal) throw new SampbidxError('gone', 'The deal is no longer in SampForce.');
+      if (!deal.companyId) throw new SampbidxError('invalid_local', 'The deal has no company, so SampBidx would not know the client.');
+      const withClient = await this.clientRefs(auth, deal.companyId, deal.contactId);
+      if (!withClient.client) throw new SampbidxError('invalid_local', 'SampBidx does not have this deal’s company as a client yet. Send the company first.');
+      const people = await this.prisma.run(auth, (tx) => personRefs(tx, auth.tenantId, [deal.ownerId, deal.managerId]));
+      return this.client.upsertDeal(keys, deal.id, t.id, {
+        ...source,
+        externalId: deal.id,
+        ...withClient,
+        deal: {
+          id: deal.id,
+          number: deal.dealNumber,
+          name: deal.name,
+          amount: deal.amount,
+          currency: deal.currency,
+          status: deal.status,
+          pipeline: deal.pipeline.name,
+          stage: deal.stage.name,
+          probability: deal.probability,
+          expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
+          closedAt: deal.closedAt?.toISOString() ?? null,
+          lossReason: deal.lossReason,
+          owner: deal.ownerId ? (people.get(deal.ownerId)?.name ?? null) : null,
+          manager: deal.managerId ? (people.get(deal.managerId)?.name ?? null) : null,
+          createdAt: deal.createdAt.toISOString(),
+        },
+      });
     }
     if (t.kind === 'RFQ') {
       const rfq = await this.work.getRfq(auth, t.rfqId!);
@@ -940,6 +978,19 @@ export class SampbidxService {
 
   // ─── Helpers ───
 
+  /** A won company's win, so SampBidx knows the client is a customer (ADR 0095). Null while it is not won. */
+  private async relationship(auth: AuthContext, company: { wonAt: Date | null; wonDealId: string | null }) {
+    if (!company.wonAt) return null;
+    const deal = company.wonDealId
+      ? await this.prisma.run(auth, (tx) => tx.opportunity.findFirst({ where: { id: company.wonDealId!, tenantId: auth.tenantId }, select: { id: true, dealNumber: true, name: true, amount: true, currency: true, closedAt: true } }))
+      : null;
+    return {
+      status: 'WON',
+      wonAt: company.wonAt.toISOString(),
+      wonDeal: deal ? { externalId: deal.id, number: deal.dealNumber, name: deal.name, amount: deal.amount, currency: deal.currency, closedAt: deal.closedAt?.toISOString() ?? null } : null,
+    };
+  }
+
   /** The SampBidx client and the employee who shared the RFQ, with SampBidx's ids where known (ADR 0080). */
   private async clientRefs(auth: AuthContext, companyId: string, contactId: string | null) {
     return this.prisma.run(auth, async (tx) => {
@@ -988,7 +1039,7 @@ export class SampbidxService {
     if (!resend && prior.some((p) => p.delivery === 'SENT')) throw new ConflictException({ code: 'ALREADY_SENT', message });
   }
 
-  private async rows(tx: Prisma.TransactionClient, tenantId: string, rows: Omit<SampbidxTransfer, 'emailFileData'>[]): Promise<SampbidxTransferRow[]> {
+  async rows(tx: Prisma.TransactionClient, tenantId: string, rows: Omit<SampbidxTransfer, 'emailFileData'>[]): Promise<SampbidxTransferRow[]> {
     if (!rows.length) return [];
     const [rfqs, companies, people, contacts] = await Promise.all([
       tx.rfq.findMany({ where: { tenantId, id: { in: rows.map((r) => r.rfqId).filter((x): x is string => !!x) } }, select: { id: true, number: true, projectName: true } }),
@@ -1030,7 +1081,7 @@ export class SampbidxService {
     return conn;
   }
 
-  private async usableConnection(tenantId: string): Promise<AppConnection> {
+  async usableConnection(tenantId: string): Promise<AppConnection> {
     let conn: AppConnection;
     try {
       conn = await this.apps.requireConnection(tenantId, 'sampbidx');
@@ -1038,11 +1089,11 @@ export class SampbidxService {
       if (e instanceof AppError) throw new BadRequestException({ code: 'APP_ERROR', message: e.message });
       throw e;
     }
-    if (conn.status === 'ERROR') throw new BadRequestException({ code: 'APP_ERROR', message: `SampBidx needs a new API key: ${conn.lastError ?? 'the last call was refused'}. A workspace admin can replace it in Integrations.` });
+    if (conn.status === 'ERROR') throw new BadRequestException({ code: 'APP_ERROR', message: `SampBidx cannot be used right now: ${conn.lastError ?? 'the last call was refused'} A workspace admin can test and fix the connection on the SampBidx settings page.` });
     return conn;
   }
 
-  private keys(conn: AppConnection): SampbidxKeys {
+  keys(conn: AppConnection): SampbidxKeys {
     return JSON.parse(this.box.open(conn.credentialsEncrypted)) as SampbidxKeys;
   }
 
