@@ -1759,6 +1759,10 @@ model Task {
   /// Workspace hierarchy (ADR 0071): the workspace a task was handed down to, and the workspace it came from.
   workspaceNodeId   String?      @map("workspace_node_id")
   assignedByNodeId  String?      @map("assigned_by_node_id")
+  /// Redesign R7 (ADR 0087): ACKNOWLEDGED, IN_PROGRESS or BLOCKED once the assignee moves it; null = not acknowledged.
+  progress          String?
+  acknowledgedAt    DateTime?    @map("acknowledged_at")
+  blockedReason     String?      @map("blocked_reason")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
   deletedAt         DateTime?    @map("deleted_at")
@@ -1784,6 +1788,8 @@ model TaskComment {
   taskId    String   @map("task_id")
   authorId  String?  @map("author_id")
   body      String
+  /// Redesign R7: quick reactions, { "👍": [userId, ...] }.
+  reactions Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, taskId, createdAt])
@@ -4693,6 +4699,8 @@ model CrmSettings {
   exportPolicy      Json?    @map("export_policy")
   dashboardPolicies Json?    @map("dashboard_policies")
   enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  /// Redesign R3 (ADR 0083): the workspace's local date of the last morning follow-up summary, so it goes out once a day.
+  digestDate        String?  @map("digest_date")
   /// { followUps, intervalDays, updatedAt, updatedById } (ADR 0083); null = 5 follow-ups 7 days apart.
   followUpCadence   Json?    @map("follow_up_cadence")
   /// Journey stage names, colours and hidden flags set by the Super Workspace (ADR 0085).

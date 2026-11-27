@@ -65,6 +65,9 @@ export function useCompanyActions(): { has: (a: CompanyAction) => boolean; run: 
 export function focusSection(id: string, selector = 'button, select, input, a') {
   const el = document.getElementById(id);
   if (!el) return;
+  // A section under "More about this company" opens it first.
+  const more = el.closest('details');
+  if (more && !more.open) more.open = true;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   (el.querySelector(selector) as HTMLElement | null)?.focus({ preventScroll: true });
 }

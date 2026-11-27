@@ -11,6 +11,7 @@ import {
   type ManagerDashboardView,
   type SuperDashboard,
   TARGET_METRIC_LABEL,
+  TARGET_METRICS,
   type TargetMetric,
   type TargetRow,
   WORKSPACE_DASHBOARD_PERIOD_LABEL,
@@ -54,6 +55,7 @@ import { useFollowUps } from '@/lib/company-work';
 import { formatDate } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useJourneyBoard } from '@/lib/journey';
+import { dayPart, type DayPart, lineOfTheDay, WelcomeBanner } from '@/components/welcome/welcome-banner';
 import { useCan, useSession } from '@/lib/session';
 import { useTargets } from '@/lib/workspace-work';
 import { useWorkspaceDashboard } from '@/lib/workspace-dashboard';
@@ -128,33 +130,53 @@ function PeriodTabs({ value, onChange }: { value: WorkspaceDashboardPeriod; onCh
 }
 
 /** The greeting, the role's question and the quick actions the person may use. */
+/** A line for the day on the home dashboard, the same all day (Kunal, redesign: an attractive welcome). */
+const LINES: MessageKey[] = [
+  'Every conversation today is a step closer to a win.',
+  'Small follow-ups build big relationships.',
+  'Your next client is one good email away.',
+  'Focus on the few things that move deals forward.',
+  'Great teams celebrate progress, not just results.',
+  'Make today count: one call, one follow-up, one win.',
+  'Consistency beats intensity. Keep showing up.',
+];
+const HELLO: Record<DayPart, MessageKey> = { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Working late' };
+const LEVEL_BADGE: Record<Level, MessageKey> = { EXECUTIVE: 'Executive Workspace', MANAGER: 'Manager Workspace', SUPER: 'Super Workspace' };
+
 function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) {
   const t = useT();
   const { data: session } = useSession();
-  const hour = new Date().getHours();
-  const hello = hour < 12 ? t('Good morning, {name}', { name: session?.user.name.split(' ')[0] ?? '' }) : hour < 18 ? t('Good afternoon, {name}', { name: session?.user.name.split(' ')[0] ?? '' }) : t('Good evening, {name}', { name: session?.user.name.split(' ')[0] ?? '' });
+  const name = session?.user.name ?? '';
+  const first = name.split(' ')[0] ?? '';
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || '·';
+  const part = dayPart();
   return (
-    <section aria-labelledby="role-question" className="relative overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
-      <div aria-hidden className={cn('absolute inset-0 bg-gradient-to-br to-transparent', ROLE[level].band)} />
-      <div aria-hidden className="absolute -end-16 -top-16 size-56 rounded-full opacity-20 blur-3xl" style={{ background: ROLE[level].b }} />
-      <div className="relative space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">
-              {hello} · {new Intl.DateTimeFormat(t.formatLocale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
-            </p>
-            <div className="mt-1 flex items-center gap-1.5">
-              <h1 id="role-question" className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                {t(QUESTION[level])}
-              </h1>
-              <InfoTip topic="page.commandCenter" />
-            </div>
-          </div>
-          {picker}
+    <WelcomeBanner
+      headingId="role-question"
+      part={part}
+      hello={t(HELLO[part])}
+      name={first}
+      initials={initials}
+      colors={[ROLE[level].a, ROLE[level].b]}
+      date={new Intl.DateTimeFormat(t.formatLocale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
+      badge={
+        <span className="rounded-full border border-border bg-surface/80 px-2 py-0.5 font-semibold text-foreground" data-welcome-level={level}>
+          {t(LEVEL_BADGE[level])}
+        </span>
+      }
+      line={t(lineOfTheDay(LINES))}
+      heading={
+        <div className="flex items-center gap-1.5">
+          <h1 id="role-question" className="text-lg font-bold tracking-tight text-foreground/90 sm:text-xl">
+            {t(QUESTION[level])}
+          </h1>
+          <InfoTip topic="page.commandCenter" />
         </div>
-        <QuickActions />
-      </div>
-    </section>
+      }
+      aside={picker}
+    >
+      <QuickActions />
+    </WelcomeBanner>
   );
 }
 
@@ -348,7 +370,8 @@ function targetsFor(rows: TargetRow[] | undefined, pick: (t: TargetRow) => boole
   const now = Date.now();
   const running = (rows ?? []).filter((t) => pick(t) && new Date(`${t.startsOn}T00:00:00Z`).getTime() <= now && now < new Date(`${t.endsOn}T00:00:00Z`).getTime() + 86_400_000);
   const out: { metric: TargetMetric; amount: number; achieved: number; percent: number; currency: string | null }[] = [];
-  for (const metric of ['REVENUE', 'LEADS', 'DEALS_WON', 'CALLS'] as const) {
+  // Revenue first, then the other metrics in their usual order.
+  for (const metric of ['REVENUE', ...TARGET_METRICS.filter((m) => m !== 'REVENUE')] as TargetMetric[]) {
     const list = running.filter((t) => t.metric === metric);
     if (!list.length) continue;
     const amount = list.reduce((a, t) => a + t.amount, 0);
