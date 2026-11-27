@@ -120,10 +120,11 @@ const WORKER_ALL = new Set([
 ]);
 /** Collections the worker may only read across workspaces (`worker_scan` FOR SELECT). */
 // ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
+// OrgDocument: expiry reminders for My Organization documents (ADR 0100) find the documents close to expiry.
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
 // Contact: the follow-up cadence job (ADR 0096) finds contacts whose period after the first email has passed; it reads ids only and moves each one inside its own workspace.
-const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
+const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'OrgDocument', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

@@ -6184,3 +6184,165 @@ model CallSettings {
 
   @@map("call_settings")
 }
+
+// ───────────────────────────── My Organization (ADR 0100) ─────────────────────────────
+
+/// The organisation's own company record: one per organisation, shared by every workspace (never copied per workspace).
+model OrgProfile {
+  id                   String    @id @default(uuid()) @map("_id")
+  tenantId             String    @unique @map("tenant_id")
+  /// The name people know the company by; legalName is the registered name.
+  brandName            String    @map("brand_name")
+  legalName            String?   @map("legal_name")
+  tagline              String?
+  description          String?
+  businessActivities   String?   @map("business_activities")
+  services             String[]
+  products             String[]
+  industriesServed     String[]  @map("industries_served")
+  certifications       String[]
+  companyType          String?   @map("company_type")
+  companySize          String?   @map("company_size")
+  employeeCount        Int?      @map("employee_count")
+  foundedYear          Int?      @map("founded_year")
+  /// Incorporation: YYYY-MM-DD, the country and the body that registered the company.
+  incorporationDate    String?   @map("incorporation_date")
+  incorporationCountry String?   @map("incorporation_country")
+  registrationNumber   String?   @map("registration_number")
+  registrationAuthority String?  @map("registration_authority")
+  /// [{ label, value }]: GST, VAT, PAN, EIN...
+  taxIds               Json      @default("[]") @map("tax_ids")
+  /// The registered office { country, state, city, address, postalCode }.
+  registeredAddress    Json?     @map("registered_address")
+  /// Other offices: [{ label, country, state, city, address, postalCode }].
+  offices              Json      @default("[]")
+  /// [{ value, label }]
+  phones               Json      @default("[]")
+  emails               Json      @default("[]")
+  website              String?
+  /// Further pages of the website and other sites: [{ label, url }].
+  websiteLinks         Json      @default("[]") @map("website_links")
+  /// [{ platform, url }], the same shape as a company's (ADR 0076).
+  socialLinks          Json      @default("[]") @map("social_links")
+  /// [{ name, designation, email, phone, department }].
+  keyContacts          Json      @default("[]") @map("key_contacts")
+  /// [{ label, value }]
+  moreDetails          Json      @default("[]") @map("more_details")
+  brandColors          String[]  @map("brand_colors")
+  /// Profile sections approved for clients (ORG_SHARE_SECTIONS); the rest stay inside the organisation.
+  sharedSections       String[]  @map("shared_sections")
+  logoData             Bytes?    @map("logo_data")
+  logoContentType      String?   @map("logo_content_type")
+  logoUpdatedAt        DateTime? @map("logo_updated_at")
+  createdById          String?   @map("created_by_id")
+  updatedById          String?   @map("updated_by_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("org_profiles")
+}
+
+/// A document of the organisation (certificate, registration, presentation...). The file lives in its versions.
+model OrgDocument {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  title            String
+  /// ORG_DOCUMENT_CATEGORIES
+  category         String
+  description      String?
+  issuer           String?
+  referenceNumber  String?   @map("reference_number")
+  /// YYYY-MM-DD
+  issueDate        String?   @map("issue_date")
+  expiryDate       String?   @map("expiry_date")
+  tags             String[]
+  /// ALL (every workspace), MANAGERS (Super and Manager Workspaces) or SUPER.
+  visibility       String    @default("ALL")
+  /// Approved for sharing with clients. Never set on its own: a person with edit rights approves it.
+  clientShareable  Boolean   @default(false) @map("client_shareable")
+  approvedById     String?   @map("approved_by_id")
+  approvedAt       DateTime? @map("approved_at")
+  currentVersion   Int       @default(1) @map("current_version")
+  /// The expiry date the last reminder was sent for, and which one (30 days, 7 days, expired).
+  remindedFor      String?   @map("reminded_for")
+  createdById      String?   @map("created_by_id")
+  updatedById      String?   @map("updated_by_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  versions OrgDocumentVersion[]
+
+  @@index([tenantId, category])
+  @@index([tenantId, expiryDate])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_documents")
+}
+
+/// One uploaded file of an organisation document. Replacing a document adds a version; older ones are kept.
+model OrgDocumentVersion {
+  id           String   @id @default(uuid()) @map("_id")
+  tenantId     String   @map("tenant_id")
+  documentId   String   @map("document_id")
+  version      Int
+  fileName     String   @map("file_name")
+  contentType  String   @map("content_type")
+  sizeBytes    Int      @map("size_bytes")
+  data         Bytes
+  sha256       String
+  note         String?
+  uploadedById String?  @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document OrgDocument @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([documentId, version])
+  @@index([tenantId, documentId])
+  /// Relation lookups match on this field alone, so it needs its own index.
+  @@index([documentId])
+  @@map("org_document_versions")
+}
+
+/// A login, licence or membership number of the organisation. The secret is sealed (AES-256-GCM) and never shared with clients.
+model OrgCredential {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  label        String
+  /// ORG_CREDENTIAL_KINDS
+  kind         String
+  url          String?
+  username     String?
+  secretSealed String?   @map("secret_sealed")
+  notesSealed  String?   @map("notes_sealed")
+  /// SUPER (Super Workspace only) or MANAGERS (Super and Manager Workspaces).
+  access       String    @default("SUPER")
+  lastRevealedAt DateTime? @map("last_revealed_at")
+  createdById  String?   @map("created_by_id")
+  updatedById  String?   @map("updated_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_credentials")
+}
+
+/// A link that shows a client the approved profile and chosen approved documents, until it expires or is revoked.
+model OrgShare {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  documentIds    String[]  @map("document_ids")
+  includeProfile Boolean   @default(true) @map("include_profile")
+  recipientName  String?   @map("recipient_name")
+  recipientEmail String?   @map("recipient_email")
+  companyId      String?   @map("company_id")
+  message        String?
+  expiresAt      DateTime  @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  revokedById    String?   @map("revoked_by_id")
+  views          Int       @default(0)
+  lastViewedAt   DateTime? @map("last_viewed_at")
+  createdById    String    @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_shares")
+}

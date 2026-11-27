@@ -74,6 +74,7 @@ export const en = {
   'module.customer-success': 'Customer Success',
   'module.reports': 'Reports & Analytics',
   'module.gamification': 'Sales Gamification',
+  'module.my-organization': 'My Organization',
   'module.team': 'Team Management',
   'module.integrations': 'Integrations',
   'module.marketplace': 'Marketplace',

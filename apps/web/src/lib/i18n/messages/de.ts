@@ -68,6 +68,7 @@ export const de: Messages = {
   'module.customer-success': 'Kundenerfolg',
   'module.reports': 'Berichte & Analysen',
   'module.gamification': 'Vertriebs-Gamification',
+  'module.my-organization': 'Meine Organisation',
   'module.team': 'Teamverwaltung',
   'module.integrations': 'Integrationen',
   'module.marketplace': 'Marktplatz',

@@ -20,6 +20,7 @@ import { ChatModule } from './chat/chat.module';
 import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
 import { CallsModule } from './calls/calls.module';
+import { MyOrganizationModule } from './my-organization/my-organization.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
@@ -97,6 +98,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     CommandCenterModule,
     CrmModule,
     CallsModule,
+    MyOrganizationModule,
     ChatModule,
     SupportModule,
     AutomationModule,

@@ -25,6 +25,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.mobileAccess': 'mobile',
   'page.announcements': 'workspaces',
   'page.mobileConfiguration': 'mobile',
+  'page.myOrganization': 'workspaces',
   'page.team': 'workspaces',
   'page.administration': 'workspaces',
   'page.workspaceSecurity': 'workspaces',

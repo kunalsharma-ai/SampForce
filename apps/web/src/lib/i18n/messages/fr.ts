@@ -68,6 +68,7 @@ export const fr: Messages = {
   'module.customer-success': 'Réussite client',
   'module.reports': 'Rapports et analyses',
   'module.gamification': 'Gamification des ventes',
+  'module.my-organization': 'Mon organisation',
   'module.team': 'Gestion d’équipe',
   'module.integrations': 'Intégrations',
   'module.marketplace': 'Marketplace',

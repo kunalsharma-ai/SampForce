@@ -4,6 +4,7 @@ import { PipsService } from '../recognition/pips.service';
 import { RecognitionService } from '../recognition/recognition.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
+import { OrgExpiryRemindersService } from '../my-organization/org-expiry-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
@@ -73,6 +74,8 @@ export interface WorkerTick {
   taskPlans: number;
   /** Employee of the Month targets counted (and month-end selections) and improvement plans counted (ADR 0102). */
   recognition: number;
+  /** Expiry reminders for My Organization documents (ADR 0100). */
+  orgDocuments: number;
 }
 
 /**
@@ -118,6 +121,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly consoleNotices: ConsoleNotificationSweep,
     private readonly clientHealth: ConsoleHealthService,
     private readonly overview: ConsoleOverviewService,
+    private readonly orgDocuments: OrgExpiryRemindersService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -185,6 +189,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const sampbidxChat = await this.sampbidxChat.sweep();
     const taskPlans = await this.taskPlans.sweep();
     const recognition = (await this.recognition.sweep()) + (await this.pips.sweep());
+    const orgDocuments = await this.orgDocuments.sweep();
     // Console notifications once a minute: they read across every client, so not on every tick.
     // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
     let consoleNotifications = 0;
@@ -196,7 +201,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { teamApprovals, deletedItemsPurged, events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans, recognition };
+    return { teamApprovals, deletedItemsPurged, events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans, recognition, orgDocuments };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CALL_OUTCOME_LABELS, CALL_STATUS_LABELS, CALL_WINDOW_LABELS, DIALER_AUTH_LABELS, DIALER_CAPABILITIES, DIALER_CATEGORY_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS, DIALER_PROVIDERS, ENQUIRY_CATEGORY_LABELS, ENQUIRY_STATUS_LABELS, ENQUIRY_TYPE_LABELS, METRIC_RULE, OUTCOME_ACTION_LABELS, RANKING_METRIC_LABEL, RECORDING_SOURCE_LABELS, SUPER_TASK_NOTICES_LABEL, TARGET_METRIC_LABEL, TASK_CADENCE_LABEL, TASK_PLAN_DURATION_LABEL, TASK_PLAN_STATUS_LABEL, TASK_STATUS_LABEL, WEEKDAY_SHORT } from '@dealflow/types';
+import { ORG_ACTIVITY_LABELS, ORG_COMPLETENESS_FIELDS, ORG_CREDENTIAL_ACCESS_LABELS, ORG_CREDENTIAL_KIND_LABELS, ORG_DOCUMENT_CATEGORY_LABELS, ORG_DOCUMENT_VISIBILITY_LABELS, ORG_SHARE_SECTION_LABELS } from '@dealflow/types';
 import {
   ENRICH_FIELD_LABELS,
   COMPANY_EMAIL_CTA_LABELS,
@@ -236,6 +237,8 @@ describe('page phrases', () => {
         'The call request is complete', 'The keys are saved', 'The provider accepted the keys', 'Signed in to the provider', 'The webhook answered', 'The link is complete',
       ],
     ],
+    // My Organization (ADR 0100): document categories and audiences, credential kinds, shared sections, history and completeness.
+    ['my organization labels', [...Object.values(ORG_DOCUMENT_CATEGORY_LABELS), ...Object.values(ORG_DOCUMENT_VISIBILITY_LABELS), ...Object.values(ORG_CREDENTIAL_KIND_LABELS), ...Object.values(ORG_CREDENTIAL_ACCESS_LABELS), ...Object.values(ORG_SHARE_SECTION_LABELS), ...Object.values(ORG_ACTIVITY_LABELS), ...ORG_COMPLETENESS_FIELDS.map((f) => f[1])]],
     // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
     // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
     // retention plan's cadences and steps.
