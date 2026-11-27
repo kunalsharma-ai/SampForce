@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
-import { type APIRequestContext, type Browser, expect, type Page, test } from '@playwright/test';
+import { type APIRequestContext, type Browser, expect, type Locator, type Page, test } from '@playwright/test';
 import { E2E_DATABASE_URL, signUp } from './helpers';
 
 /*
@@ -31,6 +31,17 @@ async function join(browser: Browser, inviteUrl: string, name: string): Promise<
   return page;
 }
 
+/** Controls and text in the banner whose box overlaps the sky scene (should be none). */
+async function clashesWithSky(banner: Locator) {
+  return banner.evaluate((el) => {
+    const sky = el.querySelector('[data-welcome-scene]')!.getBoundingClientRect();
+    const hits = (r: DOMRect) => r.width > 0 && r.height > 0 && r.left < sky.right - 1 && r.right > sky.left + 1 && r.top < sky.bottom - 1 && r.bottom > sky.top + 1;
+    return [...el.querySelectorAll<HTMLElement>('a, button, [role="radio"], [role="radiogroup"], [role="toolbar"], input, select, h1, [data-welcome-hello], [data-welcome-line], [data-welcome-date], [data-welcome-level]')]
+      .filter((n) => hits(n.getBoundingClientRect()))
+      .map((n) => n.getAttribute('aria-label') ?? n.textContent?.trim().slice(0, 40) ?? n.tagName);
+  });
+}
+
 /** The banner reads right, passes axe and fits; then it is photographed in light and dark at every size. */
 async function check(page: Page, path: string, name: string, badge: string, prefix: string) {
   const banner = page.locator('[data-welcome-banner]').first();
@@ -56,6 +67,8 @@ async function check(page: Page, path: string, name: string, badge: string, pref
       await expect(banner.locator('[data-welcome-date]')).not.toBeEmpty();
       // It never pushes the page sideways.
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+      // The sky never sits over or behind a control: nothing you can click or read in the banner overlaps it.
+      expect(await clashesWithSky(banner)).toEqual([]);
       if (size === 'desktop') {
         const r = await new AxeBuilder({ page }).include('[data-welcome-banner]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
         expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);

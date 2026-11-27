@@ -112,7 +112,7 @@ export function RoleDashboard({ level }: { level: Level }) {
 function PeriodTabs({ value, onChange }: { value: WorkspaceDashboardPeriod; onChange: (p: WorkspaceDashboardPeriod) => void }) {
   const t = useT();
   return (
-    <div role="radiogroup" aria-label={t('Period')} className="inline-flex max-w-full overflow-x-auto rounded-full border border-border bg-surface/80 p-0.5 shadow-sm backdrop-blur">
+    <div role="radiogroup" aria-label={t('Period')} className="grid w-full grid-cols-2 gap-0.5 rounded-2xl border border-border bg-surface/80 p-0.5 shadow-sm backdrop-blur sm:inline-flex sm:w-auto sm:max-w-full sm:gap-0 sm:overflow-x-auto sm:rounded-full">
       {WORKSPACE_DASHBOARD_PERIODS.map((p) => (
         <button
           key={p}
