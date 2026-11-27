@@ -35,4 +35,11 @@ describe('bulk actions', () => {
     expect(bulkActionSchema.safeParse({ entity: 'leads', ids: [id], action: 'delete' }).success).toBe(true);
     expect(bulkActionSchema.safeParse({ entity: 'leads', ids: [], action: 'delete' }).success).toBe(false);
   });
+
+  it('takes either the ticked rows or every matching record, never both or neither', () => {
+    expect(bulkActionSchema.safeParse({ entity: 'companies', all: { query: { q: 'acme' }, expected: 1200 }, action: 'delete' }).success).toBe(true);
+    expect(bulkActionSchema.safeParse({ entity: 'companies', action: 'delete' }).success).toBe(false);
+    expect(bulkActionSchema.safeParse({ entity: 'companies', ids: [id], all: { expected: 1 }, action: 'delete' }).success).toBe(false);
+    expect(bulkActionSchema.safeParse({ entity: 'companies', all: { expected: 0 }, action: 'delete' }).success).toBe(false);
+  });
 });

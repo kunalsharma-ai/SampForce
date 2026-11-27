@@ -195,7 +195,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
           loading={list.isPending}
           error={list.error}
           href={(r) => `/app/${entity}/${r.id}`}
-          bulk={canWrite ? { statuses: entity === 'leads' ? BULK_LEAD_STATUSES : undefined } : undefined}
+          bulk={canWrite ? { statuses: entity === 'leads' ? BULK_LEAD_STATUSES : undefined, query: listParams } : undefined}
           filters={
             <>
               {filters && (

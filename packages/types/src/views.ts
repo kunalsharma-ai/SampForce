@@ -82,12 +82,20 @@ export const BULK_ACTIONS = ['assign', 'status', 'delete'] as const;
 export const bulkActionSchema = z
   .object({
     entity: z.enum(TABLE_ENTITIES),
-    ids: z.array(z.string().uuid()).min(1).max(100),
+    /** The rows ticked on screen (one page at most). */
+    ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+    /**
+     * Every record the list shows for these filters, on every page, with no limit: `query` is the list's own query
+     * (search, owner, status, custom field filters…) and `expected` the total the person saw. When the list has changed
+     * since, nothing is done and the new total is returned, so a selection never grows behind the person's back.
+     */
+    all: z.object({ query: z.record(z.string().max(4_000)).default({}), expected: z.number().int().min(1) }).strict().optional(),
     action: z.enum(BULK_ACTIONS),
     ownerId: z.string().uuid().optional(),
     status: z.string().max(40).optional(),
   })
   .strict()
+  .refine((v) => !!v.ids !== !!v.all, { message: 'Choose the rows or all matching records', path: ['ids'] })
   .refine((v) => v.action !== 'assign' || !!v.ownerId, { message: 'Choose an owner', path: ['ownerId'] })
   .refine((v) => v.action !== 'status' || !!v.status, { message: 'Choose a status', path: ['status'] });
 export type BulkActionInput = z.infer<typeof bulkActionSchema>;
