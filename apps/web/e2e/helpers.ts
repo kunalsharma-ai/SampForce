@@ -86,6 +86,12 @@ export async function setFeatures(page: Page, features: Record<string, boolean>)
   await fixture({ action: 'featureOverrides', tenantId: me.tenant.id, features });
 }
 
+/** Sets the Console's workspace rules for the signed-in client (W3, R8), as a Console Admin would; null = the plan's. */
+export async function setWorkspaceRules(page: Page, override: Record<string, unknown> | null) {
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  await fixture({ action: 'workspaceRules', tenantId: me.tenant.id, override });
+}
+
 /** Approves the signed-in workspace for the mobile app and switches it on (ADR 0072). */
 export async function approveMobile(page: Page) {
   const me = await (await page.request.get('/api/v1/auth/me')).json();

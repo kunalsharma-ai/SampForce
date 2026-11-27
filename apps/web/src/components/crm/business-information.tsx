@@ -55,7 +55,7 @@ import { InfoTip } from '@/components/info-tip';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
-import { useCan, useHiddenKeys } from '@/lib/session';
+import { useCan, useHiddenKeys, useLockedKeys } from '@/lib/session';
 import { Select, Textarea } from './select';
 import { BRAND_MARKS } from './brand-marks';
 import { INSTAGRAM_GRADIENT, profileLinks } from './social-icons';
@@ -604,13 +604,16 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   // Fields the Console hides from this level are left out (R8); the server ignores them anyway.
   const hiddenKeys = useHiddenKeys('company');
+  // Fields the workspace above locked are shown read only (ADR 0096); the server ignores changes to them.
+  const lockedKeys = useLockedKeys('company');
+  const lockedHint = t('Locked by the workspace above yours');
   const label = (f: EnrichField) => t.maybe(ENRICH_FIELD_LABELS[f]);
   // Deleting a saved value happens here, never on the page itself (Kunal, ADR 0097): "Delete" empties the field, and
-  // nothing is removed until Save.
+  // nothing is removed until Save. A field the workspace above locked has no Delete.
   const clearable = (k: keyof Form, fieldLabel: string, node: React.ReactNode) => (
     <div className="relative">
       {node}
-      {!!form[k] && (
+      {!!form[k] && !lockedKeys.has(k as string) && (
         <button
           type="button"
           className="absolute end-0 top-0 inline-flex items-center gap-1 rounded px-1 text-xs text-muted-foreground hover:text-critical focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
@@ -628,8 +631,8 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
       : clearable(
           k,
           extra.label ?? label(k),
-          <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={extra.hint}>
-            <Input type={type} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
+          <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={lockedKeys.has(k) ? lockedHint : extra.hint}>
+            <Input type={type} value={form[k] as string} readOnly={lockedKeys.has(k)} data-locked-field={lockedKeys.has(k) ? k : undefined} onChange={(e) => set(k, e.target.value as never)} />
           </Field>,
         );
   const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) =>
@@ -638,8 +641,8 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
       : clearable(
           k,
           fieldLabel,
-          <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={hint}>
-            <Textarea rows={rows} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
+          <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={lockedKeys.has(k as string) ? lockedHint : hint}>
+            <Textarea rows={rows} value={form[k] as string} readOnly={lockedKeys.has(k as string)} data-locked-field={lockedKeys.has(k as string) ? k : undefined} onChange={(e) => set(k, e.target.value as never)} />
           </Field>,
         );
   const onePerLine = t('One per line.');

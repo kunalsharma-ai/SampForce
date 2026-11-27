@@ -10,6 +10,7 @@
  *   { "action": "meeting", "tenantId": "...", "userId": "...", "title": "...", "hoursFromNow": 2, "contactId": "...", "attendee": "...", "joinUrl"?: "..." }
  *   { "action": "featureOverride", "tenantId": "...", "feature": "sampbidx_chat", "enabled": true }
  *   { "action": "featureOverrides", "tenantId": "...", "features": { "leads_section": true, "accounts_section": true } }
+ *   { "action": "workspaceRules", "tenantId": "...", "override": { "managerHiddenSections": ["quotes"] } | null }
  */
 import { randomUUID } from 'node:crypto';
 import { createPrismaClient, type TenantTx, withDbContext } from '@dealflow/database';
@@ -22,7 +23,8 @@ type Fixture =
   | { action: 'mobileApproved'; tenantId: string }
   | { action: 'featureOverride'; tenantId: string; feature: string; enabled: boolean }
   | { action: 'featureOverrides'; tenantId: string; features: Record<string, boolean> }
-  | { action: 'backdateWorkSession'; tenantId: string; userId: string; hours: number; breakMinutes: number };
+  | { action: 'backdateWorkSession'; tenantId: string; userId: string; hours: number; breakMinutes: number }
+  | { action: 'workspaceRules'; tenantId: string; override: Record<string, unknown> | null };
 
 const MAILBOX = 'me@seller.test';
 
@@ -106,6 +108,11 @@ async function main(): Promise<void> {
           });
         }
       });
+    } else if (f.action === 'workspaceRules') {
+      // The Console's client override of the workspace rules (W3, R8), as the Console would save it.
+      await withDbContext(prisma, { tenantId: f.tenantId }, (tx) =>
+        tx.subscription.updateMany({ where: { tenantId: f.tenantId }, data: { workspaceRules: (f.override ?? null) as never } }),
+      );
     } else {
       throw new Error(`Unknown fixture ${(f as { action?: string }).action}`);
     }

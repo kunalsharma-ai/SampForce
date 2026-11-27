@@ -15,6 +15,7 @@ import {
   type MoveWorkspaceInput,
   normaliseActions,
   normaliseFeatures,
+  orderFieldIds,
   parseActionGrants,
   type UpdateWorkspaceInput,
   type WorkspaceAction,
@@ -331,6 +332,20 @@ export class WorkspacesService {
         if (target.level === 'SUPER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'This setting belongs to Manager and Executive Workspaces.' });
         data.canChatWithPeers = input.canChatWithPeers;
       }
+      const fieldChanges: Record<string, string[]> = {};
+      if (input.hiddenFields !== undefined || input.lockedFields !== undefined) {
+        // Field access is what the workspace above decides for one below it; the Super Workspace always has every field.
+        if (target.level === 'SUPER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'The Super Workspace always sees and changes every field.' });
+        const hidden = input.hiddenFields !== undefined ? orderFieldIds(input.hiddenFields) : (target.node.hiddenFields ?? []);
+        const lockedIn = input.lockedFields !== undefined ? orderFieldIds(input.lockedFields) : (target.node.lockedFields ?? []);
+        // A hidden field is not also locked: hiding already keeps it from being changed.
+        const locked = lockedIn.filter((f) => !hidden.includes(f));
+        const was = { hidden: target.node.hiddenFields ?? [], locked: target.node.lockedFields ?? [] };
+        data.hiddenFields = hidden;
+        data.lockedFields = locked;
+        const diff = (a: string[], b: string[]) => a.filter((f) => !b.includes(f));
+        for (const [k, v] of Object.entries({ fieldsHidden: diff(hidden, was.hidden), fieldsShown: diff(was.hidden, hidden), fieldsLocked: diff(locked, was.locked), fieldsUnlocked: diff(was.locked, locked) })) if (v.length) fieldChanges[k] = v;
+      }
       await tx.workspaceNode.update({ where: { id }, data });
       const added = (data.features as string[] | undefined)?.filter((f) => !before.features.includes(f)) ?? [];
       const removed = data.features ? before.features.filter((f) => !(data.features as string[]).includes(f)) : [];
@@ -341,6 +356,7 @@ export class WorkspacesService {
           workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed,
           ...(input.actions && grantsKey(before.actions) !== grantsKey(data.actions) ? { actionsFrom: before.actions, actionsTo: data.actions } : {}),
           ...flagChanges(target.node, input),
+          ...fieldChanges,
         },
         meta,
       });
@@ -726,6 +742,10 @@ export class WorkspacesService {
       canViewOtherManagers: a.node.canViewOtherManagers,
       canViewAuditLog: a.node.canViewAuditLog,
       canChatWithPeers: a.node.canChatWithPeers,
+      hiddenFields: a.level === 'SUPER' ? [] : orderFieldIds(a.node.hiddenFields ?? []),
+      lockedFields: a.level === 'SUPER' ? [] : orderFieldIds(a.node.lockedFields ?? []),
+      effectiveHiddenFields: a.fieldAccess.hidden,
+      effectiveLockedFields: a.fieldAccess.locked,
       editable,
       department: a.node.department ?? null,
       description: a.node.description ?? null,

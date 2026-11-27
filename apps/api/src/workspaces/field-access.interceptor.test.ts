@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hiddenKeysByEntity } from '@dealflow/types';
-import { dropHidden, stripHidden } from './field-access.interceptor';
+import { createsRecord, dropHidden, stripHidden } from './field-access.interceptor';
 
 const hidden = hiddenKeysByEntity(['company.primaryEmail', 'contact.phone', 'rfq.pricing']);
 
@@ -38,5 +38,15 @@ describe('field access: hiding fields in responses (R8)', () => {
     const body = { primaryEmail: 'x', emails: [], industry: 'R', patch: { primaryEmail: 'y', city: 'Pune' } };
     dropHidden(body, 'company', hidden);
     expect(body).toEqual({ industry: 'R', patch: { city: 'Pune' } });
+  });
+});
+
+describe('field access: locked fields (ADR 0096)', () => {
+  it('treats only a POST to the list itself as creating a record', () => {
+    expect(createsRecord('POST', '/api/v1/companies')).toBe(true);
+    expect(createsRecord('POST', '/contacts')).toBe(true);
+    expect(createsRecord('POST', '/api/v1/companies/c1/won')).toBe(false);
+    expect(createsRecord('PATCH', '/api/v1/companies')).toBe(false);
+    expect(createsRecord('POST', '/api/v1/companies/bulk')).toBe(false);
   });
 });

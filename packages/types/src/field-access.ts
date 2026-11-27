@@ -101,3 +101,30 @@ export function entityOfPath(path: string): FieldEntity | null {
       return null;
   }
 }
+
+/** Catalogue order, known ids only, no repeats. */
+export const orderFieldIds = (ids: Iterable<string>): string[] => {
+  const set = new Set(ids);
+  return FIELD_ACCESS_CATALOGUE.map((e) => e.id).filter((id) => set.has(id));
+};
+
+export interface FieldAccess {
+  /** Fields never shown and never changed. */
+  hidden: string[];
+  /** Fields shown but never changed (a hidden field is not also locked). */
+  locked: string[];
+}
+
+/**
+ * Field access of a Manager or Executive Workspace (ADR 0096): what the Console withholds from its level, what the
+ * workspace above it has hidden or locked, and what that workspace set on it. Nothing a level above hid or locked can
+ * be opened again below it: hidden only grows, and a locked field can only become hidden.
+ */
+export function combineFieldAccess(parent: FieldAccess, own: Partial<FieldAccess>, consoleHidden: readonly string[] = []): FieldAccess {
+  const hidden = orderFieldIds([...parent.hidden, ...(own.hidden ?? []), ...consoleHidden]);
+  const hiddenSet = new Set(hidden);
+  const locked = orderFieldIds([...parent.locked, ...(own.locked ?? [])]).filter((id) => !hiddenSet.has(id));
+  return { hidden, locked };
+}
+
+export const NO_FIELD_LIMITS: FieldAccess = { hidden: [], locked: [] };
