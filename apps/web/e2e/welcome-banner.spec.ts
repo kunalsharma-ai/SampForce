@@ -36,7 +36,7 @@ async function clashesWithSky(banner: Locator) {
   return banner.evaluate((el) => {
     const sky = el.querySelector('[data-welcome-scene]')!.getBoundingClientRect();
     const hits = (r: DOMRect) => r.width > 0 && r.height > 0 && r.left < sky.right - 1 && r.right > sky.left + 1 && r.top < sky.bottom - 1 && r.bottom > sky.top + 1;
-    return [...el.querySelectorAll<HTMLElement>('a, button, [role="radio"], [role="radiogroup"], [role="toolbar"], input, select, h1, [data-welcome-hello], [data-welcome-line], [data-welcome-date], [data-welcome-level]')]
+    return [...el.querySelectorAll<HTMLElement>('a, button, [role="radio"], [role="radiogroup"], [role="toolbar"], input, select, h1, [data-welcome-hello], [data-welcome-line], [data-welcome-date], [data-welcome-level], [data-welcome-clock], [data-welcome-special]')]
       .filter((n) => hits(n.getBoundingClientRect()))
       .map((n) => n.getAttribute('aria-label') ?? n.textContent?.trim().slice(0, 40) ?? n.tagName);
   });
@@ -65,6 +65,12 @@ async function check(page: Page, path: string, name: string, badge: string, pref
       await expect(banner.locator('[data-welcome-level]')).toHaveText(badge);
       await expect(banner.locator('[data-welcome-line]')).not.toBeEmpty();
       await expect(banner.locator('[data-welcome-date]')).not.toBeEmpty();
+      // The live clock: the day, the date with its year, and seconds that move.
+      const clock = banner.getByRole('timer');
+      await expect(clock.locator('[data-clock-date]')).toContainText(String(new Date().getFullYear()));
+      await expect(clock.locator('[data-clock-weekday]')).not.toBeEmpty();
+      const before = await clock.locator('[data-clock-seconds]').textContent();
+      await expect(clock.locator('[data-clock-seconds]')).not.toHaveText(before ?? '', { timeout: 3000 });
       // It never pushes the page sideways.
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
       // The sky never sits over or behind a control: nothing you can click or read in the banner overlaps it.
@@ -96,6 +102,29 @@ test('every home dashboard and the Console open with a welcome for the time of d
   await expect(priya.locator('[data-role-dashboard="EXECUTIVE"] [data-welcome-banner]').getByRole('heading', { level: 1 })).toHaveText('What do I need to do today?');
   await check(manager, '/app', 'Rahul', 'Manager Workspace', '02-manager');
   await check(page, '/app', 'Test', 'Super Workspace', '03-super');
+
+  // The Super Workspace adds a company event for today in Settings; every dashboard shows it beside the clock.
+  const now = new Date();
+  const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  await page.goto('/app/settings/crm?section=company-events');
+  await page.getByRole('button', { name: 'Add event' }).click();
+  await page.getByLabel('Emoji').fill('🏢');
+  await page.getByLabel('Event name').fill('Founding Day');
+  await page.getByLabel('Date', { exact: true }).fill(ymd);
+  await page.getByLabel('Note (optional)').fill('Cake in the kitchen at 4 pm');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+  for (const [who, p] of [['Super', page], ['Executive', priya]] as const) {
+    await p.goto('/app');
+    const special = p.locator('[data-welcome-special]');
+    await expect(special, who).toHaveAttribute('data-welcome-special', 'COMPANY');
+    await expect(special.locator('[data-special-kind]')).toHaveText('Company event today');
+    await expect(special.locator('[data-special-name]')).toHaveText('Founding Day');
+    await expect(special.locator('[data-special-note]')).toHaveText('Cake in the kitchen at 4 pm');
+    expect(await clashesWithSky(p.locator('[data-welcome-banner]').first())).toEqual([]);
+  }
+  // A member outside the Super Workspace cannot change them.
+  expect((await priya.request.put('/api/v1/crm-config/company-events', { data: { events: [] }, headers: ORIGIN })).status()).toBe(403);
 
   // The Console Overview greets the operator for the platform.
   const email = `ops-welcome-${String(stamp).slice(-6)}@platform.test`;

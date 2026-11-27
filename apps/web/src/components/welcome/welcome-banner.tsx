@@ -2,6 +2,8 @@
 
 import { cn } from '@dealflow/ui';
 import type * as React from 'react';
+import { LiveClock } from './live-clock';
+import { SpecialDay, type SpecialDayLabels } from './special-day';
 import './welcome-banner.css';
 
 /** The part of the day, by the viewer's own clock: it picks the greeting, the sky and the scene. */
@@ -40,6 +42,10 @@ export function WelcomeBanner({
   aside,
   children,
   className,
+  clockLabel = 'Current time',
+  locale,
+  specialDaysPath,
+  specialLabels,
 }: {
   hello: string;
   name: string;
@@ -54,6 +60,13 @@ export function WelcomeBanner({
   aside?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /** The clock's accessible name, translated. */
+  clockLabel?: string;
+  /** The language the clock and date are written in (the browser's when left out). */
+  locale?: string;
+  /** Where today's holidays and events come from: the workspace's list, or the Console's. */
+  specialDaysPath?: string;
+  specialLabels?: SpecialDayLabels;
 }) {
   return (
     <section
@@ -63,8 +76,10 @@ export function WelcomeBanner({
       style={{ '--wb-a': colors[0], '--wb-b': colors[1], '--wb-sky-a': SKY[part] } as React.CSSProperties}
     >
       <div className="relative space-y-4 p-5 sm:p-7">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div className="sf-welcome-in flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+        {/* Greeting, clock and sky each have their own cell, so none can sit over another: on wide screens they share
+            the top row; below that the clock takes a full-width row under the greeting. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-4 sm:gap-x-4 xl:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <div className="sf-welcome-in col-start-1 row-start-1 flex min-w-0 items-start gap-3 sm:gap-4">
             <span aria-hidden className="sf-welcome-avatar">
               {initials}
             </span>
@@ -85,7 +100,9 @@ export function WelcomeBanner({
               </p>
             </div>
           </div>
+          <LiveClock label={clockLabel} locale={locale} className="col-span-2 row-start-2 xl:col-span-1 xl:col-start-2 xl:row-start-1" />
           <Scene part={part} />
+          {specialDaysPath && <SpecialDay path={specialDaysPath} labels={specialLabels} className="col-span-full" />}
         </div>
         {(children || aside) && (
           <div className="flex flex-wrap items-center gap-3" data-welcome-controls>
@@ -109,7 +126,7 @@ export function WelcomeBanner({
  */
 function Scene({ part }: { part: DayPart }) {
   return (
-    <svg aria-hidden viewBox="0 0 120 120" className="sf-welcome-scene pointer-events-none -me-3 -mt-4 size-20 shrink-0 opacity-90 sm:-me-4 sm:-mt-5 sm:size-32 lg:size-36" data-welcome-scene>
+    <svg aria-hidden viewBox="0 0 120 120" className="sf-welcome-scene pointer-events-none col-start-2 row-start-1 -me-3 -mt-4 size-20 shrink-0 opacity-90 sm:-me-4 sm:-mt-5 sm:size-32 lg:size-36 xl:col-start-3" data-welcome-scene>
       <defs>
         <radialGradient id={`wb-sun-${part}`} cx="50%" cy="45%" r="55%">
           <stop offset="0%" stopColor={part === 'evening' ? '#fde68a' : '#fef3c7'} />

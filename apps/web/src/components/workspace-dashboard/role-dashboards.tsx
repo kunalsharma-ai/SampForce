@@ -174,6 +174,10 @@ function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) 
         </div>
       }
       aside={picker}
+      clockLabel={t('Current time')}
+      locale={t.formatLocale}
+      specialDaysPath="/special-days/today"
+      specialLabels={{ HOLIDAY: t('Public holiday today'), OBSERVANCE: t('Celebrated today'), COMPANY: t('Company event today') }}
     >
       <QuickActions />
     </WelcomeBanner>

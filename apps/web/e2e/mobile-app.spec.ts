@@ -51,6 +51,10 @@ test('the app signs in, follows the published configuration, and raises a questi
   await expect(phone.getByText('Field Force')).toBeVisible();
   await expect(phone.getByText(`${org} · Super Workspace`)).toBeVisible();
   await expect(phone.getByText('Organisation performance')).toBeVisible();
+  // The live clock, as on the web dashboards: the date with its year, and seconds that move.
+  await expect(phone.getByTestId('live-clock-date')).toContainText(String(new Date().getFullYear()));
+  const second = await phone.getByTestId('live-clock-seconds').textContent();
+  await expect(phone.getByTestId('live-clock-seconds')).not.toHaveText(second ?? '', { timeout: 3000 });
   await shot(phone, '11-app-home');
   await expectNoA11yViolations(phone);
 
