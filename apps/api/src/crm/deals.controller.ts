@@ -1,7 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import {
+  type BulkDealUpdateInput,
   bulkDealUpdateSchema,
   type DealInput,
+  type DealsSummaryQuery,
+  dealsSummaryQuerySchema,
   dealInputSchema,
   type DealMoveInput,
   dealMoveSchema,
@@ -63,6 +66,13 @@ export class DealsController {
     return this.deals.priority(auth, owner(auth, q));
   }
 
+  /** The Deals dashboard: pipeline, won, lost, win rate, trend, stages and top owners (ADR 0096). */
+  @Get('summary')
+  @RequirePermissions('deals:read')
+  summary(@Auth() auth: AuthContext, @Query(new ZodPipe(dealsSummaryQuerySchema)) q: DealsSummaryQuery) {
+    return this.deals.summary(auth, { pipelineId: q.pipelineId, ownerId: q.ownerId === 'me' ? auth.userId : q.ownerId, from: q.from, to: q.to });
+  }
+
   @Get('forecast')
   @RequirePermissions('deals:read')
   forecast(@Auth() auth: AuthContext, @Query(new ZodPipe(viewQuerySchema)) q: ViewQuery) {
@@ -86,7 +96,7 @@ export class DealsController {
   @AlsoRequireFeature('deal_bulk_update')
   @HttpCode(200)
   @RequirePermissions('deals:write')
-  bulk(@Auth() auth: AuthContext, @Body(new ZodPipe(bulkDealUpdateSchema)) body: z.infer<typeof bulkDealUpdateSchema>, @Meta() meta: RequestMeta) {
+  bulk(@Auth() auth: AuthContext, @Body(new ZodPipe(bulkDealUpdateSchema)) body: BulkDealUpdateInput, @Meta() meta: RequestMeta) {
     return this.deals.bulkUpdate(auth, body, meta);
   }
 
@@ -114,6 +124,21 @@ export class DealsController {
   @RequirePermissions('deals:write')
   move(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(dealMoveSchema)) body: DealMoveInput, @Meta() meta: RequestMeta) {
     return this.deals.move(auth, id, body, meta);
+  }
+
+  /** Archive a deal: it leaves the board, the list and the dashboard but is kept (ADR 0096). */
+  @Post(':id/archive')
+  @HttpCode(200)
+  @RequirePermissions('deals:write')
+  archive(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.deals.archive(auth, id, true, meta);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(200)
+  @RequirePermissions('deals:write')
+  restore(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.deals.archive(auth, id, false, meta);
   }
 
   @Post(':id/clone')

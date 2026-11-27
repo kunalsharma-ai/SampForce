@@ -14,6 +14,7 @@ import { RecordConversations } from '@/components/crm/record-conversations';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 import { StageStepper } from '@/components/deals/stage-stepper';
+import { DealArchiveButton, SAMPBIDX_LABEL } from '@/components/deals/deal-panel';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
@@ -56,6 +57,7 @@ export function DealDetail({ id }: { id: string }) {
             <Badge tone={DEAL_STATUS_TONE[d.status]}>{t.maybe(titleCase(d.status))}</Badge>
             <PriorityBadge priority={d.priority} />
             <RiskIndicator health={d.health} />
+            {d.archivedAt && <Badge tone="warning">{t('Archived {date}', { date: formatDate(d.archivedAt) })}</Badge>}
           </>
         }
         actions={
@@ -67,6 +69,7 @@ export function DealDetail({ id }: { id: string }) {
                 <Copy aria-hidden /> {t('Clone')}
               </Button>
             )}
+            <DealArchiveButton deal={d} />
           </>
         }
       />
@@ -101,8 +104,19 @@ export function DealDetail({ id }: { id: string }) {
                   ['Owner', d.owner?.name],
                   ['Source lead', d.sourceLeadId && <Link className="text-primary hover:underline" href={`/app/leads/${d.sourceLeadId}`}>{t('View lead')}</Link>],
                   ['Created', formatDate(d.createdAt)],
+                  ['Deal source', d.source],
+                  ['Products or services', d.products.length ? d.products.join(', ') : null],
+                  ['Associated RFQ', d.rfq && <Link className="text-primary hover:underline" href={`/app/rfqs?open=${d.rfq.id}`}>{`${d.rfq.number} · ${d.rfq.projectName}`}</Link>],
+                  ['SampBidx', d.sampbidx ? t.maybe(SAMPBIDX_LABEL[d.sampbidx.delivery] ?? d.sampbidx.delivery) + (d.sampbidx.remoteStatus ? ` · ${d.sampbidx.remoteStatus}` : '') : t('Not sent')],
+                  ['Next follow-up', d.nextFollowUp ? `${d.nextFollowUp.title}${d.nextFollowUp.dueAt ? ` · ${formatDate(d.nextFollowUp.dueAt)}` : ''}` : null],
                 ]}
               />
+              {d.notes && (
+                <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                  <p className="text-xs text-muted-foreground">{t('Notes')}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words">{d.notes}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
           <DealQuotes deal={{ id, name: d.name }} />

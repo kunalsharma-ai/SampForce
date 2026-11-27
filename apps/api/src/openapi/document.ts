@@ -160,6 +160,7 @@ import {
   workflowInputSchema,
   assignSchema,
   bulkDealUpdateSchema,
+  dealsSummaryQuerySchema,
   companyInputSchema,
   companyUpdateSchema,
   contactInputSchema,
@@ -437,6 +438,9 @@ export function buildOpenApiDocument(): object {
   action('get', '/deals/board', 'Deals', 'Kanban board for a pipeline (deals:read)', undefined, { query: z.object({ pipelineId: z.string().uuid().optional(), perStage: z.number().int().optional() }) });
   const dealViewQuery = { query: z.object({ pipelineId: z.string().uuid().optional(), ownerId: z.string().optional(), limit: z.number().int().optional() }) };
   action('get', '/deals/priority', 'Deals', 'Open deals ranked for attention (health risk, close date, size, priority) with the reasons (deals:read)', undefined, dealViewQuery);
+  action('get', '/deals/summary', 'Deals', 'Deals dashboard: totals, open and weighted value, created/won/lost and conversion in a date range, this month, overdue, upcoming closes, six-month trend, stage funnel, and deals by owner, manager and company (deals:read)', undefined, { query: dealsSummaryQuerySchema });
+  action('post', '/deals/{id}/archive', 'Deals', 'Archive a deal: kept, but off the board, list and dashboard (deals:write)');
+  action('post', '/deals/{id}/restore', 'Deals', 'Bring an archived deal back (deals:write)');
   action('get', '/deals/forecast', 'Deals', 'Open deals by expected close month: overdue, next six months, later, undated; value and weighted value (deals:read)', undefined, dealViewQuery);
   action('get', '/deals/territories', 'Deals', 'Open pipeline, overdue deals and this quarter’s won and lost results per sales territory, plus the open deals no territory covers and why (deals:read)', undefined, dealViewQuery);
   action('get', '/territories', 'Territories', 'Sales territories with their countries and manager (deals:read)');
@@ -446,7 +450,7 @@ export function buildOpenApiDocument(): object {
   action('get', '/deals/{id}/history', 'Deals', 'Audit history of one deal, newest first (deals:read)');
   action('post', '/deals/{id}/move', 'Deals', 'Move to another stage; Lost needs a reason (deals:write)', dealMoveSchema);
   action('post', '/deals/{id}/clone', 'Deals', 'Clone into the first stage (deals:write)');
-  action('post', '/deals/bulk-update', 'Deals', 'Reassign or move up to 200 deals (deals:write)', bulkDealUpdateSchema);
+  action('post', '/deals/bulk-update', 'Deals', 'Reassign, move, re-prioritise, re-date or set the probability of up to 200 deals (deals:write)', bulkDealUpdateSchema);
   action('get', '/pipelines', 'Pipelines', 'Pipelines with stages (pipelines:read)');
   action('post', '/pipelines', 'Pipelines', 'Create; limited by plan (pipelines:manage)', pipelineInputSchema);
   action('put', '/pipelines/{id}', 'Pipelines', 'Replace name and stages (pipelines:manage)', pipelineInputSchema);

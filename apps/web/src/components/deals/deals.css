@@ -1,0 +1,166 @@
+/*
+ * Deals redesign (ADR 0096). Colours come from stageStyle (--st-*), which keeps text readable in light and dark.
+ * Depth is a few layered shadows and gradients; movement is short and switched off for reduced motion.
+ */
+
+/* ── 3D icon tiles ─────────────────────────────────────────────── */
+.sf-i3d {
+  --i3d: 2.25rem;
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: var(--i3d);
+  height: var(--i3d);
+  align-items: center;
+  justify-content: center;
+  border-radius: 30%;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 28% 12%, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0) 46%),
+    linear-gradient(150deg, var(--st-dot), var(--st-fg));
+  box-shadow:
+    inset 0 -3px 0 rgb(0 0 0 / 0.2),
+    inset 0 2px 0 rgb(255 255 255 / 0.35),
+    0 8px 14px -6px var(--st-dot),
+    0 2px 3px rgb(15 23 42 / 0.12);
+  transform: perspective(240px) rotateX(10deg) rotateY(-10deg);
+  transition: transform 0.25s ease;
+}
+.sf-i3d > svg {
+  width: 52%;
+  height: 52%;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.3));
+}
+.sf-i3d-sm { --i3d: 1.75rem; border-radius: 28%; }
+.sf-i3d-lg { --i3d: 2.75rem; }
+.dark .sf-i3d {
+  color: #0b1120;
+  background:
+    radial-gradient(120% 90% at 28% 12%, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0) 46%),
+    linear-gradient(150deg, var(--st-fg-d), var(--st-dot-d));
+  box-shadow:
+    inset 0 -3px 0 rgb(0 0 0 / 0.25),
+    inset 0 2px 0 rgb(255 255 255 / 0.3),
+    0 8px 16px -6px var(--st-dot-d);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-lift:hover .sf-i3d { transform: perspective(240px) rotateX(0) rotateY(0) scale(1.06); }
+}
+
+/* ── KPI tiles ─────────────────────────────────────────────────── */
+.sf-kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--st-bd);
+  border-radius: 1rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(160deg, var(--st-bg) 0%, hsl(var(--surface)) 70%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 1px 2px rgb(15 23 42 / 0.05), 0 12px 26px -20px var(--st-dot);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.sf-kpi::after {
+  content: '';
+  position: absolute;
+  inset-block-start: -2.5rem;
+  inset-inline-end: -2.5rem;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--st-bg) 0%, transparent 70%);
+  pointer-events: none;
+}
+.dark .sf-kpi {
+  border-color: var(--st-bd-d);
+  background: linear-gradient(160deg, var(--st-bg-d) 0%, hsl(var(--surface)) 75%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 12px 26px -20px var(--st-dot-d);
+}
+.dark .sf-kpi::after { background: radial-gradient(circle, var(--st-bg-d) 0%, transparent 70%); }
+@media (prefers-reduced-motion: no-preference) {
+  .sf-kpi:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 18px 30px -18px var(--st-dot); }
+}
+
+/* ── Panels on the dashboard ───────────────────────────────────── */
+.sf-panel {
+  min-width: 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  background: hsl(var(--surface));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 16px 32px -28px rgb(15 23 42 / 0.4);
+}
+
+/* ── Board ─────────────────────────────────────────────────────── */
+.sf-col {
+  border: 1px solid var(--st-bd);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--st-bg) 0, hsl(var(--muted) / 0.35) 8rem);
+}
+.dark .sf-col {
+  border-color: var(--st-bd-d);
+  background: linear-gradient(180deg, var(--st-bg-d) 0, hsl(var(--muted) / 0.25) 8rem);
+}
+.sf-col[data-over='true'] { box-shadow: 0 0 0 2px var(--st-dot), 0 16px 30px -18px var(--st-dot); }
+.dark .sf-col[data-over='true'] { box-shadow: 0 0 0 2px var(--st-dot-d); }
+.sf-bar { background: var(--st-dot); }
+.dark .sf-bar { background: var(--st-dot-d); }
+.sf-ink { color: var(--st-fg); }
+.dark .sf-ink { color: var(--st-fg-d); }
+.sf-chip { border: 1px solid var(--st-bd); background: var(--st-bg); color: var(--st-fg); }
+.dark .sf-chip { border-color: var(--st-bd-d); background: var(--st-bg-d); color: var(--st-fg-d); }
+
+.sf-deal-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.875rem;
+  background: hsl(var(--surface));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 10px 20px -18px rgb(15 23 42 / 0.5);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.sf-deal-card::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--st-dot), var(--st-fg));
+}
+.dark .sf-deal-card::before { background: linear-gradient(180deg, var(--st-fg-d), var(--st-dot-d)); }
+.sf-deal-card:hover { border-color: var(--st-bd); box-shadow: 0 2px 4px rgb(15 23 42 / 0.06), 0 16px 28px -18px var(--st-dot); }
+.sf-deal-card[data-selected='true'] { border-color: hsl(var(--primary)); box-shadow: 0 0 0 2px hsl(var(--primary) / 0.5); }
+@media (prefers-reduced-motion: no-preference) {
+  .sf-deal-card:hover { transform: translateY(-1px); }
+}
+
+/* ── Floating bulk bar ─────────────────────────────────────────── */
+.sf-bulk {
+  border: 1px solid hsl(var(--primary) / 0.35);
+  border-radius: 1rem;
+  background: hsl(var(--surface) / 0.92);
+  box-shadow: 0 20px 40px -20px rgb(15 23 42 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.4) inset;
+  backdrop-filter: blur(12px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-bulk { animation: sf-bulk-in 0.22s ease-out; }
+  @keyframes sf-bulk-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+}
+
+/* ── View switcher ─────────────────────────────────────────────── */
+.sf-views {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.875rem;
+  background: hsl(var(--muted) / 0.5);
+}
+.sf-views button[aria-pressed='true'] {
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.1), 0 4px 10px -6px rgb(15 23 42 / 0.4);
+}
+
+/* Side by side once a tile is wide enough; on phones the icon sits above so whole values fit. */
+@media (min-width: 640px) {
+  .sf-kpi { flex-direction: row; gap: 0.75rem; }
+}

@@ -1,7 +1,7 @@
 'use client';
 
-import type { DealForecast, DealRow, Page, PriorityDeal, TerritoryView } from '@dealflow/types';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { BulkDealUpdateInput, DealForecast, DealRow, DealsSummary, Page, PriorityDeal, TerritoryView } from '@dealflow/types';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 
 export interface DealViewFilter {
@@ -47,3 +47,31 @@ export function useDealsClosing(f: DealViewFilter & { from: string; to: string }
 }
 
 export const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** The Deals dashboard numbers (ADR 0096). `from`/`to` are YYYY-MM-DD or empty for all time. */
+export function useDealsSummary(f: DealViewFilter & { from?: string; to?: string }) {
+  const p = new URLSearchParams();
+  if (f.pipelineId) p.set('pipelineId', f.pipelineId);
+  if (f.ownerId) p.set('ownerId', f.ownerId);
+  if (f.from) p.set('from', f.from);
+  if (f.to) p.set('to', f.to);
+  return useQuery({ queryKey: ['deal-views', 'summary', f], queryFn: () => api<DealsSummary>(`/deals/summary${p.size ? `?${p}` : ''}`), placeholderData: keepPreviousData });
+}
+
+/** Changes many deals at once, then refreshes every deal view. */
+export function useBulkDeals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BulkDealUpdateInput) => api<{ updated: number }>('/deals/bulk-update', { method: 'POST', json: input }),
+    onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: ['board'] }), qc.invalidateQueries({ queryKey: ['deals'] }), qc.invalidateQueries({ queryKey: ['deal-views'] })]),
+  });
+}
+
+/** Archives or restores one deal. */
+export function useArchiveDeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => api<DealRow>(`/deals/${id}/${archived ? 'archive' : 'restore'}`, { method: 'POST', json: {} }),
+    onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: ['board'] }), qc.invalidateQueries({ queryKey: ['deals'] }), qc.invalidateQueries({ queryKey: ['deal-views'] }), qc.invalidateQueries({ queryKey: ['deal'] })]),
+  });
+}

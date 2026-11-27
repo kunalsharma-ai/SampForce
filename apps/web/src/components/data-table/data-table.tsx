@@ -38,7 +38,9 @@ interface Props<T extends { id: string }> {
    * Bulk actions: rows can be selected when set. `query` is the list's query (search, filters, custom field filters),
    * so the person can select every matching record on every page, not only the rows on screen.
    */
-  bulk?: { statuses?: { value: string; label: string }[]; query?: Record<string, string | number | undefined | null> };
+  bulk?: { statuses?: { value: string; label: string }[]; query?: Record<string, string | number | undefined | null>;
+    extra?: (ids: string[], clear: () => void) => React.ReactNode;
+  };
 }
 
 /**
@@ -189,6 +191,10 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
             setSelection({});
             setAllPages(false);
           }}
+          extra={p.bulk.extra?.(selectedIds, () => {
+            setSelection({});
+            setAllPages(false);
+          })}
         />
       )}
 
