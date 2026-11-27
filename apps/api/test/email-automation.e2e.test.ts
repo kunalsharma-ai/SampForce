@@ -90,7 +90,7 @@ describe('email automation on Automation Studio', () => {
       name: 'Wrong',
       definition: { trigger: { event: 'deal.created' }, start: 'a', nodes: [{ id: 'a', type: 'action', action: { type: 'stop_sequences', mode: 'stop' }, next: null }] },
     }).expect(400);
-    expect(JSON.stringify(res.body)).toMatch(/needs a lead or contact/);
+    expect(JSON.stringify(res.body)).toMatch(/needs a contact, so use an inbound contact, contact or email trigger/);
   });
 
   it('scenario 2: a click on a proposal link creates a high-priority task, other links do not', async () => {
