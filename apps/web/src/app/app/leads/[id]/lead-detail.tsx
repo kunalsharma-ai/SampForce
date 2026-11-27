@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LeadQualificationCard } from '@/components/ai/record-ai';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
-import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { RecordSequences } from '@/components/crm/record-sequences';
@@ -107,7 +106,6 @@ export function LeadDetail({ id }: { id: string }) {
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
           <RecordMeetings target={{ leadId: id }} />
-          <RecordZoomMeetings target={{ leadId: id }} />
           <RecordVoiceNotes record={{ type: 'lead', id, name: l.fullName }} />
           <RecordWebActivityCard type="lead" id={id} />
           <RecordSequences leadId={id} email={l.email} />

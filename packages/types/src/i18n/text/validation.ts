@@ -121,8 +121,6 @@ export const validation = {
   'Choose an owner': ['Elige un responsable', 'Choisissez un responsable', 'Wählen Sie einen Verantwortlichen', 'اختر مالكًا'],
 
   // Workspace apps
-  'Choose a Slack channel': ['Elige un canal de Slack', 'Choisissez un canal Slack', 'Wählen Sie einen Slack-Kanal', 'اختر قناة Slack'],
-  'Choose a Teams channel': ['Elige un canal de Teams', 'Choisissez un canal Teams', 'Wählen Sie einen Teams-Kanal', 'اختر قناة Teams'],
   'Paste the full workflow URL': ['Pega la URL completa del flujo de trabajo', 'Collez l’URL complète du workflow', 'Fügen Sie die vollständige Workflow-URL ein', 'الصق رابط سير العمل كاملًا'],
   'Confirm that participants agree to the recording': ['Confirma que los participantes aceptan la grabación', 'Confirmez que les participants acceptent l’enregistrement', 'Bestätigen Sie, dass die Teilnehmenden der Aufzeichnung zustimmen', 'أكّد موافقة المشاركين على التسجيل'],
   'Link the meeting to one lead, contact or deal': ['Vincula la reunión a un lead, contacto u oportunidad', 'Associez la réunion à un prospect, un contact ou une opportunité', 'Verknüpfen Sie das Meeting mit einem Lead, Kontakt oder einer Verkaufschance', 'اربط الاجتماع بعميل محتمل أو جهة اتصال أو صفقة واحدة'],

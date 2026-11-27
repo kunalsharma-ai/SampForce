@@ -36,7 +36,7 @@ except Docker.
    | Google, Microsoft 365 | Mailbox sending and sync, calendars |
    | Apollo.io, Hunter.io | Prospect search, email finder and verification |
    | Deepgram | Transcribing meeting recordings and voice notes |
-   | Slack, Zoom, DocuSign, Zapier | Workspace apps |
+   | DocuSign, Zapier | Workspace apps |
    | Stripe, Razorpay | Online card payments (off by default: plans are paid by invoice) |
 
 ## The install in one command

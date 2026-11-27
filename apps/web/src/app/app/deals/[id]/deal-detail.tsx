@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DealIntelligenceCard, ProposalButton } from '@/components/ai/record-ai';
 import { MeetingNotesButton, RecordMeetings } from '@/components/meetings/record-meetings';
-import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { DealHealthTrend } from '@/components/crm/deal-health-trend';
 import { RecordConversations } from '@/components/crm/record-conversations';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
@@ -109,7 +108,6 @@ export function DealDetail({ id }: { id: string }) {
           <RfqCapture source={{ type: 'deal', id }} companyId={d.company?.id ?? null} contactId={d.contact?.id ?? null} />
           <RecordConversations dealId={id} />
           <RecordMeetings target={{ dealId: id }} />
-          <RecordZoomMeetings target={{ dealId: id }} />
           <RecordVoiceNotes record={{ type: 'deal', id, name: d.name }} />
           <ActivityTimeline related={{ opportunityId: id }} timeline={{ entity: 'deal', id }} />
         </div>

@@ -8,7 +8,6 @@ import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader 
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
-import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { ContactWhatsapp } from '@/components/whatsapp/contact-whatsapp';
 import { ContactSms } from '@/components/sms/contact-sms';
 import { RecordSequences } from '@/components/crm/record-sequences';
@@ -98,7 +97,6 @@ function ContactBody({ contact: c }: { contact: ContactRow }) {
           <RfqCapture source={{ type: 'contact', id }} companyId={c.company?.id ?? null} contactId={id} />
           <RecordEmails contactId={id} email={c.email} />
           <RecordMeetings target={{ contactId: id }} />
-          <RecordZoomMeetings target={{ contactId: id }} />
           <RecordVoiceNotes record={{ type: 'contact', id, name: c.fullName }} />
           <RecordWebActivityCard type="contact" id={id} />
           <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />

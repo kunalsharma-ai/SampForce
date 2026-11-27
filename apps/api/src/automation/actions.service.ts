@@ -1,8 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { AppError, AppsService } from '../apps/apps.service';
-import { slackEscape } from '../apps/slack';
-import { teamsEscape } from '../apps/teams';
+import { AppError } from '../apps/apps.service';
 import { AuditService } from '../audit/audit.service';
 import { createHmac } from 'node:crypto';
 import {
@@ -72,7 +70,6 @@ export class WorkflowActions {
     private readonly notifications: NotificationsService,
     private readonly communication: CommunicationService,
     private readonly audit: AuditService,
-    private readonly apps: AppsService,
     private readonly whatsapp: WhatsappService,
     private readonly twilio: TwilioService,
     private readonly moduleRef: ModuleRef,
@@ -215,28 +212,6 @@ export class WorkflowActions {
         }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
         if (res.status < 200 || res.status >= 300) throw new ActionError(`The endpoint answered ${res.status}.`);
         return { status: res.status, host: url.host };
-      }
-      case 'post_to_chat': {
-        // Record values are escaped so they cannot add links or @mentions; the record link is added by SampForce.
-        const link = recordLink(entity, id);
-        const url = link ? `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${link}` : null;
-        if (action.app === 'teams') {
-          try {
-            const r = await this.apps.postToTeams(actor.tenantId, { channelId: action.channelId, message: { text: teamsEscape(text(action.text)), link: url ? { title: 'Open in SampForce', url } : null }, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
-            return { app: 'teams', channel: r.channel };
-          } catch (e) {
-            if (e instanceof AppError) throw new ActionError(e.message);
-            throw e;
-          }
-        }
-        const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in SampForce>` : '');
-        try {
-          const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
-          return { app: action.app, channel: r.channel, ts: r.ts };
-        } catch (e) {
-          if (e instanceof AppError) throw new ActionError(e.message);
-          throw e;
-        }
       }
       case 'send_whatsapp': {
         // Reached only after a person approved this exact step; consent and the template are checked again here.

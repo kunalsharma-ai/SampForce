@@ -1,4 +1,3 @@
-import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
@@ -43,8 +42,6 @@ export interface WorkerTick {
   /** Website tracking rows deleted under each workspace's retention period. */
   visitorRetention: number;
   prospectImports: number;
-  /** Zoom transcripts imported into meeting notes. */
-  zoomTranscripts: number;
   /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
   reminders: number;
   /** Company logos looked up from company websites (ADR 0070). */
@@ -91,7 +88,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly gamification: GamificationService,
     private readonly visitors: VisitorsService,
     private readonly prospects: ProspectsService,
-    private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
@@ -155,7 +151,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const badges = await this.gamification.sweep();
     const visitorRetention = await this.visitors.sweep();
     const prospectImports = await this.prospects.sweep();
-    const zoomTranscripts = await this.zoom.importDue();
     const reminders = await this.reminders.sweep();
     const logos = await this.logos.runDue();
     const autofills = await this.autofill.runDue();
@@ -174,7 +169,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

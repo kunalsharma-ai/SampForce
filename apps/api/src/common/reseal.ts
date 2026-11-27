@@ -21,7 +21,7 @@ const TENANT_COLUMNS = [
     column: 'credentials_encrypted',
     field: 'credentialsEncrypted',
   },
-  // Workspace apps (Slack, Zoom, DocuSign, Teams, card payments, WhatsApp, Twilio).
+  // Workspace apps (DocuSign, card payments, WhatsApp, Twilio, SampBidx).
   {
     table: 'app_connections',
     model: 'appConnection',

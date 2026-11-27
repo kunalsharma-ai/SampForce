@@ -593,7 +593,6 @@ model Tenant {
   meetingRecords         MeetingRecord[]
   appConnections         AppConnection[]
   appEvents              AppEvent[]
-  zoomMeetings           ZoomMeeting[]
   signatureEnvelopes     SignatureEnvelope[]
   quotePayments          QuotePayment[]
   whatsappMessages       WhatsappMessage[]
@@ -3286,7 +3285,7 @@ model PlatformSetting {
 /// Provider keys entered in the operator console (ADR 0051). Values are sealed with ENCRYPTION_KEY (SecretBox) and
 /// override the environment variable of the same name; clearing a row falls back to that variable.
 model PlatformSecret {
-  /// The environment variable name, e.g. SLACK_CLIENT_SECRET.
+  /// The environment variable name, e.g. DOCUSIGN_SECRET_KEY.
   name        String   @id @map("_id")
   valueEnc    String   @map("value_enc")
   /// What the console shows after saving: the last four characters of a secret, or the full non-secret value.
@@ -4333,9 +4332,6 @@ model ProspectSettings {
 }
 
 enum AppProvider {
-  SLACK
-  TEAMS
-  ZOOM
   DOCUSIGN
   /// Card payments on quotes, into the workspace's own Stripe or Razorpay account.
   PAYMENTS
@@ -4357,7 +4353,7 @@ model AppConnection {
   id                   String           @id @default(uuid()) @map("_id")
   tenantId             String           @map("tenant_id")
   provider             AppProvider
-  /// The provider's id for the connected account (Slack team id), used to route inbound events.
+  /// The provider's id for the connected account (e.g. the DocuSign account id), used to route inbound events.
   externalAccountId    String           @map("external_account_id")
   accountName          String           @map("account_name")
   scopes               String[]
@@ -4372,7 +4368,6 @@ model AppConnection {
 
   tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   events           AppEvent[]
-  zoomMeetings     ZoomMeeting[]
   envelopes        SignatureEnvelope[]
   payments         QuotePayment[]
   whatsappMessages WhatsappMessage[]
@@ -4408,46 +4403,6 @@ model AppEvent {
   /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
   @@index([connectionId])
   @@map("app_events")
-}
-
-/// A Zoom meeting scheduled from SampForce. Only these meetings' transcripts are ever imported.
-model ZoomMeeting {
-  id                 String   @id @default(uuid()) @map("_id")
-  tenantId           String   @map("tenant_id")
-  connectionId       String?  @map("connection_id")
-  /// Zoom's numeric meeting id, as text.
-  zoomMeetingId      String   @map("zoom_meeting_id")
-  hostEmail          String   @map("host_email")
-  topic              String
-  startsAt           DateTime @map("starts_at")
-  durationMinutes    Int      @map("duration_minutes")
-  joinUrl            String   @map("join_url")
-  /// The organiser chose cloud recording with the transcript imported afterwards.
-  recordToCloud      Boolean  @default(false) @map("record_to_cloud")
-  leadId             String?  @map("lead_id")
-  contactId          String?  @map("contact_id")
-  dealId             String?  @map("deal_id")
-  createdById        String   @map("created_by_id")
-  activityId         String?  @map("activity_id")
-  meetingRecordId    String?  @map("meeting_record_id")
-  /// none, waiting (recording on), ready (Zoom sent the transcript), imported, failed
-  transcriptStatus   String   @default("none") @map("transcript_status")
-  transcriptError    String?  @map("transcript_error")
-  /// Sealed {url, token} from Zoom's recording.transcript_completed event, cleared after import.
-  transcriptSource   String?  @map("transcript_source")
-  transcriptAttempts Int      @default(0) @map("transcript_attempts")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@unique([tenantId, zoomMeetingId])
-  @@index([tenantId, startsAt])
-  @@index([transcriptStatus])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([connectionId])
-  @@map("zoom_meetings")
 }
 
 /// A contract sent for e-signature through DocuSign. Status follows DocuSign Connect events.

@@ -193,11 +193,11 @@ export const HELP_CATEGORIES = [
     tone: 1,
     title: ['Apps & integrations', 'Apps e integraciones', 'Applications et intégrations', 'Apps & Integrationen', 'التطبيقات والتكاملات'],
     description: [
-      'Connect your mailbox, calendar, Slack, Zoom, WhatsApp, payments, Zapier, API keys and webhooks.',
-      'Conecta tu buzón, calendario, Slack, Zoom, WhatsApp, pagos, Zapier, claves de API y webhooks.',
-      'Connectez boîte mail, agenda, Slack, Zoom, WhatsApp, paiements, Zapier, clés d’API et webhooks.',
-      'Postfach, Kalender, Slack, Zoom, WhatsApp, Zahlungen, Zapier, API-Schlüssel und Webhooks verbinden.',
-      'اربط بريدك وتقويمك وSlack وZoom وWhatsApp والمدفوعات وZapier ومفاتيح API والخطافات.',
+      'Connect your mailbox, calendar, DocuSign, WhatsApp, payments, Zapier, API keys and webhooks.',
+      'Conecta tu buzón, calendario, DocuSign, WhatsApp, pagos, Zapier, claves de API y webhooks.',
+      'Connectez boîte mail, agenda, DocuSign, WhatsApp, paiements, Zapier, clés d’API et webhooks.',
+      'Postfach, Kalender, DocuSign, WhatsApp, Zahlungen, Zapier, API-Schlüssel und Webhooks verbinden.',
+      'اربط بريدك وتقويمك وDocuSign وWhatsApp والمدفوعات وZapier ومفاتيح API والخطافات.',
     ],
   },
   {

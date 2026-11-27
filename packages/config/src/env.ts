@@ -111,20 +111,6 @@ export const apiEnvSchema = z.object({
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_TENANT: z.string().default('common'),
-  /**
-   * Workspace apps (Slack, and later Teams, Zoom, DocuSign, payments, WhatsApp). Each needs the platform's own app
-   * credentials here; a workspace admin then connects their account. Without them the app shows Pending Configuration.
-   */
-  SLACK_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
-  SLACK_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
-  SLACK_AUTH_BASE_URL: z.string().url().default('https://slack.com'),
-  SLACK_API_BASE_URL: z.string().url().default('https://slack.com/api'),
-  // Zoom workspace app (General app, admin-managed). The webhook secret token verifies Zoom's event notifications.
-  ZOOM_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
-  ZOOM_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
-  ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
-  ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
-  ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
   /** Invite link to the operator's SampForce app in Zapier (integrations/zapier). Unset: Zapier is Pending Configuration. */
   ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */

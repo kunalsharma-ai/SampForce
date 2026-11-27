@@ -6,7 +6,7 @@
 # Two settings files sit next to this one (both created by scripts/generate-secrets.sh):
 #   .env          the database passwords and DOMAIN, generated or filled in by the script
 #   sampforce.env optional limits and tuning, passed as-is to the API and the worker
-# Every API key (AI, email, payments, Google, Microsoft, Slack, ...) is entered in the operator console under
+# Every API key (AI, email, payments, Google, Microsoft, DocuSign, ...) is entered in the operator console under
 # Providers and stored in the database, encrypted with a key that is also kept in the database (ADR 0059).
 # No file holds API keys.
 #

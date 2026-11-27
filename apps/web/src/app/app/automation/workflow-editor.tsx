@@ -11,8 +11,6 @@ import {
   PERSON_ACTIONS,
   type AppStatus,
   type SequenceRow,
-  type SlackChannel,
-  type TeamsChannel,
   type WhatsappTemplate,
   SMS_MAX_LENGTH,
   smsSegments,
@@ -588,8 +586,6 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         />
       )}
 
-      {a.type === 'post_to_chat' && <ChatStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
-
       {a.type === 'send_whatsapp' && <WhatsappStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
 
       {a.type === 'send_sms' && <SmsStepFields action={a} readOnly={readOnly} onChange={onChange} />}
@@ -604,66 +600,6 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         </>
       )}
     </div>
-  );
-}
-
-/** App, channel and message for a "Post to Slack or Teams" step. Channels come from the workspace's connection. */
-function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'post_to_chat' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
-  const t = useT();
-  const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
-  const target = apps.data?.find((x) => x.key === a.app);
-  const connected = target?.state === 'connected' || (a.app === 'teams' && target?.state === 'error');
-  const slackChannels = useQuery({ enabled: a.app === 'slack' && connected && !readOnly, queryKey: ['apps', 'slack', 'channels'], queryFn: () => api<SlackChannel[]>('/apps/slack/channels') });
-  const teamsChannels = useQuery({ enabled: a.app === 'teams' && connected && !readOnly, queryKey: ['apps', 'teams', 'channels'], queryFn: () => api<TeamsChannel[]>('/apps/teams/channels') });
-  const options =
-    a.app === 'slack'
-      ? (slackChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: c.isPrivate ? t('#{name} (private)', { name: c.name }) : `#${c.name}` }))
-      : (teamsChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: c.name }));
-  const settings = (target?.connection?.settings ?? {}) as { defaultChannelName?: string | null; defaultChannelId?: string | null; channels?: TeamsChannel[] };
-  const fallback = a.app === 'slack' ? (settings.defaultChannelName ? `#${settings.defaultChannelName}` : null) : (settings.channels?.find((c) => c.id === settings.defaultChannelId)?.name ?? null);
-  const name = a.app === 'slack' ? 'Slack' : 'Microsoft Teams';
-  return (
-    <>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${id}-app`}>{t('App')}</Label>
-        <Select id={`${id}-app`} disabled={readOnly} value={a.app} onChange={(e) => onChange({ ...a, app: e.target.value as 'slack' | 'teams', channelId: null, channelName: null })}>
-          <option value="slack">Slack</option>
-          <option value="teams">Microsoft Teams</option>
-        </Select>
-      </div>
-      {target && !connected && (
-        <p className="text-xs text-warning" role="status">
-          {target.state === 'pending_configuration'
-            ? t('{name} is Pending Configuration on this installation, so this step will fail until an operator adds the app credentials and an admin connects it.', { name })
-            : target.state === 'error'
-              ? t('{name} needs reconnecting in Integrations before this step can post.', { name })
-              : a.app === 'teams'
-                ? t('No Teams channels are added yet. An admin can add one in Integrations; until then this step fails with that message.')
-                : t('Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.')}
-        </p>
-      )}
-      <div className="space-y-1.5">
-        <Label htmlFor={`${id}-channel`}>{t('Channel')}</Label>
-        <Select
-          id={`${id}-channel`}
-          disabled={readOnly || !connected}
-          value={a.channelId ?? ''}
-          onChange={(e) => {
-            const ch = options.find((c) => c.id === e.target.value);
-            onChange({ ...a, channelId: ch?.id ?? null, channelName: ch?.name ?? null });
-          }}
-        >
-          <option value="">{fallback ? t('Default channel ({name})', { name: fallback }) : t('Default channel')}</option>
-          {a.channelId && !options.some((c) => c.id === a.channelId) && <option value={a.channelId}>{a.app === 'slack' ? '#' : ''}{a.channelName ?? a.channelId}</option>}
-          {options.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <TextField label={t('Message')} multiline value={a.text} readOnly={readOnly} maxLength={3000} hint={`${t(TEMPLATE_HINT)} ${t('A link to the record is added automatically.')}`} onChange={(text) => onChange({ ...a, text })} />
-    </>
   );
 }
 

@@ -59,7 +59,7 @@ export const site = {
     'Automation Studio', 'AI Copilot', '10 AI agents', 'Lead scoring', 'Deal health', 'Forecasting',
     'Quick Bid Studio', 'Quotes & proposals', 'Contracts', 'Customer success', 'Client portal', 'Website visitors',
     'Relationship Galaxy', 'Revenue Globe', 'Pipeline replay', 'Territories', 'Gamification', 'Voice to CRM',
-    'Slack', 'Microsoft Teams', 'Zoom', 'DocuSign', 'WhatsApp', 'Twilio SMS', 'Zapier', 'SSO + SCIM', '5 languages',
+    'DocuSign', 'WhatsApp', 'Twilio SMS', 'Zapier', 'SSO + SCIM', '5 languages',
   ],
 
   journey: {
@@ -119,7 +119,7 @@ export const site = {
       { key: 'replay', size: 'md', media: 'replay', color: 'gold', title: 'Pipeline replay', text: 'Rewind the pipeline to any day and play it forward to see how deals actually moved.' },
       { key: 'health', size: 'md', media: 'health', color: 'volt', title: 'Deal health', text: 'Every open deal scored hourly, with the reasons written out, so managers know where to step in.' },
       { key: 'revenue', size: 'wide', media: 'revenue', color: 'ember', title: 'Revenue intelligence', text: 'Wins by month, funnel, owners, lead sources and loss reasons, plus a report builder with templates and saved dashboards.' },
-      { key: 'apps', size: 'wide', media: 'apps', color: 'gold', title: 'Workspace apps', text: 'Slack, Teams, Zoom, DocuSign, WhatsApp, Twilio, Zapier, Stripe and Razorpay, connected with your own accounts.' },
+      { key: 'apps', size: 'wide', media: 'apps', color: 'gold', title: 'Workspace apps', text: 'DocuSign, WhatsApp, Twilio, Zapier, Stripe and Razorpay, connected with your own accounts.' },
     ],
   },
 

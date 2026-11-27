@@ -1,6 +1,6 @@
 import type { PhraseTable } from './types';
 
-/** Integrations: mailbox and calendar, workspace apps (Slack, Teams, Zoom, DocuSign, card payments, WhatsApp, SMS), the browser extension, API keys, webhooks and planned integrations. */
+/** Integrations: mailbox and calendar, workspace apps (DocuSign, card payments, WhatsApp, SMS, SampBidx), the browser extension, API keys, webhooks and planned integrations. */
 export const integrations = {
   'Zapier and API keys': ['Zapier y claves de API', 'Zapier et clés d’API', 'Zapier und API-Schlüssel', 'Zapier ومفاتيح API'],
   'Available': ['Disponible', 'Disponible', 'Verfügbar', 'متاح'],
@@ -198,98 +198,16 @@ export const integrations = {
   ],
   'Credentials checked {time}.': ['Credenciales comprobadas {time}.', 'Identifiants vérifiés {time}.', 'Zugangsdaten geprüft {time}.', 'تم التحقق من بيانات الاعتماد {time}.'],
   'Workspace apps': ['Aplicaciones del espacio de trabajo', 'Applications de l’espace de travail', 'Arbeitsbereich-Apps', 'تطبيقات مساحة العمل'],
-  'Zoom is connected. Schedule meetings from any lead, contact or deal.': [
-    'Zoom está conectado. Programa reuniones desde cualquier prospecto, contacto u oportunidad.',
-    'Zoom est connecté. Planifiez des réunions depuis n’importe quel prospect, contact ou opportunité.',
-    'Zoom ist verbunden. Planen Sie Meetings von jedem Lead, Kontakt oder jeder Verkaufschance aus.',
-    'Zoom متصل. جدوِل الاجتماعات من أي عميل محتمل أو جهة اتصال أو صفقة.',
-  ],
   'DocuSign is connected. Send draft contracts for signature from the contract page.': [
     'DocuSign está conectado. Envía borradores de contratos para firma desde la página del contrato.',
     'DocuSign est connecté. Envoyez les projets de contrat à la signature depuis la page du contrat.',
     'DocuSign ist verbunden. Senden Sie Vertragsentwürfe von der Vertragsseite zur Unterschrift.',
     'DocuSign متصل. أرسل مسودات العقود للتوقيع من صفحة العقد.',
   ],
-  'Connected. Choose a default channel below, then send a test message.': [
-    'Conectado. Elige un canal predeterminado abajo y envía un mensaje de prueba.',
-    'Connecté. Choisissez un canal par défaut ci-dessous, puis envoyez un message de test.',
-    'Verbunden. Wählen Sie unten einen Standardkanal und senden Sie dann eine Testnachricht.',
-    'تم الاتصال. اختر قناة افتراضية أدناه، ثم أرسل رسالة اختبار.',
-  ],
-  'Add a “Post to Slack” step to any workflow.': [
-    'Añade un paso «Publicar en Slack» a cualquier flujo de trabajo.',
-    'Ajoutez une étape « Publier sur Slack » à n’importe quel workflow.',
-    'Fügen Sie einem beliebigen Workflow einen Schritt „In Slack posten“ hinzu.',
-    'أضف خطوة «النشر في Slack» إلى أي سير عمل.',
-  ],
-  'An operator must add {settings} (the SampForce Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.': [
-    'Un operador debe añadir {settings} (las credenciales de la aplicación de Slack de SampForce) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse. No se envía nada hasta entonces.',
-    'Un opérateur doit ajouter {settings} (les identifiants de l’application Slack de SampForce) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter. Rien n’est envoyé d’ici là.',
-    'Ein Betreiber muss {settings} (die Zugangsdaten der SampForce-Slack-App) in der Betreiberkonsole unter Anbieter hinzufügen, bevor sich jemand verbinden kann. Bis dahin wird nichts gesendet.',
-    'يجب على أحد المشغّلين إضافة {settings} (بيانات اعتماد تطبيق Slack الخاص بـ SampForce) في وحدة تحكم المشغّل ضمن المزوّدين قبل أن يتمكن أي أحد من الاتصال. لا يُرسل شيء حتى ذلك الحين.',
-  ],
-  'Slack workspace: {name}': ['Espacio de trabajo de Slack: {name}', 'Espace de travail Slack : {name}', 'Slack-Arbeitsbereich: {name}', 'مساحة عمل Slack: {name}'],
-  'Last message {time}.': ['Último mensaje {time}.', 'Dernier message {time}.', 'Letzte Nachricht {time}.', 'آخر رسالة {time}.'],
   'No messages yet.': ['Aún no hay mensajes.', 'Aucun message pour l’instant.', 'Noch keine Nachrichten.', 'لا توجد رسائل بعد.'],
-  'None (each step names its channel)': ['Ninguno (cada paso indica su canal)', 'Aucun (chaque étape indique son canal)', 'Keiner (jeder Schritt nennt seinen Kanal)', 'لا شيء (كل خطوة تحدد قناتها)'],
-  'Send test message': ['Enviar mensaje de prueba', 'Envoyer un message de test', 'Testnachricht senden', 'إرسال رسالة اختبار'],
-  'Test message posted to {channel}.': [
-    'Mensaje de prueba publicado en {channel}.',
-    'Message de test publié dans {channel}.',
-    'Testnachricht in {channel} gepostet.',
-    'نُشرت رسالة الاختبار في {channel}.',
-  ],
-  'Reconnect Slack': ['Reconectar Slack', 'Reconnecter Slack', 'Slack neu verbinden', 'إعادة الاتصال بـ Slack'],
-  'Connect Slack': ['Conectar Slack', 'Connecter Slack', 'Slack verbinden', 'الاتصال بـ Slack'],
-  'Disconnect Slack? Workflow steps that post to Slack will fail until it is connected again.': [
-    '¿Desconectar Slack? Los pasos de flujo que publican en Slack fallarán hasta que se vuelva a conectar.',
-    'Déconnecter Slack ? Les étapes de workflow qui publient sur Slack échoueront jusqu’à sa reconnexion.',
-    'Slack trennen? Workflow-Schritte, die in Slack posten, schlagen fehl, bis es wieder verbunden ist.',
-    'قطع الاتصال بـ Slack؟ ستفشل خطوات سير العمل التي تنشر في Slack حتى يُعاد الاتصال.',
-  ],
-  'Workspace admins connect and configure apps.': [
-    'Los administradores del espacio de trabajo conectan y configuran las aplicaciones.',
-    'Les administrateurs de l’espace de travail connectent et configurent les applications.',
-    'Arbeitsbereich-Admins verbinden und konfigurieren Apps.',
-    'يربط مسؤولو مساحة العمل التطبيقات ويهيّئونها.',
-  ],
-  'Recent Slack activity': ['Actividad reciente de Slack', 'Activité Slack récente', 'Letzte Slack-Aktivität', 'نشاط Slack الأخير'],
-  'Add a “Post to Slack or Teams” step to any workflow and choose Microsoft Teams.': [
-    'Añade un paso «Publicar en Slack o Teams» a cualquier flujo de trabajo y elige Microsoft Teams.',
-    'Ajoutez une étape « Publier sur Slack ou Teams » à n’importe quel workflow et choisissez Microsoft Teams.',
-    'Fügen Sie einem beliebigen Workflow einen Schritt „In Slack oder Teams posten“ hinzu und wählen Sie Microsoft Teams.',
-    'أضف خطوة «النشر في Slack أو Teams» إلى أي سير عمل واختر Microsoft Teams.',
-  ],
-  'Teams channels': ['Canales de Teams', 'Canaux Teams', 'Teams-Kanäle', 'قنوات Teams'],
-  'Not accepting messages': ['No acepta mensajes', 'N’accepte pas les messages', 'Nimmt keine Nachrichten an', 'لا يقبل الرسائل'],
-  'Added {time}': ['Añadido {time}', 'Ajouté {time}', 'Hinzugefügt {time}', 'أُضيف {time}'],
-  'Send test message to {name}': ['Enviar mensaje de prueba a {name}', 'Envoyer un message de test à {name}', 'Testnachricht an {name} senden', 'إرسال رسالة اختبار إلى {name}'],
   'Test': ['Probar', 'Tester', 'Testen', 'اختبار'],
-  'Remove {name}? Workflow steps that post there will fail. Also turn off its workflow in Teams.': [
-    '¿Quitar {name}? Los pasos de flujo que publican allí fallarán. Desactiva también su flujo en Teams.',
-    'Retirer {name} ? Les étapes de workflow qui y publient échoueront. Désactivez aussi son workflow dans Teams.',
-    '{name} entfernen? Workflow-Schritte, die dort posten, schlagen fehl. Schalten Sie auch den zugehörigen Workflow in Teams aus.',
-    'إزالة {name}؟ ستفشل خطوات سير العمل التي تنشر هناك. أوقف أيضًا سير العمل الخاص بها في Teams.',
-  ],
-  'Default Teams channel': ['Canal de Teams predeterminado', 'Canal Teams par défaut', 'Standard-Teams-Kanal', 'قناة Teams الافتراضية'],
-  'In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. SampForce posts a welcome card to check it before saving. The URL is stored encrypted.': [
-    'En Teams, abre el {menu} del canal, elige «Send webhook alerts to a channel» y copia la URL que te da. SampForce publica una tarjeta de bienvenida para comprobarla antes de guardar. La URL se guarda cifrada.',
-    'Dans Teams, ouvrez le {menu} du canal, choisissez « Send webhook alerts to a channel » et copiez l’URL fournie. SampForce publie une carte de bienvenue pour la vérifier avant d’enregistrer. L’URL est stockée chiffrée.',
-    'Öffnen Sie in Teams das {menu} des Kanals, wählen Sie „Send webhook alerts to a channel“ und kopieren Sie die angezeigte URL. SampForce postet zur Prüfung eine Willkommenskarte, bevor gespeichert wird. Die URL wird verschlüsselt gespeichert.',
-    'في Teams، افتح {menu} الخاصة بالقناة، واختر «Send webhook alerts to a channel»، وانسخ عنوان URL الذي يظهر. ينشر SampForce بطاقة ترحيب للتحقق منه قبل الحفظ. يُخزَّن عنوان URL مشفّرًا.',
-  ],
   'Workflows': ['Flujos de trabajo', 'Workflows', 'Workflows', 'مسارات العمل'],
   'Channel name': ['Nombre del canal', 'Nom du canal', 'Kanalname', 'اسم القناة'],
-  'Workflow URL': ['URL del flujo de trabajo', 'URL du workflow', 'Workflow-URL', 'عنوان URL لسير العمل'],
-  'Checking with Teams…': ['Comprobando con Teams…', 'Vérification auprès de Teams…', 'Prüfung bei Teams…', 'جارٍ التحقق مع Teams…'],
-  'Add channel': ['Añadir canal', 'Ajouter un canal', 'Kanal hinzufügen', 'إضافة قناة'],
-  'Workspace admins add Teams channels.': [
-    'Los administradores del espacio de trabajo añaden canales de Teams.',
-    'Les administrateurs de l’espace de travail ajoutent les canaux Teams.',
-    'Arbeitsbereich-Admins fügen Teams-Kanäle hinzu.',
-    'يضيف مسؤولو مساحة العمل قنوات Teams.',
-  ],
-  'Recent Teams activity': ['Actividad reciente de Teams', 'Activité Teams récente', 'Letzte Teams-Aktivität', 'نشاط Teams الأخير'],
   'An operator must add {settings} ({credentials}) in the operator console under Providers before anyone can connect.': [
     'Un operador debe añadir {settings} ({credentials}) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse.',
     'Un opérateur doit ajouter {settings} ({credentials}) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter.',
@@ -454,11 +372,11 @@ export const integrations = {
   ],
   'Recent SMS activity': ['Actividad reciente de SMS', 'Activité SMS récente', 'Letzte SMS-Aktivität', 'نشاط SMS الأخير'],
   'Integrations': ['Integraciones', 'Intégrations', 'Integrationen', 'عمليات التكامل'],
-  'Connect your own mailbox and calendar, connect workspace apps such as Slack, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned.': [
-    'Conecta tu propio buzón y calendario, conecta aplicaciones del espacio de trabajo como Slack, usa tus propios servidores de IA y de correo, configura la extensión del navegador, conecta Zapier con claves de API, gestiona los webhooks salientes y consulta qué integraciones siguen planificadas.',
-    'Connectez votre propre boîte mail et votre agenda, connectez des applications d’espace de travail comme Slack, utilisez vos propres serveurs d’IA et d’e-mail, configurez l’extension de navigateur, connectez Zapier avec des clés d’API, gérez les webhooks sortants et voyez quelles intégrations sont encore prévues.',
-    'Verbinden Sie Ihr eigenes Postfach und Ihren Kalender, verbinden Sie Arbeitsbereich-Apps wie Slack, nutzen Sie eigene KI- und E-Mail-Server, richten Sie die Browsererweiterung ein, verbinden Sie Zapier mit API-Schlüsseln, verwalten Sie ausgehende Webhooks und sehen Sie, welche Integrationen noch geplant sind.',
-    'اربط بريدك وتقويمك، واربط تطبيقات مساحة العمل مثل Slack، واستخدم خوادم الذكاء الاصطناعي والبريد الخاصة بك، وأعدّ إضافة المتصفح، واربط Zapier بمفاتيح API، وأدِر خطافات الويب الصادرة، واطّلع على عمليات التكامل التي لا تزال مخططة.',
+  'Connect your own mailbox and calendar, connect workspace apps such as DocuSign, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned.': [
+    'Conecta tu propio buzón y calendario, conecta aplicaciones del espacio de trabajo como DocuSign, usa tus propios servidores de IA y de correo, configura la extensión del navegador, conecta Zapier con claves de API, gestiona los webhooks salientes y consulta qué integraciones siguen planificadas.',
+    'Connectez votre propre boîte mail et votre agenda, connectez des applications d’espace de travail comme DocuSign, utilisez vos propres serveurs d’IA et d’e-mail, configurez l’extension de navigateur, connectez Zapier avec des clés d’API, gérez les webhooks sortants et voyez quelles intégrations sont encore prévues.',
+    'Verbinden Sie Ihr eigenes Postfach und Ihren Kalender, verbinden Sie Arbeitsbereich-Apps wie DocuSign, nutzen Sie eigene KI- und E-Mail-Server, richten Sie die Browsererweiterung ein, verbinden Sie Zapier mit API-Schlüsseln, verwalten Sie ausgehende Webhooks und sehen Sie, welche Integrationen noch geplant sind.',
+    'اربط بريدك وتقويمك، واربط تطبيقات مساحة العمل مثل DocuSign، واستخدم خوادم الذكاء الاصطناعي والبريد الخاصة بك، وأعدّ إضافة المتصفح، واربط Zapier بمفاتيح API، وأدِر خطافات الويب الصادرة، واطّلع على عمليات التكامل التي لا تزال مخططة.',
   ],
   'Planned integrations': ['Integraciones planificadas', 'Intégrations prévues', 'Geplante Integrationen', 'عمليات التكامل المخططة'],
   'Requires:': ['Requiere:', 'Nécessite :', 'Erfordert:', 'يتطلب:'],
@@ -492,12 +410,6 @@ export const integrations = {
     'DocuSign trennen? Bereits gesendete Umschläge bleiben in DocuSign, aber ihr Status wird hier nicht mehr aktualisiert.',
     'قطع الاتصال بـ DocuSign؟ تبقى المظاريف المرسلة في DocuSign، لكن حالتها لن تُحدَّث هنا بعد الآن.',
   ],
-  'Disconnect Zoom? Scheduling from records stops; meetings already scheduled stay in Zoom.': [
-    '¿Desconectar Zoom? La programación desde los registros se detiene; las reuniones ya programadas se quedan en Zoom.',
-    'Déconnecter Zoom ? La planification depuis les fiches s’arrête ; les réunions déjà planifiées restent dans Zoom.',
-    'Zoom trennen? Die Planung aus Datensätzen stoppt; bereits geplante Meetings bleiben in Zoom.',
-    'قطع الاتصال بـ Zoom؟ تتوقف الجدولة من السجلات؛ وتبقى الاجتماعات المجدولة في Zoom.',
-  ],
   'Green': ['Verde', 'Vert', 'Grün', 'أخضر'],
   'In Razorpay, add a webhook with the URL below and a secret you choose, then paste that secret.': [
     'En Razorpay, añade un webhook con la URL de abajo y un secreto que elijas, y luego pega ese secreto.',
@@ -530,12 +442,6 @@ export const integrations = {
     'Lassen Sie Kunden angenommene Angebote per Karte bezahlen, auf Ihr eigenes Stripe- oder Razorpay-Konto.',
     'اسمح للعملاء بدفع العروض المقبولة بالبطاقة، إلى حساب Stripe أو Razorpay الخاص بك.',
   ],
-  'Meetings are created in each person’s own Zoom user, matched by their SampForce email.': [
-    'Las reuniones se crean en el usuario de Zoom de cada persona, emparejado por su correo de SampForce.',
-    'Les réunions sont créées dans l’utilisateur Zoom de chaque personne, associé par son e-mail SampForce.',
-    'Meetings werden im eigenen Zoom-Benutzer jeder Person angelegt, zugeordnet über ihre SampForce-E-Mail.',
-    'تُنشأ الاجتماعات في مستخدم Zoom الخاص بكل شخص، بالمطابقة مع بريده في SampForce.',
-  ],
   'Message contacts on WhatsApp from their record and from approved workflow steps, through your own WhatsApp Business number.': [
     'Envía mensajes a contactos por WhatsApp desde su registro y desde pasos de flujo aprobados, con tu propio número de WhatsApp Business.',
     'Écrivez aux contacts sur WhatsApp depuis leur fiche et depuis des étapes de workflow approuvées, via votre propre numéro WhatsApp Business.',
@@ -548,24 +454,6 @@ export const integrations = {
     'Aucune confirmation de paiement n’est encore arrivée. Ajoutez le webhook ci-dessous dans le tableau de bord de votre fournisseur ; les paiements ne sont marqués payés que lorsque le fournisseur les confirme.',
     'Es ist noch keine Zahlungsbestätigung eingegangen. Fügen Sie den Webhook unten im Dashboard Ihres Anbieters hinzu; Zahlungen werden erst als bezahlt markiert, wenn der Anbieter sie bestätigt.',
     'لم يصل أي تأكيد دفع بعد. أضف خطاف الويب أدناه في لوحة تحكم المزوّد؛ لا تُعلَّم المدفوعات كمدفوعة إلا عندما يؤكدها المزوّد.',
-  ],
-  'Only meetings scheduled from SampForce with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.': [
-    'Solo se importan las transcripciones de reuniones programadas desde SampForce con grabación elegida. Las demás reuniones de la cuenta de Zoom nunca se leen.',
-    'Seules les réunions planifiées depuis SampForce avec enregistrement choisi voient leurs transcriptions importées. Les autres réunions du compte Zoom ne sont jamais lues.',
-    'Nur von Meetings, die aus SampForce mit Aufzeichnung geplant wurden, werden Transkripte importiert. Andere Meetings im Zoom-Konto werden nie gelesen.',
-    'تُستورد نصوص الاجتماعات المجدولة من SampForce مع اختيار التسجيل فقط. لا تُقرأ الاجتماعات الأخرى في حساب Zoom أبدًا.',
-  ],
-  'Post deal, lead and task updates to Slack channels from workflows.': [
-    'Publica novedades de oportunidades, prospectos y tareas en canales de Slack desde flujos de trabajo.',
-    'Publiez les mises à jour d’opportunités, de prospects et de tâches dans des canaux Slack depuis des workflows.',
-    'Posten Sie Neuigkeiten zu Verkaufschancen, Leads und Aufgaben aus Workflows in Slack-Kanäle.',
-    'انشر تحديثات الصفقات والعملاء المحتملين والمهام في قنوات Slack من مسارات العمل.',
-  ],
-  'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.': [
-    'Publica novedades de oportunidades, prospectos y tareas en canales de Teams desde flujos de trabajo, mediante la aplicación Workflows de Teams.',
-    'Publiez les mises à jour d’opportunités, de prospects et de tâches dans des canaux Teams depuis des workflows, via l’application Workflows de Teams.',
-    'Posten Sie Neuigkeiten zu Verkaufschancen, Leads und Aufgaben aus Workflows in Teams-Kanäle, über die Teams-App Workflows.',
-    'انشر تحديثات الصفقات والعملاء المحتملين والمهام في قنوات Teams من مسارات العمل، عبر تطبيق Workflows في Teams.',
   ],
   'Read companies': ['Leer empresas', 'Lire les entreprises', 'Unternehmen lesen', 'قراءة الشركات'],
   'Read contacts': ['Leer contactos', 'Lire les contacts', 'Kontakte lesen', 'قراءة جهات الاتصال'],
@@ -585,12 +473,6 @@ export const integrations = {
     'Les réponses et le statut de livraison sont en Configuration en attente jusqu’à ce que Twilio envoie la première requête signée. Définissez l’URL entrante ci-dessous comme webhook « A message comes in » de votre numéro.',
     'Antworten und Zustellstatus sind Einrichtung ausstehend, bis Twilio die erste signierte Anfrage sendet. Legen Sie die eingehende URL unten als „A message comes in“-Webhook Ihrer Nummer fest.',
     'الردود وحالة التسليم في حالة انتظار الإعداد حتى يرسل Twilio أول طلب موقّع. اضبط عنوان URL الوارد أدناه كخطاف ويب «A message comes in» لرقمك.',
-  ],
-  'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.': [
-    'Programa reuniones de Zoom desde prospectos, contactos y oportunidades, y lleva las transcripciones de las reuniones grabadas a las notas de reunión.',
-    'Planifiez des réunions Zoom depuis les prospects, contacts et opportunités, et importez les transcriptions des réunions enregistrées dans les notes de réunion.',
-    'Planen Sie Zoom-Meetings aus Leads, Kontakten und Verkaufschancen und übernehmen Sie Transkripte aufgezeichneter Meetings in die Meeting-Notizen.',
-    'جدوِل اجتماعات Zoom من العملاء المحتملين وجهات الاتصال والصفقات، وانقل نصوص الاجتماعات المسجّلة إلى ملاحظات الاجتماع.',
   ],
   'Send contracts for e-signature; a completed envelope marks the contract signed.': [
     'Envía contratos para firma electrónica; un sobre completado marca el contrato como firmado.',
@@ -646,12 +528,6 @@ export const integrations = {
     'Der Anmeldelink ist abgelaufen oder gehörte zu einer anderen Sitzung. Versuchen Sie erneut, sich zu verbinden.',
     'انتهت صلاحية رابط تسجيل الدخول أو كان يخص جلسة أخرى. حاول الاتصال مرة أخرى.',
   ],
-  'Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at SampForce.': [
-    'La importación de transcripciones está en Configuración pendiente: un operador debe añadir ZOOM_WEBHOOK_SECRET_TOKEN y dirigir la suscripción de eventos de Zoom a SampForce.',
-    'L’import des transcriptions est en Configuration en attente : un opérateur doit ajouter ZOOM_WEBHOOK_SECRET_TOKEN et diriger l’abonnement aux événements de Zoom vers SampForce.',
-    'Der Transkriptimport ist Einrichtung ausstehend: Ein Betreiber muss ZOOM_WEBHOOK_SECRET_TOKEN hinzufügen und das Ereignisabonnement von Zoom auf SampForce richten.',
-    'استيراد النصوص في انتظار الإعداد: يجب على أحد المشغّلين إضافة ZOOM_WEBHOOK_SECRET_TOKEN وتوجيه اشتراك أحداث Zoom إلى SampForce.',
-  ],
   'Twilio Voice and call recording consent rules': [
     'Twilio Voice y reglas de consentimiento para grabar llamadas',
     'Twilio Voice et règles de consentement pour l’enregistrement des appels',
@@ -665,11 +541,5 @@ export const integrations = {
     'la clé d’intégration et le secret de l’application DocuSign de SampForce',
     'Integrationsschlüssel und Geheimnis der SampForce-DocuSign-App',
     'مفتاح التكامل والسر لتطبيق DocuSign الخاص بـ SampForce',
-  ],
-  'the SampForce Zoom app’s credentials': [
-    'las credenciales de la aplicación de Zoom de SampForce',
-    'les identifiants de l’application Zoom de SampForce',
-    'die Zugangsdaten der SampForce-Zoom-App',
-    'بيانات اعتماد تطبيق Zoom الخاص بـ SampForce',
   ],
 } as const satisfies PhraseTable;

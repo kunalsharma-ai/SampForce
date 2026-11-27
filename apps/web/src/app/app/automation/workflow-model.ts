@@ -25,7 +25,6 @@ export const ACTION_LABELS: Record<WorkflowAction['type'], string> = {
   add_engagement_points: 'Change their engagement score',
   send_webhook: 'Send to a webhook URL',
   send_email: 'Send an email',
-  post_to_chat: 'Post to Slack or Teams',
   send_whatsapp: 'Send a WhatsApp template',
   send_sms: 'Send an SMS',
 };
@@ -216,8 +215,6 @@ export function defaultAction(type: WorkflowAction['type']): WorkflowAction {
       return { type, url: 'https://' };
     case 'send_email':
       return { type, subject: 'Following up', body: 'Hi {{record.fullName}},\n\n' };
-    case 'post_to_chat':
-      return { type, app: 'slack', channelId: null, channelName: null, text: 'Update on {{record.fullName}}' };
     case 'send_whatsapp':
       return { type, templateName: '', language: 'en', params: [] };
     case 'send_sms':

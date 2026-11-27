@@ -103,7 +103,7 @@ const SECTIONS: SettingsSection[] = [
     id: 'integrations',
     title: 'Integrations',
     text: 'The apps and services SampForce connects to, and the keys other systems use.',
-    links: [{ href: '/app/integrations', icon: Blocks, title: 'Apps and connections', text: 'Slack, Teams, email servers, the browser extension and API keys.' }],
+    links: [{ href: '/app/integrations', icon: Blocks, title: 'Apps and connections', text: 'DocuSign, WhatsApp, email servers, the browser extension and API keys.' }],
   },
   {
     id: 'audit',

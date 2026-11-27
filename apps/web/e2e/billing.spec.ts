@@ -177,36 +177,36 @@ test('operator providers page: masked keys, saving a key applies it without a re
   await expect(ops.locator('body')).not.toContainText('test-key-not-real');
   await expectNoA11yViolations(ops);
 
-  // Slack's keys come from the deployment. Replace the secret with a wrong one here: it is used at once.
-  const slack = ops.getByRole('region', { name: 'Slack' });
-  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText('SLACK_CLIENT_SECRETFrom deployment secrets · ends in cret');
-  await slack.getByRole('button', { name: 'Update keys' }).click();
-  const form = slack.getByRole('form', { name: 'Edit Slack keys' });
-  await form.getByLabel('Client secret SLACK_CLIENT_SECRET').fill('a-wrong-slack-secret-9z9z');
+  // DocuSign's keys come from the deployment. Replace the secret with a wrong one here: it is used at once.
+  const docusign = ops.getByRole('region', { name: 'DocuSign', exact: true });
+  await expect(docusign.getByRole('list', { name: 'DocuSign keys' })).toContainText('DOCUSIGN_SECRET_KEYFrom deployment secrets · ends in -key');
+  await docusign.getByRole('button', { name: 'Update keys' }).click();
+  const form = docusign.getByRole('form', { name: 'Edit DocuSign keys' });
+  await form.getByLabel('Secret key DOCUSIGN_SECRET_KEY').fill('a-wrong-docusign-secret-9z9z');
   await expectNoA11yViolations(ops);
   await form.getByRole('button', { name: 'Save keys' }).click();
-  await expect(slack.getByText('Saved. The API and worker use the new keys within seconds, without a restart.')).toBeVisible();
-  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText(`SLACK_CLIENT_SECRETSaved here · ends in 9z9z`);
-  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText(`by ${email}`);
-  await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');
-  await slack.getByRole('button', { name: 'Test connection' }).click();
-  await expect(slack.getByText('Connection test failed')).toBeVisible();
-  await expect(slack.getByText(/Slack refused the client ID or secret \(invalid_client_id\)/)).toBeVisible();
+  await expect(docusign.getByText('Saved. The API and worker use the new keys within seconds, without a restart.')).toBeVisible();
+  await expect(docusign.getByRole('list', { name: 'DocuSign keys' })).toContainText(`DOCUSIGN_SECRET_KEYSaved here · ends in 9z9z`);
+  await expect(docusign.getByRole('list', { name: 'DocuSign keys' })).toContainText(`by ${email}`);
+  await expect(ops.locator('body')).not.toContainText('a-wrong-docusign-secret');
+  await docusign.getByRole('button', { name: 'Test connection' }).click();
+  await expect(docusign.getByText('Connection test failed')).toBeVisible();
+  await expect(docusign.getByText(/DocuSign refused the client ID or secret \(invalid_client\)/)).toBeVisible();
 
-  // Remove the saved value: Slack falls back to the deployment's secret, and the test passes again.
-  await slack.getByRole('button', { name: 'Update keys' }).click();
+  // Remove the saved value: DocuSign falls back to the deployment's secret, and the test passes again.
+  await docusign.getByRole('button', { name: 'Update keys' }).click();
   await form.getByLabel(/Remove the saved value/).check();
   await form.getByRole('button', { name: 'Save keys' }).click();
-  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText('SLACK_CLIENT_SECRETFrom deployment secrets · ends in cret');
-  await slack.getByRole('button', { name: 'Test connection' }).click();
-  await expect(slack.getByText('Connection test passed')).toBeVisible();
-  await expect(slack.getByText(/Slack accepted the client ID and secret/)).toBeVisible();
+  await expect(docusign.getByRole('list', { name: 'DocuSign keys' })).toContainText('DOCUSIGN_SECRET_KEYFrom deployment secrets · ends in -key');
+  await docusign.getByRole('button', { name: 'Test connection' }).click();
+  await expect(docusign.getByText('Connection test passed')).toBeVisible();
+  await expect(docusign.getByText(/DocuSign accepted the client ID and secret/)).toBeVisible();
 
   // Every change is in the operator log, by fingerprint and last four characters only.
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Audit log' }).click();
   await expect(ops.getByText('provider_key.set').first()).toBeVisible();
   await expect(ops.getByText('provider_key.cleared').first()).toBeVisible();
-  await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');
+  await expect(ops.locator('body')).not.toContainText('a-wrong-docusign-secret');
 });
 
 test('operator console: setup guides with URLs to paste, checkout switches, and what stays on the server', async ({ browser }) => {
@@ -225,16 +225,16 @@ test('operator console: setup guides with URLs to paste, checkout switches, and 
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Providers' }).click();
   await expect(ops.getByRole('heading', { level: 1, name: 'Providers' })).toBeVisible();
 
-  // The Slack guide: steps, a link to Slack's console, and the redirect URL to paste there, with a copy button.
-  const slack = ops.getByRole('region', { name: 'Slack' });
-  await slack.getByText('How to set up Slack').click();
-  await expect(slack.getByRole('link', { name: 'Open Slack apps' })).toHaveAttribute('href', 'https://api.slack.com/apps');
-  await expect(slack.getByText(/Bot Token Scopes: add chat:write/)).toBeVisible();
-  const urls = slack.getByRole('list', { name: 'URLs to paste into Slack' });
-  await expect(urls).toContainText('http://localhost:3000/api/v1/apps/slack/callback');
-  await urls.getByRole('button', { name: 'Copy Redirect URL' }).click();
-  await expect(urls.getByRole('button', { name: 'Copy Redirect URL' })).toHaveText('Copied');
-  expect(await ops.evaluate(() => navigator.clipboard.readText())).toBe('http://localhost:3000/api/v1/apps/slack/callback');
+  // The DocuSign guide: steps, a link to DocuSign's console, and the redirect URL to paste there, with a copy button.
+  const docusign = ops.getByRole('region', { name: 'DocuSign', exact: true });
+  await docusign.getByText('How to set up DocuSign').click();
+  await expect(docusign.getByRole('link', { name: 'Open DocuSign Apps and Keys' })).toHaveAttribute('href', 'https://admin.docusign.com/apps-and-keys');
+  await expect(docusign.getByText(/Choose "Authorization Code Grant"/)).toBeVisible();
+  const urls = docusign.getByRole('list', { name: 'URLs to paste into DocuSign' });
+  await expect(urls).toContainText('http://localhost:3000/api/v1/apps/docusign/callback');
+  await urls.getByRole('button', { name: 'Copy Redirect URI' }).click();
+  await expect(urls.getByRole('button', { name: 'Copy Redirect URI' })).toHaveText('Copied');
+  expect(await ops.evaluate(() => navigator.clipboard.readText())).toBe('http://localhost:3000/api/v1/apps/docusign/callback');
 
   // Stripe sends signed webhooks: the card says none has arrived yet, and its guide has the endpoint URL.
   const stripe = ops.getByRole('region', { name: 'Stripe (subscription billing)' });
