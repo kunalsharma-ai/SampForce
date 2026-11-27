@@ -128,6 +128,14 @@ export default defineConfig({
       env: { SMTP_FIXTURE_PORT: '4400' },
     },
     {
+      // Local stand-in for the company website's Sampforce API, with a few weeks of made-up enquiries (ADR 0095).
+      command: 'npx tsx test/fixtures/website-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4980/health',
+      reuseExistingServer: !process.env.CI,
+      env: { WEBSITE_FIXTURE_PORT: '4980' },
+    },
+    {
       command: 'node dist/main.js',
       cwd: '../api',
       url: 'http://localhost:4000/api/v1/health/ready',

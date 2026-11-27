@@ -106,11 +106,24 @@ export async function startWebsiteFixture(port = 0): Promise<WebsiteFixture> {
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://x');
     const path = u.pathname.replace(/^\/api\/v1\/sampforce/, '');
-    calls.push(`${req.method} ${path}${u.search}`);
     const send = (status: number, body: unknown) => {
       res.writeHead(status, { 'content-type': 'application/json' });
       res.end(JSON.stringify(body));
     };
+    // For browser tests: health, adding a lead as the website would, and what SampForce sent back (no key needed; not part of the website's API).
+    if (path === '/health') return send(200, { ok: true });
+    if (path === '/__patches') return send(200, patches);
+    if (path === '/__leads' && req.method === 'POST') {
+      let raw = '';
+      req.on('data', (c: Buffer) => (raw += c.toString('utf8')));
+      req.on('end', () => {
+        const l = JSON.parse(raw || '{}') as FixtureLead;
+        leads.set(l.id, l);
+        send(201, { ok: true });
+      });
+      return;
+    }
+    calls.push(`${req.method} ${path}${u.search}`);
     const auth = req.headers.authorization ?? '';
     if (auth !== `Bearer ${WEBSITE_KEY}` && req.headers['x-api-key'] !== WEBSITE_KEY) return send(401, { ok: false, error: 'Invalid API key.' });
     let body = '';
@@ -166,4 +179,33 @@ export async function startWebsiteFixture(port = 0): Promise<WebsiteFixture> {
     },
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
+}
+
+/** A few weeks of history, so the first import has something to bring in (browser tests and previews). */
+export function seedHistory(fx: WebsiteFixture): void {
+  const day = 86_400_000;
+  const at = (daysAgo: number, h = 10) => new Date(Date.now() - daysAgo * day - h * 3_600_000).toISOString();
+  fx.lead({ createdAt: at(1), category: 'rfq', contact: { name: 'Meera Iyer', firstName: 'Meera', lastName: 'Iyer', email: 'meera.iyer@novacare.test', company: 'NovaCare Health', designation: 'Head of Insights' }, enquiry: { service: 'Healthcare research: Physician surveys', message: 'Looking for a quote: 300 oncologists across India and the UAE, 20-minute online survey, fieldwork in January.' }, extraFields: { Budget: 'USD 10,000 - 25,000', 'Sample size': '300' } });
+  fx.lead({ createdAt: at(2), type: 'download', category: 'download', form: { key: 'case-study', name: 'Case study download' }, contact: { name: 'Tom Becker', firstName: 'Tom', lastName: 'Becker', email: 'tom.becker@marktblick.test', company: 'Marktblick GmbH', country: 'Germany', countryCode: '+49', phone: '1701234567' }, enquiry: { resource: 'B2B panel quality case study', message: '' } });
+  fx.lead({ createdAt: at(3), type: 'chat', category: 'chat', form: { key: 'chat', name: 'Live chat' }, contact: { name: 'Lina Haddad', firstName: 'Lina', lastName: 'Haddad', email: 'lina.haddad@gmail.com', company: '', country: 'United Arab Emirates', countryCode: '+971', phone: '501234567' }, enquiry: { interest: 'Consumer panels in the GCC', message: 'Do you have panels in Saudi Arabia and Qatar?' } });
+  fx.lead({ createdAt: at(5), category: 'partnership', form: { key: 'partner', name: 'Partner with us' }, contact: { name: 'Daniel Ortiz', firstName: 'Daniel', lastName: 'Ortiz', email: 'daniel@panelhub.test', company: 'PanelHub', country: 'Spain', countryCode: '+34', phone: '612345678' }, enquiry: { service: 'Panel partnership', message: 'We run a 200k consumer panel in Spain and would like to partner.' }, status: 'contacted' });
+  fx.lead({ createdAt: at(8), type: 'resource-download', category: 'download', form: { key: 'resource', name: 'Resource download' }, contact: { name: 'Grace Lee', firstName: 'Grace', lastName: 'Lee', email: 'grace.lee@brightpath.test', company: 'BrightPath Consulting', country: 'Singapore', countryCode: '+65', phone: '81234567' }, enquiry: { resource: 'Global panel book 2026', message: '' } });
+  fx.lead({ createdAt: at(11), contact: { name: 'Arjun Mehta', firstName: 'Arjun', lastName: 'Mehta', email: 'arjun.mehta@finsight.test', company: 'FinSight Analytics' }, enquiry: { service: 'Market research: B2B IT decision makers', message: 'Need 150 CIO interviews in the US.' }, status: 'qualified' });
+  for (const [i, c] of [
+    ['priya.nair@outlook.com', 'Priya Nair', 2],
+    ['sam.wilson@acmeretail.test', 'Sam Wilson', 6],
+  ].entries()) {
+    const [email, name, days] = c as [string, string, number];
+    fx.contacts.set(email, { id: email, object: 'contact', email, name, subscribed: true, subscribedAt: at(days, i), forms: ['newsletter'], sources: ['newsletter'], createdAt: at(days, i), updatedAt: at(days, i) });
+  }
+  fx.reviews.set('r_seed_1', { id: 'r_seed_1', object: 'review', status: 'published', rating: 5, review: 'Excellent field team, delivered 1,200 completes ahead of schedule.', services: ['Online surveys'], reply: '', contact: { name: 'Hannah Clarke', email: 'hannah.clarke@insightly.test', company: 'Insightly UK', country: 'United Kingdom' }, createdAt: at(4), updatedAt: at(4) });
+  fx.reviews.set('r_seed_2', { id: 'r_seed_2', object: 'review', status: 'published', rating: 4, review: 'Quick turnaround on our physician study.', services: ['Healthcare research'], reply: '', contact: { name: 'Omar Farouk', email: 'omar@medisurvey.test', company: 'MediSurvey', country: 'Egypt' }, createdAt: at(9), updatedAt: at(9) });
+}
+
+// Run on its own (Playwright): `tsx test/fixtures/website-fixture.ts`, port from WEBSITE_FIXTURE_PORT, with seeded history.
+if (process.argv[1]?.endsWith('website-fixture.ts')) {
+  void startWebsiteFixture(Number(process.env.WEBSITE_FIXTURE_PORT ?? 4980)).then((f) => {
+    seedHistory(f);
+    console.warn(`Website fixture on ${f.url}`);
+  });
 }
