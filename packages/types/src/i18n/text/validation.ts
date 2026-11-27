@@ -118,6 +118,7 @@ export const validation = {
   'Use a locale tag such as en-GB or de-CH.': ['Usa una etiqueta regional como en-GB o de-CH.', 'Utilisez un code de paramètres régionaux comme en-GB ou de-CH.', 'Verwenden Sie ein Gebietsschema wie en-GB oder de-CH.', 'استخدم رمز إعدادات إقليمية مثل en-GB أو de-CH.'],
   'a report can appear only once': ['un informe solo puede aparecer una vez', 'un rapport ne peut apparaître qu’une fois', 'ein Bericht darf nur einmal vorkommen', 'يمكن أن يظهر التقرير مرة واحدة فقط'],
   'Choose a status': ['Elige un estado', 'Choisissez un statut', 'Wählen Sie einen Status', 'اختر حالة'],
+  'Choose the rows or all matching records': ['Elige las filas o todos los registros que coinciden', 'Choisissez les lignes ou tous les enregistrements correspondants', 'Wählen Sie die Zeilen oder alle passenden Datensätze', 'اختر الصفوف أو كل السجلات المطابقة'],
   'Choose an owner': ['Elige un responsable', 'Choisissez un responsable', 'Wählen Sie einen Verantwortlichen', 'اختر مالكًا'],
 
   // Workspace apps

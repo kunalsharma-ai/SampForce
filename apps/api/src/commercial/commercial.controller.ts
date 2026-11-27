@@ -22,20 +22,23 @@ import {
   quoteUpdateSchema,
   taxRateInputSchema,
   z,
+  deleteAllSchema,
+  deleteAllCountSchema,
+  type DeleteAllInput,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature, RequireAction } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { ZodPipe } from '../common/zod.pipe';
 import { CatalogService } from './catalog.service';
 import { ContractsService } from './contracts.service';
 import { ProposalsService } from './proposals.service';
 import { renderQuotePdf } from './quote-pdf';
-import { QuotesService } from './quotes.service';
+import { quoteListQuerySchema, QuotesService } from './quotes.service';
 import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const priceBody = z.object({ unitPrice: z.coerce.number().min(0).max(1e12).nullable() });
-const quoteListQuery = z.object({ opportunityId: z.string().uuid().optional(), status: z.string().max(30).optional(), allVersions: z.coerce.boolean().optional() });
+const quoteListQuery = quoteListQuerySchema;
 const contractListQuery = z.object({ status: z.string().max(30).optional(), companyId: z.string().uuid().optional(), renewalWithinDays: z.coerce.number().int().min(0).max(730).optional() });
 const includeInactive = z.object({ all: z.coerce.boolean().optional() });
 
@@ -126,6 +129,25 @@ export class QuotesController {
     private readonly prisma: PrismaService,
     private readonly proposals: ProposalsService,
   ) {}
+
+  /** Delete every record this list shows for its filters, on every page, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('quotes:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.quotes.deleteAll(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('delete-all/count')
+  @HttpCode(200)
+  @RequirePermissions('quotes:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.quotes.matchingIds(auth, body.query)).length };
+  }
+
 
   /** Email the proposal with its online link from your mailbox; an approved quote becomes Sent. */
   @Post(':id/send')

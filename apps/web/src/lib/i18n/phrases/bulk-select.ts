@@ -15,4 +15,15 @@ export const bulkSelect = {
     'Damit werden alle Datensätze dieser Liste gelöscht, auf allen Seiten, nicht nur die sichtbaren Zeilen.',
     'سيؤدي هذا إلى حذف كل السجلات المطابقة لهذه القائمة في جميع الصفحات، وليس الصفوف الظاهرة فقط.',
   ],
+  // Delete all on lists that are not tables (ADR 0096)
+  'Delete all': ['Eliminar todo', 'Tout supprimer', 'Alle löschen', 'حذف الكل'],
+  'Counting…': ['Contando…', 'Décompte…', 'Wird gezählt…', 'جارٍ العدّ…'],
+  'Delete all {count}': ['Eliminar los {count}', 'Supprimer les {count}', 'Alle {count} löschen', 'حذف الكل ({count})'],
+  'Delete everything in this list?': ['¿Eliminar todo lo de esta lista?', 'Tout supprimer dans cette liste ?', 'Alles in dieser Liste löschen?', 'حذف كل ما في هذه القائمة؟'],
+  'This deletes all {count} records this list shows with its current filters, not only the ones you can see.': [
+    'Esto elimina los {count} registros que muestra esta lista con sus filtros actuales, no solo los que ves.',
+    'Cela supprime les {count} enregistrements que cette liste affiche avec ses filtres actuels, pas seulement ceux que vous voyez.',
+    'Damit werden alle {count} Datensätze gelöscht, die diese Liste mit ihren aktuellen Filtern zeigt, nicht nur die sichtbaren.',
+    'سيؤدي هذا إلى حذف كل السجلات ({count}) التي تعرضها هذه القائمة بعوامل التصفية الحالية، وليس الظاهرة فقط.',
+  ],
 } as const satisfies PhraseTable;

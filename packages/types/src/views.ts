@@ -104,3 +104,13 @@ export interface BulkActionResult {
   updated: number;
   failed: { id: string; message: string }[];
 }
+
+/**
+ * Delete every record a list shows for its filters, on every page, with no limit (RFQs, follow-ups, tasks, activities,
+ * quotes, meeting notes). `query` is the list's own query and `expected` the count the person saw: when the list has
+ * changed since, nothing is deleted (409 SELECTION_CHANGED). Needs the password, like any delete.
+ */
+export const deleteAllSchema = z.object({ query: z.record(z.string().max(4_000)).default({}), expected: z.number().int().min(1) }).strict();
+export type DeleteAllInput = z.infer<typeof deleteAllSchema>;
+/** Asks how many records "delete all" would delete for a list query, to show before the person confirms. */
+export const deleteAllCountSchema = deleteAllSchema.pick({ query: true });

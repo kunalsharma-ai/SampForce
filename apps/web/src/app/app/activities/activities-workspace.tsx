@@ -15,6 +15,7 @@ import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { InfoTip } from '@/components/info-tip';
+import { DeleteAllButton } from '@/components/delete-all-button';
 
 function relatedHref(r: { leadId: string | null; contactId: string | null; opportunityId: string | null; companyId?: string | null }): { href: string; label: MessageKey } | null {
   if (r.opportunityId) return { href: `/app/deals/${r.opportunityId}`, label: 'Deal' };
@@ -85,6 +86,7 @@ function TaskList() {
           <option value="OPEN">{t('Open')}</option>
           <option value="DONE">{t('Done')}</option>
         </Select>
+        <DeleteAllButton path="/tasks" query={{ scope, status }} hasItems={!!tasks.data?.length} permission="activities:write" feature="task_management" invalidate={['tasks']} />
       </CardHeader>
       <CardContent className="space-y-3">
         {canWrite && status === 'OPEN' && (
@@ -191,6 +193,9 @@ function RecentActivity() {
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-base">{t('Recent activity')}</CardTitle>
           <InfoTip topic="activities.recent" />
+          <span className="ms-auto">
+            <DeleteAllButton path="/activities" query={{}} hasItems={!!list.data?.items.length} permission="activities:write" feature="activity_tracking" invalidate={['activities']} />
+          </span>
         </div>
       </CardHeader>
       <CardContent>

@@ -6,8 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { FollowUpItem } from '@/components/crm/follow-ups';
 import { BUCKET_LABEL } from '@/components/crm/work-labels';
-import { useFollowUpCounts, useFollowUps } from '@/lib/company-work';
+import { browserTimeZone, useFollowUpCounts, useFollowUps } from '@/lib/company-work';
 import { type MessageKey, useT } from '@/lib/i18n';
+import { DeleteAllButton } from '@/components/delete-all-button';
 
 const SCOPES: { value: 'mine' | 'team' | 'all'; label: MessageKey }[] = [
   { value: 'mine', label: 'Mine' },
@@ -76,11 +77,16 @@ export function FollowUpsWorkspace() {
         ) : !list.data?.length ? (
           <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('No follow-ups here.')}</p>
         ) : (
-          <ul className="space-y-2">
-            {list.data.map((f) => (
-              <FollowUpItem key={f.id} f={f} />
-            ))}
-          </ul>
+          <div className="space-y-2">
+            <div className="flex justify-end">
+              <DeleteAllButton path="/follow-ups" query={{ scope, bucket, tz: browserTimeZone() }} hasItems={list.data.length > 0} permission="activities:write" feature="follow_up_management" invalidate={['follow-ups']} />
+            </div>
+            <ul className="space-y-2">
+              {list.data.map((f) => (
+                <FollowUpItem key={f.id} f={f} />
+              ))}
+            </ul>
+          </div>
         )}
       </section>
     </div>

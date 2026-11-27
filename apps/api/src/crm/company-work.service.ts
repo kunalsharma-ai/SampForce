@@ -25,15 +25,18 @@ import {
   startOfDayIn,
   sumByCurrency,
   type z,
-  type followUpListQuerySchema,
+  followUpListQuerySchema,
   type followUpUpdateSchema,
   type interactionListQuerySchema,
-  type rfqListQuerySchema,
+  rfqListQuerySchema,
+  type BulkActionResult,
+  type DeleteAllInput,
   type rfqUpdateSchema,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { allPages, deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -545,6 +548,32 @@ export class CompanyWorkService {
     });
   }
 
+  /** Deletes a follow-up (a task) the person may change: gone from every list, kept in the audit log. */
+  removeFollowUp(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      await this.editableFollowUp(tx, auth, id);
+      await tx.task.update({ where: { id }, data: { deletedAt: new Date() } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.deleted', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
+    });
+  }
+
+  /** Every follow-up the list shows for this query (no 300 cap), then each one deleted (ADR 0096). */
+  async matchingIdsFollowUps(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(followUpListQuerySchema, query);
+    const ids = await this.prisma.run(auth, async (tx) => {
+      const where = await this.followUpWhere(tx, auth, q);
+      const now = new Date();
+      const today = startOfDayIn(now, q.tz);
+      const rows = await tx.task.findMany({ where: { ...where, ...bucketWhere(q.bucket ?? 'upcoming', now, today, new Date(today.getTime() + DAY)) }, select: { id: true } });
+      return rows.map((r) => r.id);
+    });
+    return ids;
+  }
+
+  async deleteAllFollowUps(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'follow-ups', input, await this.matchingIdsFollowUps(auth, input.query), (id) => this.removeFollowUp(auth, id, meta));
+  }
+
   cancelFollowUp(auth: AuthContext, id: string, meta: RequestMeta): Promise<FollowUpRow> {
     return this.prisma.run(auth, async (tx) => {
       const before = await this.editableFollowUp(tx, auth, id);
@@ -809,6 +838,17 @@ export class CompanyWorkService {
       await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [id] });
       return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
+  }
+
+  /** Every RFQ the register shows for this query, on every page, then each one deleted (ADR 0096). */
+  async matchingIdsRfqs(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(rfqListQuerySchema, { ...query, page: '1', pageSize: '100' });
+    const ids = await allPages((page) => this.listRfqs(auth, { ...q, page }));
+    return ids;
+  }
+
+  async deleteAllRfqs(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'rfqs', input, await this.matchingIdsRfqs(auth, input.query), (id) => this.removeRfq(auth, id, meta));
   }
 
   removeRfq(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

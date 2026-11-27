@@ -1,10 +1,11 @@
 import { nullsLast } from '@dealflow/database';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@dealflow/database';
-import type { TaskInput, TaskRow } from '@dealflow/types';
+import { type BulkActionResult, type DeleteAllInput, type TaskInput, type TaskRow, taskListQuerySchema } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { assertRefs, diff, iso, notFound, ownerRefs } from './crm-helpers';
 import { FollowUpCadenceService } from './follow-up-cadence.service';
 
@@ -31,17 +32,8 @@ export class TasksService {
   list(auth: AuthContext, q: TaskListQuery, opts: { withoutFollowUps?: boolean } = {}): Promise<TaskRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.task.findMany({
-        where: {
-          tenantId: auth.tenantId,
-          deletedAt: null,
-          // The phone lists follow-ups on their own (ADR 0072).
-          ...(opts.withoutFollowUps ? { followUpType: null } : {}),
-          status: q.status,
-          ...(q.scope === 'mine' ? { assigneeId: auth.userId } : {}),
-          ...(q.leadId ? { leadId: q.leadId } : {}),
-          ...(q.contactId ? { contactId: q.contactId } : {}),
-          ...(q.opportunityId ? { opportunityId: q.opportunityId } : {}),
-        },
+        // The phone lists follow-ups on their own (ADR 0072).
+        where: { ...this.listWhere(auth, q), ...(opts.withoutFollowUps ? { followUpType: null } : {}) },
         orderBy:
           q.status === 'OPEN'
             ? [{ dueAt: nullsLast('asc') }, { createdAt: 'asc' }]
@@ -52,6 +44,18 @@ export class TasksService {
       const now = new Date();
       return rows.map((r) => toTaskRow(r, owners, now));
     });
+  }
+
+  private listWhere(auth: AuthContext, q: TaskListQuery): Prisma.TaskWhereInput {
+    return {
+      tenantId: auth.tenantId,
+      deletedAt: null,
+      status: q.status,
+      ...(q.scope === 'mine' ? { assigneeId: auth.userId } : {}),
+      ...(q.leadId ? { leadId: q.leadId } : {}),
+      ...(q.contactId ? { contactId: q.contactId } : {}),
+      ...(q.opportunityId ? { opportunityId: q.opportunityId } : {}),
+    };
   }
 
   /** One task, as in the workspace's task list (which every member can read). */
@@ -130,6 +134,17 @@ export class TasksService {
       });
       return toTaskRow(row, await ownerRefs(tx, [row.assigneeId]), new Date());
     });
+  }
+
+  /** Every task the list shows for this query (no 200 cap), then each one deleted (ADR 0096). */
+  async matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(taskListQuerySchema, query);
+    const ids = await this.prisma.run(auth, async (tx) => (await tx.task.findMany({ where: this.listWhere(auth, q), select: { id: true } })).map((r) => r.id));
+    return ids;
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'tasks', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

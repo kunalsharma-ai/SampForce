@@ -9,14 +9,22 @@ import {
   type QuoteUpdate,
   quoteTotals,
   lineTotals,
+  type BulkActionResult,
+  type DeleteAllInput,
+  z,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { badRef, notFound, ownerRefs } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { readSettings } from './catalog.service';
 import { QUOTE_APPROVAL_KIND } from './quote-approval';
+
+/** The quote list's query (GET /quotes), also used to find every quote to delete at once. */
+export const quoteListQuerySchema = z.object({ opportunityId: z.string().uuid().optional(), status: z.string().max(30).optional(), allVersions: z.coerce.boolean().optional() });
+type QuoteListQuery = z.infer<typeof quoteListQuerySchema>;
 
 const include = {
   lines: { orderBy: { position: 'asc' } },
@@ -42,16 +50,20 @@ export class QuotesService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  list(auth: AuthContext, q: { opportunityId?: string; status?: string; allVersions?: boolean }): Promise<QuoteRow[]> {
+  private listWhere(auth: AuthContext, q: QuoteListQuery): Prisma.QuoteWhereInput {
+    return {
+      tenantId: auth.tenantId,
+      ...(q.opportunityId ? { opportunityId: q.opportunityId } : {}),
+      ...(q.status ? { status: q.status as never } : {}),
+      ...(q.allVersions ? {} : { isLatest: true }),
+      opportunity: { deletedAt: null },
+    };
+  }
+
+  list(auth: AuthContext, q: QuoteListQuery): Promise<QuoteRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.quote.findMany({
-        where: {
-          tenantId: auth.tenantId,
-          ...(q.opportunityId ? { opportunityId: q.opportunityId } : {}),
-          ...(q.status ? { status: q.status as never } : {}),
-          ...(q.allVersions ? {} : { isLatest: true }),
-          opportunity: { deletedAt: null },
-        },
+        where: this.listWhere(auth, q),
         include,
         orderBy: [{ number: 'desc' }, { version: 'desc' }],
         take: 200,
@@ -193,6 +205,20 @@ export class QuotesService {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: `quote.${action}`, entityType: 'quote', entityId: resultId, metadata: { from: q.status, number: q.number, version: q.version }, meta });
       return (await this.rows(tx, auth.tenantId, [await this.find(tx, auth.tenantId, resultId)]))[0]!;
     });
+  }
+
+  /**
+   * Every quote the list shows for this query (no 200 cap), then each one deleted (ADR 0096). Only first-version drafts
+   * can be deleted, so the others are reported back, not hidden.
+   */
+  async matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(quoteListQuerySchema, query);
+    const ids = await this.prisma.run(auth, async (tx) => (await tx.quote.findMany({ where: this.listWhere(auth, q), select: { id: true } })).map((r) => r.id));
+    return ids;
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'quotes', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

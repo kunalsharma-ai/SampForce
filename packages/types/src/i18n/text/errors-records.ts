@@ -224,4 +224,6 @@ export const errorsRecords = {
   // Edit everywhere (ADR 0065)
   'Change the type of a company interaction from the company page.': ['Cambia el tipo de una interacción con una empresa desde la página de la empresa.', 'Modifiez le type d’une interaction avec une entreprise depuis la page de l’entreprise.', 'Ändern Sie die Art einer Unternehmensinteraktion auf der Seite des Unternehmens.', 'غيّر نوع التفاعل مع الشركة من صفحة الشركة.'],
   'Only the person who sent an instruction can edit it.': ['Solo la persona que envió una instrucción puede editarla.', 'Seule la personne qui a envoyé une instruction peut la modifier.', 'Nur die Person, die eine Anweisung gesendet hat, kann sie bearbeiten.', 'لا يعدّل التعليمات إلا من أرسلها.'],
+  // Select all and delete all (ADR 0096)
+  'The list changed: it now has {count} records, not {expected}. Check it and try again.': ['La lista cambió: ahora tiene {count} registros, no {expected}. Revísala e inténtalo de nuevo.', 'La liste a changé : elle contient maintenant {count} enregistrements, et non {expected}. Vérifiez-la et réessayez.', 'Die Liste hat sich geändert: Sie enthält jetzt {count} Datensätze, nicht {expected}. Prüfen Sie sie und versuchen Sie es erneut.', 'تغيّرت القائمة: أصبحت تضم {count} سجلًا وليس {expected}. راجعها وحاول مرة أخرى.'],
 } as const satisfies TextTable;
