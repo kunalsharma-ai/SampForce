@@ -2,7 +2,7 @@ import type { QuickCreateKind } from '@/stores/quick-create';
 
 /** Two-key "go to" shortcuts: press g, then the letter. */
 export const GO_TO: { key: string; label: string; href: string }[] = [
-  { key: 'h', label: 'Command Center', href: '/app' },
+  { key: 'h', label: 'Dashboard', href: '/app' },
   { key: 'l', label: 'Leads', href: '/app/leads' },
   { key: 'c', label: 'Contacts', href: '/app/contacts' },
   { key: 'o', label: 'Companies', href: '/app/companies' },

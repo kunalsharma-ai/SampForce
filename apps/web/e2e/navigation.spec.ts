@@ -75,7 +75,7 @@ test('the menu can be reordered and modules hidden; hidden modules are still fou
 
   await page.reload();
   const workspace = section(page, 'modules').first().getByRole('link');
-  await expect(workspace.nth(2)).toHaveText('Deals');
+  await expect(workspace.nth(1)).toHaveText('Deals');
   await expect(section(page, 'modules').getByRole('link', { name: 'Meetings' })).toHaveCount(0);
 
   await page.keyboard.press('Control+k');
@@ -86,7 +86,7 @@ test('the menu can be reordered and modules hidden; hidden modules are still fou
   await page.getByRole('button', { name: 'Customize menu' }).click();
   await page.getByRole('button', { name: 'Restore default menu' }).click();
   await expect(section(page, 'modules').getByRole('link', { name: 'Meetings' })).toBeVisible();
-  await expect(section(page, 'modules').first().getByRole('link').nth(1)).toHaveText('Leads');
+  await expect(section(page, 'modules').first().getByRole('link').nth(1)).toHaveText('Companies');
 });
 
 test('keyboard shortcuts, Focus Workspace and search actions', async ({ page }) => {

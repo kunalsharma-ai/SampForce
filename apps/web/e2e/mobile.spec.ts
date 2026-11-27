@@ -5,6 +5,8 @@ test('works on a phone: drawer navigation and readable dashboard', async ({ page
   await signUp(page, 'Mobile Org');
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
   await page.getByRole('button', { name: 'Open navigation' }).click();
+  // Team Management is under More (ADR 0082).
+  await page.getByRole('dialog').getByRole('button', { name: 'More' }).click();
   await page.getByRole('link', { name: 'Team Management' }).click();
   await expect(page.getByRole('heading', { name: 'Team Management' })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

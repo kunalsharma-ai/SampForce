@@ -29,7 +29,7 @@ export const en = {
   'nav.collapseSidebar': 'Collapse sidebar',
   'nav.expandSidebar': 'Expand sidebar',
   'nav.toggleSidebar': 'Toggle sidebar ( [ )',
-  'nav.home': 'SampForce Command Center',
+  'nav.home': 'SampForce Dashboard',
   'nav.group.Workspace': 'Workspace',
   'nav.group.Engage': 'Engage',
   'nav.group.Intelligence': 'Intelligence',
@@ -37,7 +37,7 @@ export const en = {
   'nav.group.Organization': 'Organization',
 
   // Module names (sidebar, mobile menu, command palette)
-  'module.home': 'Command Center',
+  'module.home': 'Dashboard',
   'module.leads': 'Leads',
   'module.contacts': 'Contacts',
   'module.companies': 'Companies',
@@ -49,6 +49,7 @@ export const en = {
   'module.targets': 'Targets',
   'module.rfqs': 'RFQs',
   'module.chat': 'Team chat',
+  'module.team-status': 'Team status',
   'module.activities': 'Sales Activities',
   'module.communication': 'Email & Communication',
   'module.sequences': 'Email Sequences',
@@ -118,6 +119,7 @@ export const en = {
   'mobile.nav': 'Quick navigation',
   'mobile.home': 'Home',
   'mobile.leads': 'Leads',
+  'mobile.companies': 'Companies',
   'mobile.deals': 'Deals',
   'mobile.tasks': 'Tasks',
   'mobile.create': 'Create',

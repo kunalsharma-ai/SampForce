@@ -128,7 +128,7 @@ export const crm = {
     'ستتم إزالة «{title}» من القوائم والبحث. يُسجَّل التغيير في سجل التدقيق.',
   ],
   'This record does not exist or was deleted.': ['Este registro no existe o se eliminó.', 'Cet enregistrement n’existe pas ou a été supprimé.', 'Dieser Datensatz existiert nicht oder wurde gelöscht.', 'هذا السجل غير موجود أو تم حذفه.'],
-  'Back to the Command Center': ['Volver al Centro de mando', 'Retour au Centre de commande', 'Zurück zur Kommandozentrale', 'العودة إلى مركز القيادة'],
+  'Back to the Dashboard': ['Volver al panel', 'Retour au tableau de bord', 'Zurück zum Dashboard', 'العودة إلى لوحة المعلومات'],
   Location: ['Ubicación', 'Localisation', 'Standort', 'الموقع'],
   Source: ['Origen', 'Source', 'Quelle', 'المصدر'],
   Campaign: ['Campaña', 'Campagne', 'Kampagne', 'الحملة'],

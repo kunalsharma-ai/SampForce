@@ -108,6 +108,9 @@ export const FEATURE_KEYS = [
   'crm_configuration',
   // ADR 0072
   'mobile_app',
+  // ADR 0082: the Leads and Accounts pages, hidden until the Console Admin switches them on.
+  'leads_section',
+  'accounts_section',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -122,6 +125,11 @@ export interface FeatureDef {
   defaultFrom: PlanCode;
   /** Workspace pages (path prefixes under /app) that belong to the feature and show the upgrade page without it. */
   paths: string[];
+  /**
+   * Pages that belong to the feature at exactly this path, not below it: the Leads list is hidden without
+   * `leads_section` while a lead's own page, linked from notifications and other records, still opens.
+   */
+  exactPaths?: string[];
   /** A subfeature: only available while this feature is (ADR 0071). */
   parent?: FeatureKey;
   /**
@@ -196,7 +204,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'lead_assignment', group: 'CRM', label: 'Lead assignment', description: 'Assign inbound leads to an owner.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
   { key: 'lead_conversion', group: 'CRM', label: 'Lead conversion', description: 'Convert an inbound lead into a company, contact and deal.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
   { key: 'lead_merge', group: 'CRM', label: 'Duplicate leads and merging', description: 'Find duplicate inbound leads and merge them.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
-  { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Company leads (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies', '/app/accounts'], since: 2 },
+  { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Company leads (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies'], since: 2 },
   { key: 'company_branches', group: 'CRM', label: 'Company branches', description: 'Branches and offices of a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'company_files', group: 'CRM', label: 'Company files', description: 'Files kept on a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'company_enrichment', group: 'CRM', label: 'Company auto-fill', description: 'Fill missing company details from the company’s own website and Wikidata, with the source of every value and undo.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 3 },
@@ -227,6 +235,10 @@ export const FEATURES: FeatureDef[] = [
   { key: 'audit_log', group: 'Administration', label: 'Audit log', description: 'Who changed what, and when.', defaultFrom: 'free', paths: [], since: 2 },
   { key: 'crm_configuration', group: 'Administration', label: 'CRM configuration', description: 'Statuses, departments, designations, lead numbering and other CRM settings.', defaultFrom: 'free', paths: ['/app/settings/crm'], since: 2 },
   { key: 'mobile_app', group: 'Apps', label: 'Mobile app', description: 'The SampForce app for iPhone and Android, once the Console Admin approves it and the Super Workspace switches it on.', defaultFrom: 'free', paths: ['/app/settings/mobile'], since: 2 },
+  // ADR 0082 (redesign R2): the separate Leads and Accounts pages are off for every organisation until the Console Admin
+  // switches them on. Companies and their contacts are where leads are worked now.
+  { key: 'leads_section', group: 'CRM', label: 'Leads page', description: 'The separate Leads page for inbound leads. Hidden unless the Console Admin switches it on; companies and contacts hold the leads otherwise.', defaultFrom: 'free', paths: [], exactPaths: ['/app/leads'], parent: 'lead_management', since: 4, optIn: true },
+  { key: 'accounts_section', group: 'CRM', label: 'Accounts page', description: 'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.', defaultFrom: 'free', paths: ['/app/accounts'], parent: 'account_management', since: 4, optIn: true },
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
@@ -286,6 +298,8 @@ export function featureForPath(pathname: string): FeatureKey | null {
     for (const p of f.paths) {
       if ((pathname === p || pathname.startsWith(`${p}/`)) && (!best || p.length > best.len)) best = { key: f.key, len: p.length };
     }
+    // An exact page wins over a prefix of the same length.
+    for (const p of f.exactPaths ?? []) if (pathname === p && (!best || p.length + 0.5 > best.len)) best = { key: f.key, len: p.length + 0.5 };
   }
   return best?.key ?? null;
 }
