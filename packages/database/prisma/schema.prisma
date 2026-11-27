@@ -1696,6 +1696,14 @@ model Opportunity {
   managerId         String?           @map("manager_id")
   leadCreatorId     String?           @map("lead_creator_id")
   supportingUserIds String[]          @map("supporting_user_ids")
+  /// Where the deal came from (DEAL_SOURCES or the team's own words), the products or services it covers, and
+  /// free notes (Deals redesign, ADR 0096).
+  source            String?
+  products          String[]
+  notes             String?
+  /// Archived deals leave the board, the list and the dashboard but are kept, and can be brought back.
+  archivedAt        DateTime?         @map("archived_at")
+  archivedById      String?           @map("archived_by_id")
   customFields      Json              @default("{}") @map("custom_fields")
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -1717,6 +1725,7 @@ model Opportunity {
   meetingRecords MeetingRecord[]
 
   @@unique([tenantId, dealNumber])
+  @@index([tenantId, archivedAt])
   @@index([tenantId, status])
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
