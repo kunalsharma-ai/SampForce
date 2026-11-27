@@ -97,7 +97,7 @@ export interface TodayBirthdays {
 
 /** /people/birthdays?date=YYYY-MM-DD, the reader's own local date. */
 export const birthdaysQuery = z
-  .object({ date: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Use a date like 2026-12-25.') })
+  .object({ date: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Send the date as YYYY-MM-DD.') })
   .strict();
 
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
