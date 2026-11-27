@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, transactionLock, type TenantTx } from '@dealflow/database';
 import {
+  readTeamApprovalSettings,
+  withDeleteWhereEdit,
   type ActionGrants,
   actionAllowed,
   type AssignWorkspaceMemberInput,
@@ -141,7 +143,11 @@ export class WorkspacesService {
         throw new ConflictException({ code: 'WORKSPACE_NAME_TAKEN', message: 'A workspace with this name already exists in your organisation.' });
 
       const features = input.features ? this.grantableFeatures(parent, input.features) : parent.features;
-      const actions = input.actions ? this.grantableActions(parent, input.actions) : defaultChildActions(input.level, parent.actions);
+      let actions = input.actions ? this.grantableActions(parent, input.actions) : defaultChildActions(input.level, parent.actions);
+      // The Super Workspace let Manager and Executive Workspaces delete (ADR 0097): a new one gets Delete with Edit.
+      if (!input.actions && readTeamApprovalSettings((await tx.teamApprovalSettings.findUnique({ where: { tenantId: auth.tenantId } }))?.settings).lowerLevelsDelete) {
+        actions = this.grantableActions(parent, withDeleteWhereEdit(actions, true) as typeof actions);
+      }
       const node = await tx.workspaceNode.create({
         data: {
           tenantId: auth.tenantId,
