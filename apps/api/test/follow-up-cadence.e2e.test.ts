@@ -21,6 +21,8 @@ describe('Follow-up cadence', () => {
   const cadence = async (id: string) => (await api(rep).get(`/contacts/${id}/cadence`).expect(200)).body as ContactCadence;
   const stageOf = async (id: string) => ((await api(rep).get(`/companies/${companyId}/employee-activity`).expect(200)).body as EmployeeActivity).rows.find((r) => r.id === id)!.stage?.key ?? null;
   const openCadenceTasks = (contactId: string) => asTenant(owner.tenantId, (tx) => tx.task.findMany({ where: { contactId, cadenceStep: { not: null } }, orderBy: { cadenceStep: 'asc' } }));
+  const moveDue = (now: Date) => app.get(FollowUpCadenceService).moveDue(now);
+  const later = () => new Date(Date.now() + 30 * DAY);
 
   beforeAll(async () => {
     app = await startApp();
@@ -67,9 +69,19 @@ describe('Follow-up cadence', () => {
     const sentAt = new Date(Date.now() - DAY);
     await api(rep).post('/interactions', { companyId, contactId: priya, kind: 'EMAIL_SENT', subject: 'Introduction', occurredAt: sentAt.toISOString() }).expect(201);
     expect(await stageOf(priya)).toBe('INITIAL_EMAIL_SENT');
+    // She waits until the follow-up period has passed (ADR 0096): no follow-up yet.
     let c = await cadence(priya);
-    expect(c).toMatchObject({ state: 'ACTIVE', completed: 0, total: 3, next: { step: 1 } });
-    expect(new Date(c.next!.dueAt).getTime()).toBe(sentAt.getTime() + 2 * DAY);
+    expect(c).toMatchObject({ state: 'ACTIVE', completed: 0, total: 3, next: null, initialEmailSource: 'LOGGED' });
+    expect(new Date(c.movesAt!).getTime()).toBe(sentAt.getTime() + 2 * DAY);
+    expect(await openCadenceTasks(priya)).toHaveLength(0);
+    await moveDue(new Date(sentAt.getTime() + DAY));
+    expect(await openCadenceTasks(priya)).toHaveLength(0);
+    // Two days on, the background job creates follow-up 1, due by the end of that day; running it again changes nothing.
+    await moveDue(new Date(sentAt.getTime() + 2 * DAY + 1000));
+    await moveDue(new Date(sentAt.getTime() + 2 * DAY + 2000));
+    c = await cadence(priya);
+    expect(c).toMatchObject({ state: 'ACTIVE', next: { step: 1 }, movesAt: null });
+    expect(c.next!.dueAt).toBe(localDay(new Date(sentAt.getTime() + 2 * DAY), 'UTC').endOfDay.toISOString());
     const [first] = await openCadenceTasks(priya);
     expect(first).toMatchObject({ title: 'Follow-up 1 of 3: Priya Shah', followUpType: 'EMAIL', assigneeId: rep.userId, status: 'OPEN', cadenceStep: 1 });
     // A second email changes nothing: the cadence runs once.
@@ -90,6 +102,8 @@ describe('Follow-up cadence', () => {
   it('stops when the employee answers, and cancels the follow-up still planned', async () => {
     const tom = ids[1]!;
     await api(rep).post(`/contacts/${tom}/initial-email`, {}).expect(200);
+    expect(await cadence(tom)).toMatchObject({ next: null, initialEmailSource: 'MANUAL' });
+    await moveDue(later());
     expect((await cadence(tom)).next?.step).toBe(1);
     await api(rep).post('/interactions', { companyId, contactId: tom, kind: 'EMAIL_RECEIVED', subject: 'Re: Introduction' }).expect(201);
     const c = await cadence(tom);
@@ -105,11 +119,14 @@ describe('Follow-up cadence', () => {
     const lena = ids[2]!;
     const svc = app.get(FollowUpCadenceService);
     const actor = { tenantId: owner.tenantId, userId: rep.userId };
-    await asTenant(owner.tenantId, (tx) => svc.emailStored(tx, actor, { contactId: lena, direction: 'OUTBOUND', sentAt: new Date() }));
-    expect(await cadence(lena)).toMatchObject({ state: 'ACTIVE', next: { step: 1 } });
+    await asTenant(owner.tenantId, (tx) => svc.emailStored(tx, actor, { contactId: lena, direction: 'OUTBOUND', sentAt: new Date() }, 'SENT'));
+    expect(await cadence(lena)).toMatchObject({ state: 'ACTIVE', next: null, initialEmailSource: 'SENT' });
+    // A reply while she waits: the cadence stops, and the job never moves her into Follow-ups.
     await asTenant(owner.tenantId, (tx) => svc.emailStored(tx, actor, { contactId: lena, direction: 'INBOUND', sentAt: new Date() }));
-    expect(await cadence(lena)).toMatchObject({ state: 'STOPPED', stoppedReason: 'the contact replied by email' });
+    expect(await cadence(lena)).toMatchObject({ state: 'STOPPED', stoppedReason: 'the contact replied by email', movesAt: null });
     expect(await stageOf(lena)).toBe('DISCUSSION');
+    await moveDue(later());
+    expect(await openCadenceTasks(lena)).toHaveLength(0);
   });
 
   it('an RFQ from the employee stops the cadence too', async () => {

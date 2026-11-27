@@ -115,7 +115,8 @@ const WORKER_ALL = new Set([
 // ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
-const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'VisitorSettings', 'ZoomMeeting']);
+// Contact: the follow-up cadence job (ADR 0096) finds contacts whose period after the first email has passed; it reads ids only and moves each one inside its own workspace.
+const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'VisitorSettings', 'ZoomMeeting']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

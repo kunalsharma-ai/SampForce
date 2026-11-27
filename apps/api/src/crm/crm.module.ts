@@ -23,6 +23,7 @@ import { CompanyDealsService } from './company-deals.service';
 import { JourneyController } from './journey.controller';
 import { JourneyService } from './journey.service';
 import { FollowUpCadenceController } from './follow-up-cadence.controller';
+import { FirstEmailService } from './first-email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -87,6 +88,7 @@ import {
     ClientConcernsController,
   ],
   providers: [
+    FirstEmailService,
     CustomFieldsService,
     CrmAdminService,
     CompaniesService,

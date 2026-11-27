@@ -16,6 +16,7 @@ import { CompanyLogosService } from '../crm/company-logos.service';
 import { HunterClient } from '../finder/hunter';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { CrmModule } from '../crm/crm.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MobileModule } from '../mobile/mobile.module';
 import { CompanyClosureService } from '../tenants/company-closure.service';
@@ -23,7 +24,7 @@ import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
-  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule],
+  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule, CrmModule],
   providers: [WorkerService, CrmRemindersService, CompanyLogosService, CompanyEnrichmentService, HunterClient, NotificationsService, CompanyClosureService],
   exports: [WorkerService],
 })

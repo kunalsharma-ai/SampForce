@@ -1,6 +1,7 @@
 import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
@@ -47,6 +48,8 @@ export interface WorkerTick {
   zoomTranscripts: number;
   /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
   reminders: number;
+  /** Contacts moved into Follow-ups once the period after their first email passed (ADR 0096). */
+  cadenceMoves: number;
   /** Company logos looked up from company websites (ADR 0070). */
   logos: number;
   /** Company auto-fill runs (ADR 0076). */
@@ -94,6 +97,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
     private readonly reminders: CrmRemindersService,
+    private readonly cadence: FollowUpCadenceService,
     private readonly logos: CompanyLogosService,
     private readonly autofill: CompanyEnrichmentService,
     private readonly pushes: MobilePushService,
@@ -156,6 +160,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const visitorRetention = await this.visitors.sweep();
     const prospectImports = await this.prospects.sweep();
     const zoomTranscripts = await this.zoom.importDue();
+    // Before reminders, so a follow-up created now is in this pass's morning summary.
+    const cadenceMoves = await this.cadence.moveDue();
     const reminders = await this.reminders.sweep();
     const logos = await this.logos.runDue();
     const autofills = await this.autofill.runDue();
@@ -174,7 +180,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

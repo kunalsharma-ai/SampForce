@@ -166,7 +166,7 @@ export class CommunicationService {
         { connection: { select: { provider: true } } },
       ))!;
       // The first email to an employee starts their follow-up cadence (ADR 0083).
-      await this.cadence.emailStored(tx, auth, email);
+      await this.cadence.emailStored(tx, auth, email, 'SENT');
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: audit.action, entityType: 'email', entityId: email.id,
         metadata: { provider: conn.provider, contactId, leadId, ...audit.metadata }, meta,
