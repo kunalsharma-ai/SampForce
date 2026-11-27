@@ -67,7 +67,8 @@ export const teamApprovalSettingsSchema = z.object({
 export type TeamApprovalSettings = z.infer<typeof teamApprovalSettingsSchema>;
 
 export const DEFAULT_TEAM_APPROVAL_SETTINGS: TeamApprovalSettings = {
-  lowerLevelsDelete: false,
+  // On by default (Kunal's brief: managers delete directly, executives ask). The Super Workspace can switch it off.
+  lowerLevelsDelete: true,
   deleteNeedsApproval: true,
   editNeedsApproval: false,
   freeFormRequests: true,

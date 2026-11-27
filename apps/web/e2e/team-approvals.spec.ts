@@ -36,12 +36,12 @@ test('an executive asks their manager before deleting, deletes once approved, an
   test.setTimeout(180_000);
   await signUp(page, 'Approvals Research');
 
-  // Rules: the Super Workspace lets Manager and Executive Workspaces delete; executives still ask first.
+  // Rules: Manager and Executive Workspaces can delete; executives ask first.
   await page.goto('/app/approvals?box=rules');
-  const lower = page.getByRole('switch', { name: /Manager and Executive Workspaces can delete/ });
-  await expect(lower).not.toBeChecked();
+  // On by default; the Super Workspace can switch either off here.
+  await expect(page.getByRole('switch', { name: /Manager and Executive Workspaces can delete/ })).toBeChecked();
   await expect(page.getByRole('switch', { name: /Executives ask before deleting/ })).toBeChecked();
-  await lower.check();
+  await page.getByLabel('Move up after (hours, 0 = never)').fill('12');
   await shot(page, '01-rules');
   await page.getByRole('button', { name: 'Save rules' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();

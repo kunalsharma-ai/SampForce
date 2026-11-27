@@ -159,3 +159,12 @@ export async function workspacePerson(app: INestApplication, creator: TestUser, 
   const me = (await agent.get('/api/v1/auth/me').expect(200)).body as { user: { id: string; email: string }; tenant: { id: string } };
   return { agent, email: me.user.email, password, tenantId: me.tenant.id, userId: me.user.id, workspaceId: ws.id };
 }
+
+/**
+ * Turns off "Manager and Executive Workspaces can delete" (ADR 0098, on by default), so Delete is granted workspace by
+ * workspace in the Permission Center as in workspace redesign W2. For suites that test that per-workspace grant.
+ */
+export async function perWorkspaceDelete(owner: TestUser): Promise<void> {
+  const settings = (await api(owner).get('/team-approvals/overview').expect(200)).body.settings;
+  await api(owner).put('/team-approvals/settings', { ...settings, lowerLevelsDelete: false }).expect(200);
+}

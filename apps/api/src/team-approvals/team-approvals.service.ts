@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { nextSequenceValue, type Prisma, type TenantTx } from '@dealflow/database';
 import {
+  DEFAULT_TEAM_APPROVAL_SETTINGS,
   type ApprovalAction,
   parseActionGrants,
   withDeleteWhereEdit,
@@ -480,7 +481,36 @@ export class TeamApprovalsService {
   // ---- the worker: lapse and escalate ------------------------------------------------------------------------
 
   /** Expires requests nobody decided, lapses unused approvals and moves slow requests one level up. */
+  private defaultsApplied = false;
+
+  /**
+   * Once per worker start: organisations that never saved approval rules get the defaults written down, and with
+   * them Delete for their Manager and Executive Workspaces wherever those can edit (managers delete directly,
+   * executives ask first). New workspaces get it when they are created. Saving the rules later decides from then on.
+   */
+  async applyDefaults(): Promise<number> {
+    if (this.defaultsApplied) return 0;
+    const [tenants, saved] = await Promise.all([
+      scan(() => this.prisma.tenant.findMany({ select: { id: true } })),
+      scan(() => this.prisma.teamApprovalSettings.findMany({ select: { tenantId: true } })),
+    ]);
+    const have = new Set(saved.map((r) => r.tenantId));
+    let applied = 0;
+    for (const t of tenants) {
+      if (have.has(t.id)) continue;
+      applied += await this.prisma.run({ tenantId: t.id }, async (tx) => {
+        if (await tx.teamApprovalSettings.findUnique({ where: { tenantId: t.id } })) return 0;
+        await tx.teamApprovalSettings.create({ data: { tenantId: t.id, settings: DEFAULT_TEAM_APPROVAL_SETTINGS as unknown as Prisma.InputJsonValue } });
+        if (DEFAULT_TEAM_APPROVAL_SETTINGS.lowerLevelsDelete) await this.setLowerLevelsDelete(tx, t.id, true);
+        return 1;
+      });
+    }
+    this.defaultsApplied = true;
+    return applied;
+  }
+
   async sweep(): Promise<number> {
+    await this.applyDefaults();
     const now = new Date();
     const due = await scan(() =>
       this.prisma.teamApproval.findMany({

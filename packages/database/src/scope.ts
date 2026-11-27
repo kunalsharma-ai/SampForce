@@ -99,6 +99,7 @@ export type LookupModel = keyof typeof LOOKUP_FIELDS;
 const WORKER_ALL = new Set([
   // Team approvals and deleted items (ADR 0098): the worker expires, escalates and purges across workspaces.
   'TeamApproval',
+  'TeamApprovalSettings',
   'RecycleBatch',
   'RecycleEntry',
   'AiRun',

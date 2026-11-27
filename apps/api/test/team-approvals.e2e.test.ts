@@ -1,8 +1,9 @@
 import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { APPROVAL_HEADER } from '@dealflow/types';
+import { TeamApprovalsService } from '../src/team-approvals/team-approvals.service';
 import { WorkerService } from '../src/worker/worker.service';
-import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
+import { api, asTenant, perWorkspaceDelete, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
 /*
  * Delete approvals, the Approval section and Deleted items (ADR 0098): Super and Manager Workspaces delete directly,
@@ -30,11 +31,13 @@ describe('team approvals and deleted items', () => {
     // An executive of the Super Workspace directly, whose requests go to the Super Workspace.
     otherExecutive = await workspacePerson(app, owner, 'EXECUTIVE', 'Omar Executive');
     outsider = await registerUser(app, 'Someone Else Ltd');
-    // Delete stays a per-workspace permission (W2) until the Super Workspace lets the levels below delete.
+    // Managers and executives get Delete by default (the Super Workspace can switch it off in Rules).
+    const settings = (await api(owner).get('/team-approvals/overview').expect(200)).body.settings;
+    expect(settings.lowerLevelsDelete).toBe(true);
+    // Switching it off takes Delete away again (W2: per-workspace grants); switching it on gives it back.
+    await api(owner).put('/team-approvals/settings', { ...settings, lowerLevelsDelete: false }).expect(200);
     const b = await company(manager, 'Before The Switch Ltd');
     expect((await api(manager).del(`/companies/${b}`).expect(403)).body.error.code).toBe('ACTION_NOT_GRANTED');
-    const settings = (await api(owner).get('/team-approvals/overview').expect(200)).body.settings;
-    expect(settings.lowerLevelsDelete).toBe(false);
     await api(owner).put('/team-approvals/settings', { ...settings, lowerLevelsDelete: true }).expect(200);
   });
   afterAll(async () => {
@@ -246,5 +249,30 @@ describe('team approvals and deleted items', () => {
     expect(((await api(owner).get('/deleted-items?state=any').expect(200)).body as { id: string }[]).map((b) => b.id)).not.toContain(again.id);
     // Other organisations never see these.
     expect((await api(outsider).get('/deleted-items').expect(200)).body).toEqual([]);
+  });
+
+  it('switches Delete on once for organisations that never saved the rules, and leaves saved rules alone', async () => {
+    // An organisation from before this change: its manager has no Delete, and it has no saved rules.
+    const older = await registerUser(app, 'Older Org');
+    const lead = await workspacePerson(app, older, 'MANAGER', 'Lena Lead');
+    const actions = (await api(lead).get('/auth/me').expect(200)).body.workspace.actions as Record<string, string[]>;
+    const without = Object.fromEntries(Object.entries(actions).map(([k, v]) => [k, v.filter((a) => a !== 'delete')]));
+    await api(older).put(`/workspaces/${lead.workspaceId}/permissions`, { actions: without }).expect(200);
+    const c = await company(lead, 'Old Org Duplicate');
+    expect((await api(lead).del(`/companies/${c}`).expect(403)).body.error.code).toBe('ACTION_NOT_GRANTED');
+    // Saved rules with the switch off are kept as they are.
+    const kept = await registerUser(app, 'Kept Rules Org');
+    const keptLead = await workspacePerson(app, kept, 'MANAGER', 'Kai Kept');
+    await perWorkspaceDelete(kept);
+
+    const svc = app.get(TeamApprovalsService);
+    (svc as unknown as { defaultsApplied: boolean }).defaultsApplied = false;
+    expect(await svc.applyDefaults()).toBeGreaterThanOrEqual(1);
+    await api(lead).del(`/companies/${c}`).expect(204);
+    expect((await api(older).get('/team-approvals/overview').expect(200)).body.settings.lowerLevelsDelete).toBe(true);
+    const k = await company(keptLead, 'Kept Org Record');
+    expect((await api(keptLead).del(`/companies/${k}`).expect(403)).body.error.code).toBe('ACTION_NOT_GRANTED');
+    // Only once.
+    expect(await svc.applyDefaults()).toBe(0);
   });
 });

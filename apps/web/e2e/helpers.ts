@@ -115,3 +115,13 @@ export async function openCopilot(page: Page) {
   await openAccountMenu(page);
   await page.getByRole('menuitem', { name: 'Copilot' }).click();
 }
+
+/**
+ * Turns off "Manager and Executive Workspaces can delete" (Approvals > Rules, ADR 0098, on by default), so Delete is
+ * given workspace by workspace in the Permission Center (workspace redesign W2). For specs that test that.
+ */
+export async function perWorkspaceDelete(page: Page) {
+  const overview = await (await page.request.get('/api/v1/team-approvals/overview')).json();
+  const res = await page.request.put('/api/v1/team-approvals/settings', { data: { ...overview.settings, lowerLevelsDelete: false }, headers: { origin: 'http://localhost:3000' } });
+  expect(res.ok(), await res.text()).toBe(true);
+}

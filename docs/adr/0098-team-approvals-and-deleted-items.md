@@ -91,15 +91,18 @@ own audit entry as before.
 
 ### Settings (Super Workspace, Approvals > Rules)
 
-`lowerLevelsDelete` (default off), `deleteNeedsApproval` (on), `editNeedsApproval` (off), `freeFormRequests` (on),
+`lowerLevelsDelete` (default on), `deleteNeedsApproval` (on), `editNeedsApproval` (off), `freeFormRequests` (on),
 `escalateAfterHours` (24, 0 = never), `expireAfterDays` (7), `approvalValidDays` (3), `keepDeletedDays` (30).
 
 ## What changed in earlier work
 
-- W2 (no Delete below Super by default) is kept as the default. Kunal's brief says managers delete freely, which W2
-  does not allow, so the new switch "Manager and Executive Workspaces can delete" turns the Delete action on wherever
-  a Manager or Executive Workspace can edit, now and for workspaces created later, and off again. It changes the same
-  per-workspace actions as the Permission Center, which still works workspace by workspace.
+- W2 (no Delete below Super by default) is changed. Kunal's brief says managers delete freely and executives delete
+  with approval, so the new switch "Manager and Executive Workspaces can delete" (Approvals > Rules) is on by default.
+  It turns the Delete action on wherever a Manager or Executive Workspace can edit, for existing workspaces and for
+  those created later (the creation wizard starts with Delete ticked), and off again when switched off. Organisations
+  that never saved the approval rules get it once, on the worker's first tick after the upgrade, which also gives
+  back Delete to workspaces that had it taken away in the Permission Center. After that the Permission Center works
+  workspace by workspace as before, and turning the switch off restores the W2 behaviour.
 - The Approvals page (automation steps and quote discounts) became the Approval section; those approvals are one of
   its tabs, unchanged.
 - The record page's delete dialog closes when the delete went to the manager instead, and the bulk bar shows the
