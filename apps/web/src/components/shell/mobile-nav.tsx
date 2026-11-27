@@ -2,9 +2,10 @@
 
 import type { Permission } from '@dealflow/types';
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@dealflow/ui';
-import { Handshake, LayoutDashboard, ListTodo, Plus, UserPlus } from 'lucide-react';
+import { Building2, Handshake, LayoutDashboard, ListTodo, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLeadsSectionOn } from '@/lib/features';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { CREATE } from '@/lib/shortcuts';
@@ -14,7 +15,7 @@ const PERMISSION: Record<string, Permission> = { leads: 'leads:write', contacts:
 
 const TABS = [
   { href: '/app', label: 'mobile.home', icon: LayoutDashboard },
-  { href: '/app/leads', label: 'mobile.leads', icon: UserPlus },
+  { href: '/app/companies', label: 'mobile.companies', icon: Building2 },
   null,
   { href: '/app/deals', label: 'mobile.deals', icon: Handshake },
   { href: '/app/activities', label: 'mobile.tasks', icon: ListTodo },
@@ -26,6 +27,7 @@ export function MobileBottomNav() {
   const { data } = useSession();
   const openCreate = useQuickCreate((s) => s.open);
   const tr = useT();
+  const leadsOn = useLeadsSectionOn();
   return (
     <nav
       aria-label={tr('mobile.nav')}
@@ -44,7 +46,7 @@ export function MobileBottomNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="center">
                   <DropdownMenuLabel>{tr('mobile.create')}</DropdownMenuLabel>
-                  {CREATE.map((c) => (
+                  {CREATE.filter((c) => c.kind !== 'leads' || leadsOn).map((c) => (
                     <DropdownMenuItem key={c.kind} disabled={!data?.permissions.includes(PERMISSION[c.kind]!)} onSelect={() => openCreate(c.kind)}>
                       <Plus aria-hidden /> {tr(`create.${c.kind}`)}
                     </DropdownMenuItem>

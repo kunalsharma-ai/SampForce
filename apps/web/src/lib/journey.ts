@@ -5,10 +5,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 
 /** The Pipeline journey board and each company's journey (redesign R5, ADR 0085). */
-export function useJourneyBoard(f: { q?: string; mine?: boolean }) {
+export function useJourneyBoard(f: { q?: string; mine?: boolean; perStage?: number }) {
   const qs = new URLSearchParams();
   if (f.q?.trim()) qs.set('q', f.q.trim());
   if (f.mine) qs.set('mine', 'true');
+  if (f.perStage) qs.set('perStage', String(f.perStage));
   const s = qs.toString();
   return useQuery({ queryKey: ['journey-board', s], queryFn: () => api<JourneyBoard>(`/pipeline/journey${s ? `?${s}` : ''}`), staleTime: 15_000, placeholderData: (prev) => prev });
 }

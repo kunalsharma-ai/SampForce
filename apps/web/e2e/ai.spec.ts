@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, openCopilot } from './helpers';
 
 /**
  * AI screens against the local Claude fixture (see playwright.config.ts). These prove the screens,
@@ -25,7 +25,7 @@ test('Copilot answers from CRM data and only changes things after confirmation',
   await signUp(page, 'Copilot Co');
   const lead = (await apiPost(page, '/leads', { fullName: 'Ada Lovelace', email: 'ada@example.com' })).lead;
 
-  await page.getByRole('button', { name: 'Copilot', exact: true }).click();
+  await openCopilot(page);
   const panel = page.getByRole('dialog', { name: 'SampForce Copilot' });
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: 'Summarise my open pipeline.' }).click();
@@ -56,7 +56,7 @@ test('AI Agents page shows status and lets an owner switch AI off', async ({ pag
 
   await page.getByRole('button', { name: 'Turn off all AI' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'AI is switched off for this workspace.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Copilot', exact: true }).click();
+  await openCopilot(page);
   await expect(page.getByRole('dialog', { name: 'SampForce Copilot' }).getByLabel('Ask Copilot')).toBeDisabled();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Turn AI back on' }).click();

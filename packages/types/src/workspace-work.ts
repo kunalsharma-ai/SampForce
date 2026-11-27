@@ -9,22 +9,31 @@ import type { WorkspaceLevel } from './workspaces';
 
 // ───────────── Targets ─────────────
 
-export const TARGET_METRICS = ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE'] as const;
+/** The redesign (R7, ADR 0091) adds emails sent, follow-ups completed, meetings, RFQs and conversions. */
+export const TARGET_METRICS = ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE', 'EMAILS_SENT', 'FOLLOW_UPS_DONE', 'MEETINGS', 'RFQS', 'CONVERSIONS'] as const;
 export type TargetMetric = (typeof TARGET_METRICS)[number];
 export const TARGET_METRIC_LABEL: Record<TargetMetric, string> = {
   LEADS: 'Leads generated',
   CALLS: 'Calls',
   DEALS_WON: 'Deals won',
   REVENUE: 'Revenue',
+  EMAILS_SENT: 'Emails sent',
+  FOLLOW_UPS_DONE: 'Follow-ups completed',
+  MEETINGS: 'Meetings',
+  RFQS: 'RFQs received',
+  CONVERSIONS: 'Conversions',
 };
 
-export const TARGET_PERIODS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'CUSTOM'] as const;
+/** The redesign (R7) adds half-yearly and yearly targets. */
+export const TARGET_PERIODS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY', 'CUSTOM'] as const;
 export type TargetPeriod = (typeof TARGET_PERIODS)[number];
 export const TARGET_PERIOD_LABEL: Record<TargetPeriod, string> = {
   DAILY: 'Daily',
   WEEKLY: 'Weekly',
   MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly',
+  HALF_YEARLY: 'Half-yearly',
+  YEARLY: 'Yearly',
   CUSTOM: 'Custom period',
 };
 
@@ -77,6 +86,10 @@ export function targetEnd(period: TargetPeriod, startsOn: string, endsOn?: strin
       return new Date(Date.UTC(y, m, d));
     case 'QUARTERLY':
       return new Date(Date.UTC(y, m + 2, d));
+    case 'HALF_YEARLY':
+      return new Date(Date.UTC(y, m + 5, d));
+    case 'YEARLY':
+      return new Date(Date.UTC(y + 1, m - 1, d));
     case 'CUSTOM': {
       const [ey, em, ed] = (endsOn ?? startsOn).split('-').map(Number) as [number, number, number];
       return new Date(Date.UTC(ey, em - 1, ed + 1));
@@ -136,6 +149,27 @@ export type AssignedTaskPriority = (typeof ASSIGNED_TASK_PRIORITIES)[number];
 export const ASSIGNED_TASK_STATUSES = ['OPEN', 'DONE', 'CANCELED'] as const;
 export type AssignedTaskStatus = (typeof ASSIGNED_TASK_STATUSES)[number];
 
+/**
+ * Where an open task stands (redesign R7, ADR 0091): the assignee acknowledges it, starts it or marks it blocked (with
+ * the reason), then completes it; the assigner hears about each step. A finished task keeps its last step.
+ */
+export const TASK_PROGRESS = ['NEW', 'ACKNOWLEDGED', 'IN_PROGRESS', 'BLOCKED'] as const;
+export type TaskProgress = (typeof TASK_PROGRESS)[number];
+export const TASK_PROGRESS_LABEL: Record<TaskProgress, string> = { NEW: 'Not acknowledged', ACKNOWLEDGED: 'Acknowledged', IN_PROGRESS: 'In progress', BLOCKED: 'Blocked' };
+export const taskProgressSchema = z
+  .object({ progress: z.enum(['ACKNOWLEDGED', 'IN_PROGRESS', 'BLOCKED']), reason: z.string().trim().max(500).optional() })
+  .strict()
+  .superRefine((v, ctx) => {
+    if (v.progress === 'BLOCKED' && !v.reason) ctx.addIssue({ code: 'custom', path: ['reason'], message: 'Say what is blocking it' });
+  });
+export type TaskProgressInput = z.infer<typeof taskProgressSchema>;
+
+/** Quick reactions on task comments. */
+export const TASK_REACTIONS = ['👍', '✅', '👀', '🎉', '❤️', '🙏'] as const;
+export type TaskReaction = (typeof TASK_REACTIONS)[number];
+export const taskReactionSchema = z.object({ emoji: z.enum(TASK_REACTIONS) }).strict();
+export type TaskReactionInput = z.infer<typeof taskReactionSchema>;
+
 const title = z.string().trim().min(2, 'Enter a title').max(200);
 const description = z.string().trim().max(4000);
 const due = z.string().datetime({ offset: true });
@@ -178,6 +212,10 @@ export interface AssignedTaskRow {
   overdue: boolean;
   completedAt: string | null;
   createdAt: string;
+  progress: TaskProgress;
+  acknowledgedAt: string | null;
+  /** Why it is blocked, while it is. */
+  blockedReason: string | null;
   workspace: WorkspaceRef;
   assignee: WorkPerson | null;
   createdBy: WorkPerson | null;
@@ -185,18 +223,20 @@ export interface AssignedTaskRow {
   /** The creator and the levels above may change everything; the assignee may change the status. */
   canEdit: boolean;
   canChangeStatus: boolean;
+  /** Whether the caller is the one doing it, so may acknowledge, start or block it. */
+  canProgress: boolean;
 }
 
 export interface TaskHistoryRow {
   id: string;
   actor: WorkPerson | null;
-  kind: 'created' | 'updated' | 'commented';
+  kind: 'created' | 'updated' | 'commented' | 'progress';
   changes: { field: string; from: string | null; to: string | null }[];
   createdAt: string;
 }
 
 export interface AssignedTaskDetail extends AssignedTaskRow {
-  commentList: { id: string; author: WorkPerson | null; body: string; createdAt: string }[];
+  commentList: { id: string; author: WorkPerson | null; body: string; createdAt: string; reactions: { emoji: TaskReaction; count: number; mine: boolean; names: string[] }[] }[];
   history: TaskHistoryRow[];
 }
 

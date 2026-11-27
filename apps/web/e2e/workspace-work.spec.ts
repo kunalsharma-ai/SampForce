@@ -79,7 +79,7 @@ test('a manager assigns a task the executive sees on the dashboard, and a target
 
   // The executive records a lead; the dashboard shows the task first and the target moving.
   await post(executive.request, '/companies', { name: `Kantar Panels ${stamp}` });
-  await executive.goto('/app');
+  await executive.goto('/app?view=overview');
   const card = executive.locator('[data-tasks-for-you]');
   await expect(card.locator('[data-task="Call the five new research leads"]')).toContainText('High priority');
   await expect(executive.locator('[data-your-targets]')).toContainText('1 of 6');

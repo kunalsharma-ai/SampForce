@@ -10,7 +10,12 @@ import type {
   AssignedTaskUpdateInput,
   TaskCommentInput,
   TaskHistoryRow,
+  TaskProgress,
+  TaskProgressInput,
+  TaskReaction,
+  TaskReactionInput,
 } from '@dealflow/types';
+import { TASK_REACTIONS } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -184,6 +189,60 @@ export class AssignedTasksService {
     });
   }
 
+  /**
+   * The assignee says where an open task stands (redesign R7): acknowledged, in progress or blocked with a reason.
+   * The person who assigned it hears about each step.
+   */
+  progress(auth: AuthContext, id: string, input: TaskProgressInput, meta: RequestMeta): Promise<AssignedTaskDetail> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const me = callerOf(auth, org);
+      const task = await this.visible(tx, auth, org, me, id);
+      if (!this.rights(auth, org, me, task).canProgress)
+        throw new ForbiddenException({ code: 'TASK_PROGRESS_FORBIDDEN', message: 'Only the person the task is assigned to can update its progress.' });
+      if (task.status !== 'OPEN') throw new BadRequestException({ code: 'TASK_NOT_OPEN', message: 'This task is already finished. Reopen it first.' });
+      const from = (task.progress ?? 'NEW') as TaskProgress;
+      const reason = input.progress === 'BLOCKED' ? input.reason!.trim() : null;
+      if (from === input.progress && (task.blockedReason ?? null) === reason) return this.detail(tx, auth, org, me, task);
+      const updated = await tx.task.update({
+        where: { id },
+        data: { progress: input.progress, blockedReason: reason, ...(task.acknowledgedAt ? {} : { acknowledgedAt: new Date() }) },
+      });
+      const changes = [{ field: 'progress', from, to: input.progress }, ...(reason ? [{ field: 'blockedReason', from: task.blockedReason ?? null, to: reason }] : [])];
+      await tx.taskEvent.create({ data: { tenantId: auth.tenantId, taskId: id, actorId: auth.userId, kind: 'progress', changes } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.progress', entityType: 'task', entityId: id, metadata: { title: task.title, progress: input.progress, reason }, meta });
+      const title = { ACKNOWLEDGED: 'Task acknowledged: {title}', IN_PROGRESS: 'Task in progress: {title}', BLOCKED: 'Task blocked: {title}' }[input.progress];
+      await this.notifications.send(tx, auth.tenantId, [task.createdById].filter((u): u is string => !!u && u !== auth.userId), {
+        type: 'task.updated',
+        title: title.replace('{title}', task.title),
+        body: reason,
+        link: `/app/tasks?task=${id}`,
+        eventId: `task:${id}:progress:${Date.now()}`,
+        senderId: auth.userId,
+        priority: input.progress === 'BLOCKED' ? 'HIGH' : 'NORMAL',
+        actionRequired: input.progress === 'BLOCKED',
+      });
+      return this.detail(tx, auth, org, me, updated);
+    });
+  }
+
+  /** Adds the caller's reaction to a comment, or takes it back if they already reacted with that emoji. */
+  react(auth: AuthContext, id: string, commentId: string, input: TaskReactionInput): Promise<AssignedTaskDetail> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const me = callerOf(auth, org);
+      const task = await this.visible(tx, auth, org, me, id);
+      const comment = await tx.taskComment.findFirst({ where: { id: commentId, taskId: id, tenantId: auth.tenantId } });
+      if (!comment) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Comment not found.' });
+      const all = reactionsOf(comment.reactions);
+      const users = all[input.emoji] ?? [];
+      all[input.emoji] = users.includes(auth.userId) ? users.filter((u) => u !== auth.userId) : [...users, auth.userId];
+      if (!all[input.emoji]!.length) delete all[input.emoji];
+      await tx.taskComment.update({ where: { id: commentId }, data: { reactions: all } });
+      return this.detail(tx, auth, org, me, task);
+    });
+  }
+
   // ───────────── Helpers ─────────────
 
   private async visible(tx: TenantTx, auth: AuthContext, org: Org, me: NodeAccess, id: string): Promise<Stored> {
@@ -195,11 +254,11 @@ export class AssignedTasksService {
     return task;
   }
 
-  private rights(auth: AuthContext, org: Org, me: NodeAccess, task: Stored): { canEdit: boolean; canChangeStatus: boolean } {
+  private rights(auth: AuthContext, org: Org, me: NodeAccess, task: Stored): { canEdit: boolean; canChangeStatus: boolean; canProgress: boolean } {
     const node = org.byId.get(task.workspaceNodeId!);
     const canEdit = task.createdById === auth.userId || (!!node && handsDownTo(me, node, org) && may(me, FEATURE, 'assign'));
     const mine = task.assigneeId ? task.assigneeId === auth.userId : task.workspaceNodeId === me.node.id;
-    return { canEdit, canChangeStatus: canEdit || mine };
+    return { canEdit, canChangeStatus: canEdit || mine, canProgress: mine };
   }
 
   private async rows(tx: TenantTx, auth: AuthContext, org: Org, me: NodeAccess, tasks: Stored[], orgName: string): Promise<AssignedTaskRow[]> {
@@ -222,6 +281,9 @@ export class AssignedTasksService {
         overdue: t.status === 'OPEN' && !!t.dueAt && t.dueAt.getTime() < now,
         completedAt: t.completedAt?.toISOString() ?? null,
         createdAt: t.createdAt.toISOString(),
+        progress: (t.progress ?? 'NEW') as TaskProgress,
+        acknowledgedAt: t.acknowledgedAt?.toISOString() ?? null,
+        blockedReason: t.progress === 'BLOCKED' ? (t.blockedReason ?? null) : null,
         workspace: refOf(node, org, orgName),
         assignee: t.assigneeId ? { id: t.assigneeId, name: people.get(t.assigneeId) ?? '' } : null,
         createdBy: t.createdById ? { id: t.createdById, name: people.get(t.createdById) ?? '' } : null,
@@ -239,11 +301,15 @@ export class AssignedTasksService {
       tx.taskComment.findMany({ where: { tenantId: auth.tenantId, taskId: task.id }, orderBy: { createdAt: 'asc' }, take: 500 }),
       tx.taskEvent.findMany({ where: { tenantId: auth.tenantId, taskId: task.id }, orderBy: { createdAt: 'asc' }, take: 500 }),
     ]);
-    const names = await this.names(tx, [...comments.map((c) => c.authorId), ...events.map((e) => e.actorId)]);
+    const names = await this.names(tx, [...comments.map((c) => c.authorId), ...events.map((e) => e.actorId), ...comments.flatMap((c) => Object.values(reactionsOf(c.reactions)).flat())]);
     const ref = (id: string | null) => (id ? { id, name: names.get(id) ?? '' } : null);
     return {
       ...row,
-      commentList: comments.map((c) => ({ id: c.id, author: ref(c.authorId), body: c.body, createdAt: c.createdAt.toISOString() })),
+      commentList: comments.map((c) => {
+        const all = reactionsOf(c.reactions);
+        const reactions = TASK_REACTIONS.filter((e) => all[e]?.length).map((emoji) => ({ emoji, count: all[emoji]!.length, mine: all[emoji]!.includes(auth.userId), names: all[emoji]!.map((u) => names.get(u) ?? '') }));
+        return { id: c.id, author: ref(c.authorId), body: c.body, createdAt: c.createdAt.toISOString(), reactions };
+      }),
       history: events.map((e) => ({ id: e.id, actor: ref(e.actorId), kind: e.kind as TaskHistoryRow['kind'], changes: Array.isArray(e.changes) ? (e.changes as TaskHistoryRow['changes']) : [], createdAt: e.createdAt.toISOString() })),
     };
   }
@@ -254,6 +320,17 @@ export class AssignedTasksService {
     const users = await tx.user.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
     return new Map(users.map((u) => [u.id, u.name]));
   }
+}
+
+/** Reactions as stored ({ emoji: [userId] }), keeping only the known emoji and user ids. */
+function reactionsOf(value: unknown): Partial<Record<TaskReaction, string[]>> {
+  const out: Partial<Record<TaskReaction, string[]>> = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const e of TASK_REACTIONS) {
+    const v = (value as Record<string, unknown>)[e];
+    if (Array.isArray(v)) out[e] = v.filter((u): u is string => typeof u === 'string');
+  }
+  return out;
 }
 
 /** Open first; then overdue, high priority and soonest due; finished ones last, newest first. */

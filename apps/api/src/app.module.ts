@@ -47,6 +47,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { HierarchyGuard } from './workspaces/hierarchy.guard';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
+import { AvailabilityModule } from './availability/availability.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 import { AuditRequiredInterceptor } from './operator/audit-required.interceptor';
@@ -78,6 +79,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     TenantsModule,
     WorkspacesModule,
     WorkspaceWorkModule,
+    AvailabilityModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,

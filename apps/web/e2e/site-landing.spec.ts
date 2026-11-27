@@ -84,7 +84,7 @@ test('the home page: light and dark, the sign-up portal step by step, and signin
   await portal.getByRole('button', { name: 'Create workspace' }).click();
   await expect(portal.getByText('Your workspace is ready')).toBeVisible();
   await expect(page).toHaveURL(/\/app\?welcome=1/);
-  await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What is happening across the organisation?', level: 1 })).toBeVisible();
   await ctx.close();
 
   // ── Sign in from a shared #sign-in link, with a wrong password first ──

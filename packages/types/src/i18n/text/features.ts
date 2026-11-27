@@ -324,4 +324,19 @@ export const features = {
     'Markieren Sie, welche Mitarbeitenden RFQs senden, geben Sie jedem eine farbige Kommunikationsphase mit Verlauf und filtern Sie die Mitarbeitenden eines Unternehmens nach RFQ-Aktivität und Nachfassaktionen.',
     'حدّد الموظفين الذين يرسلون طلبات العروض، وامنح كل موظف مرحلة تواصل ملوّنة مع سجلّها، وصفِّ موظفي الشركة حسب نشاط طلبات العروض والمتابعات.',
   ],
+  // ADR 0082: the Leads and Accounts pages, switched on by the Console Admin
+  'Leads page': ['Página de leads', 'Page des prospects', 'Leads-Seite', 'صفحة العملاء المحتملين'],
+  'The separate Leads page for inbound leads. Hidden unless the Console Admin switches it on; companies and contacts hold the leads otherwise.': [
+    'La página de leads aparte para los leads entrantes. Oculta salvo que el administrador de la consola la active; si no, las empresas y los contactos guardan los leads.',
+    'La page distincte des prospects entrants. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, les entreprises et les contacts portent les prospects.',
+    'Die eigene Leads-Seite für eingehende Leads. Ausgeblendet, bis der Console-Administrator sie einschaltet; sonst stehen die Leads bei Unternehmen und Kontakten.',
+    'صفحة مستقلة للعملاء المحتملين الواردين. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا فالعملاء المحتملون ضمن الشركات وجهات الاتصال.',
+  ],
+  'Accounts page': ['Página de cuentas', 'Page des comptes', 'Accounts-Seite', 'صفحة الحسابات'],
+  'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.': [
+    'La página de cuentas aparte. Oculta salvo que el administrador de la consola la active; si no, Empresas es la lista de cuentas.',
+    'La page distincte des comptes. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, Entreprises est la liste des comptes.',
+    'Die eigene Accounts-Seite. Ausgeblendet, bis der Console-Administrator sie einschaltet; sonst ist Unternehmen die Kontenliste.',
+    'صفحة الحسابات المستقلة. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا فقائمة الشركات هي قائمة الحسابات.',
+  ],
 } satisfies TextTable;

@@ -3,6 +3,7 @@
 import { Button } from '@dealflow/ui';
 import { Settings2 } from 'lucide-react';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { JourneyBoardView } from '@/components/crm/journey';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
@@ -27,7 +28,9 @@ export function PipelineJourneyPage() {
           ) : undefined
         }
       />
-      <JourneyBoardView />
+      <Suspense>
+        <JourneyBoardView />
+      </Suspense>
     </div>
   );
 }

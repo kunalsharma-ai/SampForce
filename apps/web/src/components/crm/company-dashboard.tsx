@@ -98,17 +98,15 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
   const t = useT();
   const quick = useCompanyActions();
   const country = c.country ? countryName(c.country, t.formatLocale) : null;
-  const website = c.website ?? (c.domain ? `https://${c.domain}` : null);
   const facts = [
     c.industry,
     c.companySize && t('{range} employees', { range: c.companySize }),
     c.foundedYear && t('Founded {year}', { year: String(c.foundedYear) }),
   ].filter(Boolean) as string[];
-  // The website and LinkedIn are in the profile buttons; the chips are for reaching someone.
+  // The website is the round icon on the right and the phone is in Business information below, so neither repeats
+  // here (Kunal, redesign); the chip is for writing to the company.
   const contact: { href: string; label: string; icon: typeof Globe; external?: boolean; name: MessageKey }[] = [
-    ...(website ? [{ href: website.startsWith('http') ? website : `https://${website}`, label: website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), icon: Globe, external: true, name: 'Website' as const }] : []),
     ...(c.primaryEmail ? [{ href: `mailto:${c.primaryEmail}`, label: c.primaryEmail, icon: Mail, name: 'Email' as const }] : []),
-    ...(c.primaryPhone ? [{ href: `tel:${c.primaryPhone}`, label: c.primaryPhone, icon: Phone, name: 'Phone' as const }] : []),
   ];
   const place = [c.city, c.state, country].filter(Boolean).join(', ');
   const fullAddress = [c.address, c.city, c.state, c.postalCode, country].filter(Boolean).join(', ');
@@ -131,7 +129,7 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
           <CompanyLogoEditor company={c} />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              {c.leadNumber && <span className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
+              {c.leadNumber && <span aria-label={t('Lead number')} className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
               <StatusChip status={c.status} className="px-2.5 text-xs" />
               {c.statusChangedAt && <span className="text-xs text-muted-foreground">{t('Since {date}', { date: formatDate(c.statusChangedAt) })}</span>}
             </div>

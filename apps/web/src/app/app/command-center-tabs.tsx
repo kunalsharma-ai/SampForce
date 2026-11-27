@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { YourTargets } from '@/components/workspace-work/targets';
 import { TasksForYou } from '@/components/workspace-work/tasks';
 import { LevelDashboard } from '@/components/workspace-dashboard/level-dashboards';
+import { RoleDashboard } from '@/components/workspace-dashboard/role-dashboards';
 import { useHasFeature } from '@/lib/features';
 import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
@@ -19,7 +20,8 @@ import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
 
 /** The dashboards (ADR 0063), plus the dashboard of the workspace level (ADR 0071 part 6). */
-type View = CommandCenterView | 'workspace';
+/** `workspace` is the role dashboard (redesign R6, ADR 0086); `overview` keeps the level dashboard it replaced. */
+type View = CommandCenterView | 'workspace' | 'overview';
 const BUILT: CommandCenterView[] = ['senior', 'manager', 'executive', 'analytics'];
 const LEVEL_LABEL: Record<'SUPER' | 'MANAGER' | 'EXECUTIVE', MessageKey> = { SUPER: 'Organisation', MANAGER: 'Team', EXECUTIVE: 'My day' };
 /** Which designation dashboards each workspace level may also open: a manager its team's, an executive its own. */
@@ -54,7 +56,7 @@ export function CommandCenter() {
   // The organisation overview is for the Super Workspace's administrators; managers and executives always have theirs.
   const hasLevelView = level !== 'SUPER' || session.permissions.includes('members:manage');
   const allowed = LEVEL_VIEWS[level];
-  const views: View[] = [...(hasLevelView ? (['workspace'] as const) : []), ...ctx.data.views.filter((v) => BUILT.includes(v) && (!allowed || allowed.includes(v)))];
+  const views: View[] = [...(hasLevelView ? (['workspace', 'overview'] as const) : []), ...ctx.data.views.filter((v) => BUILT.includes(v) && (!allowed || allowed.includes(v)))];
   const asked = params.get('view') as View | null;
   const fallback: View = hasLevelView ? 'workspace' : BUILT.includes(ctx.data.defaultView) ? ctx.data.defaultView : 'analytics';
   const view = asked && views.includes(asked) ? asked : fallback;
@@ -88,7 +90,7 @@ export function CommandCenter() {
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
-            {t(v === 'workspace' ? LEVEL_LABEL[level] : VIEW_LABEL[v])}
+            {t(v === 'workspace' ? LEVEL_LABEL[level] : v === 'overview' ? 'Overview' : VIEW_LABEL[v])}
           </button>
         ))}
       </div>
@@ -98,17 +100,23 @@ export function CommandCenter() {
     <div>
       {tabs}
       {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
-      {view === 'workspace' && level === 'SUPER' && <OnboardingChecklist />}
-      {view === 'workspace' && <LevelDashboard level={level} />}
-      {(hasTasks || hasTargets || hasNotifications) && (
-        <div className={view === 'workspace' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
-          {/* The home dashboard's way to notifications (ADR 0075). */}
-          {hasNotifications && <HomeNotifications />}
-          {hasTasks && <TasksForYou />}
-          {hasTargets && <YourTargets />}
+      {view === 'overview' && level === 'SUPER' && <OnboardingChecklist />}
+      {view === 'workspace' && <RoleDashboard level={level} />}
+      {view === 'workspace' && level === 'SUPER' && (
+        <div className="mt-4">
+          <OnboardingChecklist />
         </div>
       )}
-      {view === 'workspace' ? null : view === 'senior' ? (
+      {view === 'overview' && <LevelDashboard level={level} />}
+      {(hasTasks || hasTargets || hasNotifications) && (
+        <div className={view === 'workspace' || view === 'overview' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
+          {/* The home dashboard's way to notifications (ADR 0075). The role dashboard draws its own target rings. */}
+          {hasNotifications && <HomeNotifications />}
+          {hasTasks && <TasksForYou />}
+          {hasTargets && view !== 'workspace' && <YourTargets />}
+        </div>
+      )}
+      {view === 'workspace' || view === 'overview' ? null : view === 'senior' ? (
         <div className="space-y-2">
           <PageHeader
             title="Senior management dashboard"

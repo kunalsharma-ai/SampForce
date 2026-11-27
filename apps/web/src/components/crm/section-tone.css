@@ -1,0 +1,85 @@
+/*
+ * Toned sections (redesign, company page): every panel of the company page has its own colour, a medallion icon on
+ * its top edge, a colour band, a tinted head and layered shadows for depth. Colours come from stageTones (via
+ * stageStyle), which keeps text readable at 4.5:1 in light and dark; the panel's own text and controls are unchanged.
+ */
+.sf-tone {
+  position: relative;
+  padding-top: 0.875rem;
+}
+.sf-tone > .df-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border-color: var(--st-bd);
+  background-image: linear-gradient(180deg, var(--st-bg) 0, hsl(var(--surface)) 9rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    0 1px 2px rgb(15 23 42 / 0.06),
+    0 14px 32px -18px var(--st-dot);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.sf-tone > .df-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--st-dot), var(--tone-b, var(--st-dot)));
+  pointer-events: none;
+}
+.sf-tone > .df-card:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    0 2px 4px rgb(15 23 42 / 0.06),
+    0 22px 40px -18px var(--st-dot);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-tone > .df-card:hover { transform: translateY(-2px); }
+}
+.dark .sf-tone > .df-card {
+  border-color: var(--st-bd-d);
+  background-image: linear-gradient(180deg, var(--st-bg-d) 0, hsl(var(--surface)) 9rem);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 14px 32px -18px var(--st-dot-d);
+}
+.dark .sf-tone > .df-card::before { background: linear-gradient(90deg, var(--st-dot-d), var(--tone-b, var(--st-dot-d))); }
+/* The panel's own inner cards sit on white, edged in the section's colour. */
+.sf-tone > .df-card .df-card { border-color: var(--st-bd); }
+.dark .sf-tone > .df-card .df-card { border-color: var(--st-bd-d); }
+
+/* The medallion: a glossy, raised icon on the panel's top edge. */
+.sf-tone-medal {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 1.25rem;
+  z-index: 1;
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  color: #fff;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 55%),
+    linear-gradient(135deg, var(--st-dot), var(--tone-b, var(--st-fg)));
+  box-shadow:
+    0 0 0 3px hsl(var(--background)),
+    0 6px 14px -4px var(--st-dot),
+    inset 0 -2px 0 rgb(0 0 0 / 0.15);
+  transform: rotate(-6deg);
+  transition: transform 0.3s ease;
+}
+.sf-tone:hover .sf-tone-medal { transform: rotate(0) scale(1.08); }
+.dark .sf-tone-medal {
+  color: #0b1120;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0) 55%),
+    linear-gradient(135deg, var(--st-dot-d), var(--tone-b, var(--st-fg-d)));
+}
+
+/* A section made of two cards (contracts and escalations) keeps a gap between them. */
+.sf-tone > .df-card + .df-card {
+  margin-top: 1rem;
+}
