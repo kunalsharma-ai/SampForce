@@ -44,6 +44,7 @@ export * from './company-crm';
 export * from './company-work';
 export * from './employee-stages';
 export * from './follow-up-cadence';
+export * from './company-deal';
 export * from './company-enrichment';
 export * from './company-email';
 export * from './attribution';

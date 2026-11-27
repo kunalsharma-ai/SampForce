@@ -215,6 +215,9 @@ export interface CompanyRow {
   leadNumber: string | null;
   status: CrmStatusRef | null;
   statusChangedAt: string | null;
+  /** The deal made or closed as won when the company became a client (ADR 0084). */
+  wonDealId: string | null;
+  wonAt: string | null;
   createdBy: PersonRef | null;
   updatedBy: PersonRef | null;
   manager: PersonRef | null;

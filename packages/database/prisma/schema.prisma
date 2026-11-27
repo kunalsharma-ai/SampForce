@@ -881,6 +881,9 @@ model Company {
   statusId          String?   @map("status_id")
   statusChangedAt   DateTime? @map("status_changed_at")
   statusChangedById String?   @map("status_changed_by_id")
+  /// The deal made (or closed as won) when the company became a client; one per win, so a second win reuses it (ADR 0084).
+  wonDealId         String?   @map("won_deal_id")
+  wonAt             DateTime? @map("won_at")
   /// Who generated the lead; kept when ownership moves. ownerId is the current lead owner.
   createdById       String?   @map("created_by_id")
   updatedById       String?   @map("updated_by_id")
