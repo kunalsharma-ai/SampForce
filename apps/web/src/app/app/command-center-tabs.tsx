@@ -18,6 +18,7 @@ import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
 
 /** The dashboards (ADR 0063), plus the dashboard of the workspace level (ADR 0071 part 6). */
 /** `workspace` is the role dashboard (redesign R6, ADR 0086); `overview` keeps the level dashboard it replaced. */
@@ -47,10 +48,17 @@ export function CommandCenter() {
   const hasTasks = useHasFeature('task_management');
   const hasTargets = useHasFeature('sales_target_management');
   const hasNotifications = useHasFeature('notifications');
+  const hasChat = useHasFeature('team_chat');
   const ctx = useCommandCenterContext(!!session && !session.restriction && canDashboard);
   if (!session || (canDashboard && ctx.isPending && !session.restriction))
     return <Skeleton className="h-96" aria-label={t('Loading')} />;
-  if (!ctx.data) return <AnalyticsDashboard />;
+  if (!ctx.data)
+    return (
+      <>
+        <BirthdayCelebration wishes={hasChat} className="mb-4" />
+        <AnalyticsDashboard />
+      </>
+    );
 
   const level = session.workspace?.level ?? 'SUPER';
   // The organisation overview is for the Super Workspace's administrators; managers and executives always have theirs.
@@ -99,6 +107,8 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
+      {/* Today's birthdays on every dashboard; the level's own dashboard shows them under its welcome banner. */}
+      {view !== 'workspace' && <BirthdayCelebration wishes={hasChat} className="mb-4" />}
       {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
       {view === 'overview' && level === 'SUPER' && <OnboardingChecklist />}
       {view === 'workspace' && <RoleDashboard level={level} />}

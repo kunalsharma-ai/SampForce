@@ -35,28 +35,46 @@ export function BirthdayCard() {
       : t('{count} birthdays today!', { count: others.length });
   const line = me
     ? me.age
-      ? t('You turn {age} today. Wishing you a wonderful year ahead, from all of us.', { age: me.age })
+      ? t('You turn {age} today. Wishing you a wonderful year ahead, from all of us.', {
+          age: me.age,
+        })
       : t('Wishing you a wonderful year ahead, from all of us.')
     : others.length === 1
       ? t('Send your wishes and make the day special.')
       : t('Celebrating {names}. Send your wishes and make the day special.', { names });
   return (
     <Card accent>
-      <View accessibilityRole="summary" accessibilityLabel={t('Birthday celebration')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Text style={{ fontSize: 34 }} accessibilityElementsHidden importantForAccessibility="no">
-          🎂
-        </Text>
-        <View style={{ flexDirection: 'row' }}>
-          {people.slice(0, 3).map((p, i) => (
-            <View key={p.id} style={{ marginLeft: i ? -12 : 0, borderRadius: 24, borderWidth: 3, borderColor: th.card }}>
-              <Avatar name={p.name} photoUrl={p.photoUrl} size={42} label={p.name} />
-            </View>
-          ))}
+      <View
+        accessibilityRole="summary"
+        accessibilityLabel={t('Birthday celebration')}
+        style={{ gap: 10 }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ fontSize: 34 }} accessibilityElementsHidden importantForAccessibility="no">
+            🎂
+          </Text>
+          <View style={{ flexDirection: 'row' }}>
+            {people.slice(0, 3).map((p, i) => (
+              <View
+                key={p.id}
+                style={{
+                  marginLeft: i ? -12 : 0,
+                  borderRadius: 24,
+                  borderWidth: 3,
+                  borderColor: th.card,
+                }}
+              >
+                <Avatar name={p.name} photoUrl={p.photoUrl} size={42} label={p.name} />
+              </View>
+            ))}
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ gap: 2 }}>
           <Text style={{ color: th.accent, fontWeight: '800', fontSize: 17 }}>🎉 {title}</Text>
           <Body muted>{line}</Body>
-          {me && others.length ? <Body>{t('Also celebrating today: {names}', { names })}</Body> : null}
+          {me && others.length ? (
+            <Body>{t('Also celebrating today: {names}', { names })}</Body>
+          ) : null}
         </View>
       </View>
     </Card>

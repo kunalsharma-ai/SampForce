@@ -80,8 +80,8 @@ test('a birthday is celebrated on every dashboard, with wishes, in the Console a
   await page.goto('/app/profile');
   const card = page.locator('[data-profile-birthday]');
   await card.scrollIntoViewIfNeeded();
-  await card.getByLabel('Month').selectOption(String(month));
-  await card.getByLabel('Day').selectOption(String(day));
+  await card.getByLabel('Month', { exact: true }).selectOption(String(month));
+  await card.getByLabel('Day', { exact: true }).selectOption(String(day));
   await card.getByLabel('Year (optional)').fill('1990');
   await expect(card.getByLabel('Show my birth year and age')).not.toBeChecked();
   await expect(card.getByLabel('Celebrate my birthday with my team')).toBeChecked();

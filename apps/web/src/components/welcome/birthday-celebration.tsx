@@ -39,7 +39,7 @@ function readSent(key: string): string[] {
  * celebration with their photo, confetti and a button that sends them wishes in team chat. On your own birthday it
  * wishes you happy birthday. Nothing shows on a day without birthdays. The Console passes its own list and no wishes.
  */
-export function BirthdayCelebration({ path = '/people/birthdays', wishes = true }: { path?: string; wishes?: boolean }) {
+export function BirthdayCelebration({ path = '/people/birthdays', wishes = true, className }: { path?: string; wishes?: boolean; className?: string }) {
   const t = useT();
   const [date, setDate] = React.useState<string | null>(null);
   const [burst, setBurst] = React.useState(0);
@@ -76,7 +76,7 @@ export function BirthdayCelebration({ path = '/people/birthdays', wishes = true 
   }
 
   return (
-    <section className="sf-bday" aria-labelledby="sf-bday-title" data-birthdays={people.length} data-birthday-self={me ? 'yes' : 'no'}>
+    <section className={className ? `sf-bday ${className}` : 'sf-bday'} aria-labelledby="sf-bday-title" data-birthdays={people.length} data-birthday-self={me ? 'yes' : 'no'}>
       <div aria-hidden className="sf-bday-confetti" key={burst}>
         {CONFETTI.map((c, i) => (
           <span key={i} style={{ left: `${c.left}%`, animationDelay: `${c.delay}s`, background: c.colour, rotate: `${c.tilt}deg`, borderRadius: c.round ? '999px' : '2px' }} />
