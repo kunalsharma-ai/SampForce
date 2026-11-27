@@ -148,7 +148,7 @@ const OPERATOR_READ = new Set([
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['TaskEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['TaskEvent', 'PerformancePlanEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';

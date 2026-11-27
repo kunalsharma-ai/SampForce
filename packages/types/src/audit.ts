@@ -34,7 +34,7 @@ export const AUDIT_CATEGORY_ACTIONS: Record<AuditCategory, readonly string[]> = 
   permissions: ['workspace.permissions_changed', 'role.', 'member.role_changed'],
   workspaces: ['workspace.created', 'workspace.updated', 'workspace.moved', 'workspace.archived', 'workspace.member_assigned'],
   subscription: ['billing.subscription_', 'billing.plan_', 'billing.trial_', 'billing.cancel_', 'billing.grace_', 'billing.period_', 'tenant.suspended', 'tenant.reactivated'],
-  targets: ['target.', 'sales_target.', 'performance.'],
+  targets: ['target.', 'sales_target.', 'performance.', 'recognition.', 'pip.'],
   tasks: ['task.', 'task_plan.'],
   records: ['company.', 'contact.', 'lead.', 'deal.', 'activity.', 'quote.', 'contract.'],
   people: ['member.invited', 'member.joined', 'member.invitation_revoked', 'member.org_changed'],

@@ -1,6 +1,8 @@
 import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
 import { TaskPlansService } from '../task-plans/task-plans.service';
+import { PipsService } from '../recognition/pips.service';
+import { RecognitionService } from '../recognition/recognition.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
@@ -64,6 +66,8 @@ export interface WorkerTick {
   sampbidxChat: number;
   /** Recurring task instances made, counted, closed and reminded (ADR 0096). */
   taskPlans: number;
+  /** Employee of the Month targets counted (and month-end selections) and improvement plans counted (ADR 0102). */
+  recognition: number;
 }
 
 /**
@@ -97,6 +101,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
     private readonly taskPlans: TaskPlansService,
+    private readonly recognition: RecognitionService,
+    private readonly pips: PipsService,
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
     private readonly autofill: CompanyEnrichmentService,
@@ -168,6 +174,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const erasures = await this.closures.eraseDue();
     const sampbidxChat = await this.sampbidxChat.sweep();
     const taskPlans = await this.taskPlans.sweep();
+    const recognition = (await this.recognition.sweep()) + (await this.pips.sweep());
     // Console notifications once a minute: they read across every client, so not on every tick.
     // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
     let consoleNotifications = 0;
@@ -179,7 +186,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans, recognition };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

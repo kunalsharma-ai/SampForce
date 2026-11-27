@@ -126,6 +126,9 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'visitors', label: 'High-intent website visitors', types: ['visitor.'] },
   { key: 'gamification', label: 'Badges and competitions', types: ['gamification.'] },
   { key: 'workflows', label: 'Workflow notifications', types: ['workflow.notify'] },
+  // Employee of the Month and improvement plans (ADR 0102).
+  { key: 'recognition', label: 'Employee of the Month targets and awards', types: ['recognition.'] },
+  { key: 'pip', label: 'Performance improvement plans', types: ['pip.'] },
 ] as const;
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORIES)[number]['key'];
 const CATEGORY_KEYS = NOTIFICATION_CATEGORIES.map((c) => c.key) as [NotificationCategoryKey, ...NotificationCategoryKey[]];
