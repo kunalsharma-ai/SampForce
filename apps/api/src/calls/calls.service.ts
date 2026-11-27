@@ -7,6 +7,9 @@ import {
   type CallDetails,
   type CallHandoff,
   type CallListQuery,
+  callListQuerySchema,
+  type BulkActionResult,
+  type DeleteAllInput,
   type CallLogInput,
   type CallOutcome,
   type CallRow,
@@ -33,6 +36,7 @@ import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { assertPublicUrl, publicFetch, UnsafeTargetError } from '../common/net-guard';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { TwilioClient, TwilioError, type TwilioKeys } from '../apps/twilio';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyWorkService } from '../crm/company-work.service';
@@ -477,18 +481,47 @@ export class CallsService {
 
   list(auth: AuthContext, q: CallListQuery): Promise<CallRow[]> {
     return this.prisma.run(auth, async (tx) => {
-      const where: Prisma.PhoneCallWhereInput = {
-        AND: [
-          await this.historyWhere(tx, auth, q.scope),
-          ...(q.outcome ? [{ outcome: q.outcome }] : []),
-          ...(q.companyId ? [{ companyId: q.companyId }] : []),
-          ...(q.contactId ? [{ contactId: q.contactId }] : []),
-          ...(q.q ? [{ searchText: { contains: q.q.toLowerCase() } }] : []),
-          ...(q.before ? [{ startedAt: { lt: new Date(q.before) } }] : []),
-        ],
-      };
-      const rows = await tx.phoneCall.findMany({ where, orderBy: [{ startedAt: 'desc' }, { id: 'desc' }], take: q.limit });
+      const rows = await tx.phoneCall.findMany({ where: await this.listWhere(tx, auth, q), orderBy: [{ startedAt: 'desc' }, { id: 'desc' }], take: q.limit });
       return this.rowsIn(tx, auth.tenantId, rows);
+    });
+  }
+
+  private async listWhere(tx: TenantTx, auth: AuthContext, q: CallListQuery): Promise<Prisma.PhoneCallWhereInput> {
+    return {
+      AND: [
+        await this.historyWhere(tx, auth, q.scope),
+        ...(q.outcome ? [{ outcome: q.outcome }] : []),
+        ...(q.companyId ? [{ companyId: q.companyId }] : []),
+        ...(q.contactId ? [{ contactId: q.contactId }] : []),
+        ...(q.q ? [{ searchText: { contains: q.q.toLowerCase() } }] : []),
+        ...(q.before ? [{ startedAt: { lt: new Date(q.before) } }] : []),
+      ],
+    };
+  }
+
+  /** Every call the history shows for this query (no page of 50), for "delete all" (ADR 0096). */
+  matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const { before: _before, ...rest } = query;
+    const q = parseListQuery(callListQuerySchema, rest);
+    return this.prisma.run(auth, async (tx) => (await tx.phoneCall.findMany({ where: await this.listWhere(tx, auth, q), select: { id: true } })).map((r) => r.id));
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'calls', input, await this.matchingIds(auth, input.query), (id) => this.removeCall(auth, id, meta));
+  }
+
+  /**
+   * Deletes a call from the history, logged or not, with the interaction it logged on the company (ADR 0096). Used by
+   * "delete all": the person reaches only the calls their history shows them.
+   */
+  removeCall(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      const call = await tx.phoneCall.findFirst({ where: { AND: [await this.historyWhere(tx, auth, 'all'), { id }] } });
+      if (!call) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Call not found.' });
+      const now = new Date();
+      await tx.phoneCall.update({ where: { id }, data: { deletedAt: now } });
+      if (call.activityId) await tx.activity.updateMany({ where: { id: call.activityId, tenantId: auth.tenantId, deletedAt: null }, data: { deletedAt: now } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'call.deleted', entityType: 'phone_call', entityId: id, metadata: { logged: call.status === 'LOGGED', interactionId: call.activityId }, meta });
     });
   }
 

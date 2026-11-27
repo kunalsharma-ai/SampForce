@@ -605,16 +605,43 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
   // Fields the Console hides from this level are left out (R8); the server ignores them anyway.
   const hiddenKeys = useHiddenKeys('company');
   const label = (f: EnrichField) => t.maybe(ENRICH_FIELD_LABELS[f]);
-  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) => hiddenKeys.has(k) ? null : (
-    <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={extra.hint}>
-      <Input type={type} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-    </Field>
+  // Deleting a saved value happens here, never on the page itself (Kunal, ADR 0097): "Delete" empties the field, and
+  // nothing is removed until Save.
+  const clearable = (k: keyof Form, fieldLabel: string, node: React.ReactNode) => (
+    <div className="relative">
+      {node}
+      {!!form[k] && (
+        <button
+          type="button"
+          className="absolute end-0 top-0 inline-flex items-center gap-1 rounded px-1 text-xs text-muted-foreground hover:text-critical focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+          aria-label={t('Delete {item}', { item: fieldLabel })}
+          onClick={() => set(k, '' as never)}
+        >
+          <Trash2 aria-hidden className="size-3.5" /> {t('Delete')}
+        </button>
+      )}
+    </div>
   );
-  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) => hiddenKeys.has(k) ? null : (
-    <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={hint}>
-      <Textarea rows={rows} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-    </Field>
-  );
+  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) =>
+    hiddenKeys.has(k)
+      ? null
+      : clearable(
+          k,
+          extra.label ?? label(k),
+          <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={extra.hint}>
+            <Input type={type} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
+          </Field>,
+        );
+  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) =>
+    hiddenKeys.has(k)
+      ? null
+      : clearable(
+          k,
+          fieldLabel,
+          <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={hint}>
+            <Textarea rows={rows} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
+          </Field>,
+        );
   const onePerLine = t('One per line.');
 
   async function save(e: React.FormEvent) {
@@ -677,6 +704,7 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
       <DialogContent className="top-[4%] max-h-[92vh] max-w-3xl overflow-y-auto p-6">
         <DialogTitle>{t('Edit business information')}</DialogTitle>
         <DialogDescription>{t('Change or clear anything. Auto-fill never changes a value you edit here, and does not add back what you remove.')}</DialogDescription>
+        <p className="mt-1 text-xs text-muted-foreground">{t('Use Delete beside a field, or remove a line from a list, to delete unwanted details. Nothing is deleted until you press Save.')}</p>
         <form className="mt-4 space-y-4" onSubmit={save} noValidate>
           {group(
             t('Overview'),

@@ -23,7 +23,7 @@ import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
-import { useHasFeature, useCanDelete } from '@/lib/features';
+import { ENTITY_FEATURE, useHasFeature, useCanDelete } from '@/lib/features';
 import { useLeadTransfers } from '@/lib/command-center';
 import { RequestTransferDialog } from '@/components/command-center/transfers';
 import { TRANSFER_STATUS_LABEL, TRANSFER_STATUS_TONE } from '@/components/command-center/cc-labels';
@@ -105,6 +105,30 @@ export function AddEmployeeDialog({ company, open, onOpenChange, contactId }: { 
       live = false;
     };
   }, [open, company.country, contactId]);
+  // Deleting one employee lives here, behind Edit, so it is never pressed by mistake on the list (ADR 0097).
+  const mayWrite = useCan('contacts:write');
+  const mayDelete = useCanDelete(ENTITY_FEATURE.contacts);
+  const [askDelete, setAskDelete] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  React.useEffect(() => {
+    if (open) setAskDelete(false);
+  }, [open]);
+  const removeEmployee = async () => {
+    if (!contactId) return;
+    setDeleting(true);
+    setFormError(null);
+    try {
+      await api(`/contacts/${contactId}`, { method: 'DELETE' });
+      await Promise.all(['contacts', 'company-employees', 'company-dashboard', 'companies'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      onOpenChange(false);
+    } catch (err) {
+      // A cancelled password, or a request sent to a manager for approval, is shown as a note.
+      setFormError(err instanceof Error ? t.maybe(err.message) : t('Could not delete this record.'));
+      setAskDelete(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const body = { ...employeePayload(value), companyId: company.id, ownerId: value.ownerId || company.ownerPerson?.id || null };
@@ -142,7 +166,28 @@ export function AddEmployeeDialog({ company, open, onOpenChange, contactId }: { 
                 {formError}
               </p>
             )}
-            <div className="flex justify-end gap-2">
+            {askDelete && (
+              <div role="alert" className="space-y-2 rounded-md border border-critical/40 bg-critical/5 p-3 text-sm">
+                <p className="font-medium">{t('Delete this employee?')}</p>
+                <p className="text-muted-foreground">
+                  {t('This deletes the contact records themselves, with their details. To keep a person but take them off this company, use Remove from company instead.')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="destructive" disabled={deleting} onClick={() => void removeEmployee()}>
+                    <Trash2 aria-hidden /> {deleting ? t('Deleting…') : t('Delete employee')}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" disabled={deleting} onClick={() => setAskDelete(false)}>
+                    {t('Cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              {editing && mayWrite && mayDelete && !company.restricted && !askDelete && (
+                <Button type="button" variant="ghost" className="me-auto text-critical" onClick={() => setAskDelete(true)}>
+                  <Trash2 aria-hidden /> {t('Delete employee')}
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 {t('Cancel')}
               </Button>

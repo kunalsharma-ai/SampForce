@@ -82,12 +82,20 @@ export const BULK_ACTIONS = ['assign', 'status', 'delete'] as const;
 export const bulkActionSchema = z
   .object({
     entity: z.enum(TABLE_ENTITIES),
-    ids: z.array(z.string().uuid()).min(1).max(100),
+    /** The rows ticked on screen: one page of a table, or every employee ticked in a company's Employees list (ADR 0097). */
+    ids: z.array(z.string().uuid()).min(1).max(1_000).optional(),
+    /**
+     * Every record the list shows for these filters, on every page, with no limit: `query` is the list's own query
+     * (search, owner, status, custom field filters…) and `expected` the total the person saw. When the list has changed
+     * since, nothing is done and the new total is returned, so a selection never grows behind the person's back.
+     */
+    all: z.object({ query: z.record(z.string().max(4_000)).default({}), expected: z.number().int().min(1) }).strict().optional(),
     action: z.enum(BULK_ACTIONS),
     ownerId: z.string().uuid().optional(),
     status: z.string().max(40).optional(),
   })
   .strict()
+  .refine((v) => !!v.ids !== !!v.all, { message: 'Choose the rows or all matching records', path: ['ids'] })
   .refine((v) => v.action !== 'assign' || !!v.ownerId, { message: 'Choose an owner', path: ['ownerId'] })
   .refine((v) => v.action !== 'status' || !!v.status, { message: 'Choose a status', path: ['status'] });
 export type BulkActionInput = z.infer<typeof bulkActionSchema>;
@@ -96,3 +104,13 @@ export interface BulkActionResult {
   updated: number;
   failed: { id: string; message: string }[];
 }
+
+/**
+ * Delete every record a list shows for its filters, on every page, with no limit (RFQs, follow-ups, tasks, activities,
+ * quotes, meeting notes). `query` is the list's own query and `expected` the count the person saw: when the list has
+ * changed since, nothing is deleted (409 SELECTION_CHANGED). Needs the password, like any delete.
+ */
+export const deleteAllSchema = z.object({ query: z.record(z.string().max(4_000)).default({}), expected: z.number().int().min(1) }).strict();
+export type DeleteAllInput = z.infer<typeof deleteAllSchema>;
+/** Asks how many records "delete all" would delete for a list query, to show before the person confirms. */
+export const deleteAllCountSchema = deleteAllSchema.pick({ query: true });

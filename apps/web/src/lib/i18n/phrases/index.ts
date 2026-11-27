@@ -1,3 +1,4 @@
+import type { PhraseTable } from './types';
 import { activities } from './activities';
 import { auth } from './auth';
 import { crm } from './crm';
@@ -42,7 +43,6 @@ import { workspaces } from './workspaces';
 import { levelDashboards } from './level-dashboards';
 import { audit } from './audit';
 import { security } from './security';
-import type { PhraseTable } from './types';
 import { notifications } from './notifications';
 import { site } from './site';
 import { employeeStages } from './employee-stages';
@@ -57,11 +57,12 @@ import { calls } from './calls';
 import { websiteEnquiries } from './website-enquiries';
 import { clientTime } from './client-time';
 import { companyExport } from './company-export';
+import { bulkSelect } from './bulk-select';
 
 /** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
 
-export const PHRASE_TABLES = { activities, auth, crm, dashboard, deals, sequences, communication, meetings, messaging, sampbidxChat, quotes, contracts, reports, revenue, administration, automation, integrations, growth, help, engagement, publicPages, settings, table, territories, plans, companyCrm, companyLeads, companyWork, commandCenter, crmAdmin, sampbidx, chat, edit, companyLogos, profiles, companyAutofill, companyEmail, importPhrases, ownServers, mobile, workspaces, levelDashboards, audit, security, notifications, site, employeeStages, journey, redesign, roleDashboards, welcome, teamChat, tasksTargets, achievements, calls, clientTime, companyExport, websiteEnquiries } as const satisfies Record<string, PhraseTable>;
+export const PHRASE_TABLES = { activities, auth, crm, dashboard, deals, sequences, communication, meetings, messaging, sampbidxChat, quotes, contracts, reports, revenue, administration, automation, integrations, growth, help, engagement, publicPages, settings, table, territories, plans, companyCrm, companyLeads, companyWork, commandCenter, crmAdmin, sampbidx, chat, edit, companyLogos, profiles, companyAutofill, companyEmail, importPhrases, ownServers, mobile, workspaces, levelDashboards, audit, security, notifications, site, employeeStages, journey, redesign, roleDashboards, welcome, teamChat, tasksTargets, achievements, calls, websiteEnquiries, clientTime, companyExport, bulkSelect } as const satisfies Record<string, PhraseTable>;
 
-export const PHRASES = { ...activities, ...auth, ...crm, ...dashboard, ...deals, ...sequences, ...communication, ...meetings, ...messaging, ...sampbidxChat, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...help, ...engagement, ...publicPages, ...settings, ...table, ...territories, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...crmAdmin, ...sampbidx, ...chat, ...edit, ...companyLogos, ...profiles, ...companyAutofill, ...companyEmail, ...importPhrases, ...ownServers, ...mobile, ...workspaces, ...levelDashboards, ...audit, ...security, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...welcome, ...teamChat, ...tasksTargets, ...achievements, ...calls, ...clientTime, ...companyExport, ...websiteEnquiries } as const;
+export const PHRASES = { ...activities, ...auth, ...crm, ...dashboard, ...deals, ...sequences, ...communication, ...meetings, ...messaging, ...sampbidxChat, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...help, ...engagement, ...publicPages, ...settings, ...table, ...territories, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...crmAdmin, ...sampbidx, ...chat, ...edit, ...companyLogos, ...profiles, ...companyAutofill, ...companyEmail, ...importPhrases, ...ownServers, ...mobile, ...workspaces, ...levelDashboards, ...audit, ...security, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...welcome, ...teamChat, ...tasksTargets, ...achievements, ...calls, ...websiteEnquiries, ...clientTime, ...companyExport, ...bulkSelect } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

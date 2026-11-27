@@ -14,8 +14,11 @@ import {
   rfqReportQuerySchema,
   rfqUpdateSchema,
   type z,
+  deleteAllSchema,
+  deleteAllCountSchema,
+  type DeleteAllInput,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CompanyWorkService } from './company-work.service';
 import { ConfirmPassword } from '../common/password-confirmation';
@@ -27,6 +30,26 @@ const uuid = new ParseUUIDPipe();
 @ApiKeyAccess()
 export class CompanyDashboardController {
   constructor(private readonly work: CompanyWorkService) {}
+
+  /** Delete every record this list shows for its filters, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('interactions/delete-all')
+  @HttpCode(200)
+  @AlsoRequireFeature('interactions')
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAllInteractions(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.work.deleteAllInteractions(auth, id, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('interactions/count-all')
+  @HttpCode(200)
+  @AlsoRequireFeature('interactions')
+  @RequirePermissions('activities:write')
+  async countAllInteractions(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.work.matchingIdsInteractions(auth, id, body.query)).length };
+  }
 
   @Get('dashboard')
   @RequirePermissions('companies:read')
@@ -81,6 +104,25 @@ export class InteractionsController {
 export class FollowUpsController {
   constructor(private readonly work: CompanyWorkService) {}
 
+  /** Delete every record this list shows for its filters, on every page, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.work.deleteAllFollowUps(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('count-all')
+  @HttpCode(200)
+  @RequirePermissions('activities:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.work.matchingIdsFollowUps(auth, body.query)).length };
+  }
+
+
   @Get()
   @RequirePermissions('activities:read')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(followUpListQuerySchema)) q: z.output<typeof followUpListQuerySchema>) {
@@ -134,6 +176,25 @@ export class FollowUpsController {
 @RequireFeature('rfqs')
 export class RfqsController {
   constructor(private readonly work: CompanyWorkService) {}
+
+  /** Delete every record this list shows for its filters, on every page, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('companies:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.work.deleteAllRfqs(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('count-all')
+  @HttpCode(200)
+  @RequirePermissions('companies:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.work.matchingIdsRfqs(auth, body.query)).length };
+  }
+
 
   @Get()
   @RequirePermissions('companies:read')

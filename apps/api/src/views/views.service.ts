@@ -7,8 +7,10 @@ import {
   type SavedView,
   type SavedViewInput,
   type SavedViewUpdate,
+  listQuerySchema,
   type TableEntity,
   viewConfigSchema,
+  z,
 } from '@dealflow/types';
 import { Prisma } from '@dealflow/database';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -17,6 +19,8 @@ import { CompaniesService } from '../crm/companies.service';
 import { ContactsService } from '../crm/contacts.service';
 import { DealsService } from '../crm/deals.service';
 import { LeadsService } from '../crm/leads.service';
+import { companyFiltersSchema, contactFiltersSchema } from '../crm/records.controller';
+import { AuditService } from '../audit/audit.service';
 
 type Row = Prisma.SavedViewGetPayload<{ include: { user: { select: { name: true } } } }>;
 
@@ -108,6 +112,8 @@ export class ViewsService {
   }
 }
 
+/** How many records a bulk action changes at the same time. */
+const BULK_CONCURRENCY = 8;
 const BULK_STATUSES: Partial<Record<TableEntity, readonly string[]>> = {
   leads: LEAD_STATUSES.filter((s) => s !== 'CONVERTED'),
 };
@@ -123,6 +129,8 @@ export class BulkActionsService {
     private readonly contacts: ContactsService,
     private readonly companies: CompaniesService,
     private readonly deals: DealsService,
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
   ) {}
 
   async run(auth: AuthContext, input: BulkActionInput, meta: RequestMeta): Promise<BulkActionResult> {
@@ -135,8 +143,21 @@ export class BulkActionsService {
       if (!allowed.includes(input.status!)) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The request contains invalid fields.', details: [{ path: 'status', message: 'is not a status you can set' }] });
     }
     const svc = { leads: this.leads, contacts: this.contacts, companies: this.companies, deals: this.deals }[input.entity];
+    let ids = [...new Set(input.ids ?? [])];
+    if (input.all) {
+      // Every record the list shows for this query, on every page: found first, then changed, so the pages do not
+      // shift under the loop. If the list no longer matches what the person saw, nothing is changed.
+      ids = await this.matchingIds(auth, input.entity, input.all.query);
+      if (ids.length !== input.all.expected) {
+        throw new ConflictException({
+          code: 'SELECTION_CHANGED',
+          message: `The list changed: it now has ${ids.length.toLocaleString('en-US')} records, not ${input.all.expected.toLocaleString('en-US')}. Check it and try again.`,
+          details: [{ path: 'all.expected', message: String(ids.length) }],
+        });
+      }
+    }
     const result: BulkActionResult = { updated: 0, failed: [] };
-    for (const id of [...new Set(input.ids)]) {
+    const one = async (id: string) => {
       try {
         if (input.action === 'delete') await svc.remove(auth, id, meta);
         else if (input.action === 'assign') await (svc.update as (a: AuthContext, i: string, b: object, m: RequestMeta) => Promise<unknown>)(auth, id, { ownerId: input.ownerId }, meta);
@@ -146,7 +167,43 @@ export class BulkActionsService {
         const body = (e as { getResponse?: () => unknown }).getResponse?.() as { message?: string } | undefined;
         result.failed.push({ id, message: body?.message ?? 'Could not update this record.' });
       }
+    };
+    // Each record still goes through its own rules and audit entry; a few at a time keeps thousands quick.
+    for (let i = 0; i < ids.length; i += BULK_CONCURRENCY) await Promise.all(ids.slice(i, i + BULK_CONCURRENCY).map(one));
+    if (input.all) {
+      await this.prisma.run(auth, (tx) =>
+        this.audit.record(tx, {
+          tenantId: auth.tenantId, actorUserId: auth.userId, action: `records.bulk_${input.action}`, entityType: input.entity,
+          metadata: { matched: ids.length, updated: result.updated, failed: result.failed.length, query: input.all!.query }, meta,
+        }),
+      );
     }
     return result;
+  }
+
+  /** The ids of every record the list shows for this query (all pages), in list order. */
+  private async matchingIds(auth: AuthContext, entity: TableEntity, raw: Record<string, string>): Promise<string[]> {
+    const parsed = listQuerySchema.safeParse({ ...raw, page: 1, pageSize: 100 });
+    const filters = (entity === 'companies' ? companyFiltersSchema : entity === 'contacts' ? contactFiltersSchema : z.object({})).safeParse(raw);
+    if (!parsed.success || !filters.success) {
+      const issues = [...(parsed.success ? [] : parsed.error.issues), ...(filters.success ? [] : filters.error.issues)];
+      throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The request contains invalid fields.', details: issues.map((i) => ({ path: `all.query.${i.path.join('.')}`, message: i.message })) });
+    }
+    const q = parsed.data;
+    const f = filters.data as Record<string, string | undefined>;
+    const page = (n: number): Promise<{ items: { id: string }[] }> => {
+      const pq = { ...q, page: n };
+      if (entity === 'companies') return this.companies.list(auth, pq, { ...f, cf: q.cf });
+      if (entity === 'contacts') return this.contacts.list(auth, pq, { statusId: f.statusId, cf: q.cf });
+      if (entity === 'leads') return this.leads.list(auth, pq, q.cf);
+      return this.deals.list(auth, pq, q.cf);
+    };
+    const ids: string[] = [];
+    for (let n = 1; ; n++) {
+      const { items } = await page(n);
+      ids.push(...items.map((r) => r.id));
+      if (items.length < q.pageSize) break;
+    }
+    return [...new Set(ids)];
   }
 }

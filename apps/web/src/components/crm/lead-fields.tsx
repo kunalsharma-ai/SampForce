@@ -88,7 +88,7 @@ export function PointsEditor({
                 <Star aria-hidden className={p.primary ? 'fill-current' : undefined} />
                 <span className="hidden sm:inline">{p.primary ? t('Primary') : t('Secondary')}</span>
               </Button>
-              {list.length > 1 && (
+              {(list.length > 1 || !!p.value) && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => remove(i)} aria-label={t('Remove {value}', { value: p.value || `${label} ${i + 1}` })}>
                   <Trash2 aria-hidden />
                 </Button>

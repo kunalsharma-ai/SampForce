@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Headers, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, type RawBodyRequest } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import { callListQuerySchema, callLogSchema, callStartSchema, callTargetSearchSchema, callUpdateSchema, dialerInputSchema } from '@dealflow/types';
+import { deleteAllCountSchema, deleteAllSchema, type DeleteAllInput, callListQuerySchema, callLogSchema, callStartSchema, callTargetSearchSchema, callUpdateSchema, dialerInputSchema } from '@dealflow/types';
 import { z } from 'zod';
-import { AlsoRequireFeature, Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
-import { NoPasswordConfirmation } from '../common/password-confirmation';
+import { AlsoRequireFeature, Auth, type AuthContext, Meta, Public, type RequestMeta, RequireAction, RequirePermissions } from '../common/auth-context';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 import { ZodPipe } from '../common/zod.pipe';
 import { CallsService } from './calls.service';
 
@@ -25,6 +25,24 @@ function formParams(req: RawBodyRequest<Request>): Record<string, string> {
 @AlsoRequireFeature('interactions')
 export class CallsController {
   constructor(private readonly calls: CallsService) {}
+
+  /** Delete every record this list shows for its filters, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.calls.deleteAll(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('count-all')
+  @HttpCode(200)
+  @RequirePermissions('activities:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.calls.matchingIds(auth, body.query)).length };
+  }
 
   @Get('dialers')
   @RequirePermissions('activities:read')

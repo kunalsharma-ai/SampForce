@@ -1,5 +1,6 @@
 'use client';
 
+import { DeleteAllButton } from '@/components/delete-all-button';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { MEETING_PLATFORM_LABELS, type MeetingRecord, type MeetingRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -115,7 +116,10 @@ function NotesSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Meeting notes')}</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-base">{t('Meeting notes')}</CardTitle>
+          <DeleteAllButton path="/meeting-records" query={{}} hasItems={!!records.data?.length} permission="activities:write" feature="meeting_intelligence" invalidate={['meeting-records']} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {canWrite && (

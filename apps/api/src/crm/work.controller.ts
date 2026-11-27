@@ -21,11 +21,14 @@ import {
   taskUpdateSchema,
   listQuerySchema,
   z,
+  deleteAllSchema,
+  deleteAllCountSchema,
+  type DeleteAllInput,
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
-import { ActivitiesService } from './activities.service';
+import { activityListQuerySchema, ActivitiesService } from './activities.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { EXPORT_ENTITIES, type ExportEntity, ImportExportService, xlsxToCsv } from './import-export.service';
 import { COMPANY_EXPORT_PARTS, CompanyExportService, type ExportFile } from './company-export.service';
@@ -38,14 +41,7 @@ import { ConfirmPassword } from '../common/password-confirmation';
 const uuid = new ParseUUIDPipe();
 const customFieldListQuery = z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES).optional(), includeInactive: z.enum(['true', 'false']).optional() });
 const fileUploadQuery = z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES), key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/), name: z.string().trim().min(1).max(200) });
-const activityQuerySchema = z.object({
-  leadId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  companyId: z.string().uuid().optional(),
-  opportunityId: z.string().uuid().optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(50),
-});
+const activityQuerySchema = activityListQuerySchema;
 const SEARCH_PERMISSION: Record<'lead' | 'contact' | 'company' | 'deal', Permission> = {
   lead: 'leads:read',
   contact: 'contacts:read',
@@ -81,6 +77,25 @@ function requirePermission(auth: AuthContext, permission: Permission) {
 @ApiKeyAccess()
 export class ActivitiesController {
   constructor(private readonly activities: ActivitiesService) {}
+
+  /** Delete every record this list shows for its filters, on every page, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.activities.deleteAll(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('count-all')
+  @HttpCode(200)
+  @RequirePermissions('activities:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.activities.matchingIds(auth, body.query)).length };
+  }
+
 
   @Get()
   @RequirePermissions('activities:read')
@@ -120,6 +135,25 @@ export class ActivitiesController {
 @ApiKeyAccess()
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}
+
+  /** Delete every record this list shows for its filters, on every page, with no limit (ADR 0096). */
+  @ConfirmPassword()
+  @Post('delete-all')
+  @HttpCode(200)
+  @RequireAction('delete')
+  @RequirePermissions('activities:write')
+  deleteAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllSchema)) body: DeleteAllInput, @Meta() meta: RequestMeta) {
+    return this.tasks.deleteAll(auth, body, meta);
+  }
+
+  /** How many records "delete all" would delete for this list query, shown before the person confirms. */
+  @Post('count-all')
+  @HttpCode(200)
+  @RequirePermissions('activities:write')
+  async countAll(@Auth() auth: AuthContext, @Body(new ZodPipe(deleteAllCountSchema)) body: { query: Record<string, string> }) {
+    return { count: (await this.tasks.matchingIds(auth, body.query)).length };
+  }
+
 
   @Get()
   @RequirePermissions('activities:read')

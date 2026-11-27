@@ -13,6 +13,9 @@ import {
   type VoiceNote,
   type VoiceNoteCreate,
   type VoiceRecordType,
+  VOICE_RECORD_TYPES,
+  type BulkActionResult,
+  type DeleteAllInput,
 } from '@dealflow/types';
 import { AgentOutputError, AgentsService } from '../ai/agents.service';
 import { PermissionDenied, READ_PERMISSION, RecordContextBuilder } from '../ai/record-context';
@@ -20,6 +23,15 @@ import { untrusted } from '../ai/redact';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
+
+/** The voice notes list's query (GET /voice-notes), also used to find every note to delete at once. */
+export const voiceNoteListQuerySchema = z.object({ type: z.enum(VOICE_RECORD_TYPES).optional(), id: z.string().uuid().optional() });
+
+/** A person's own voice notes, optionally on one record. */
+function voiceWhere(auth: AuthContext, record: { type: VoiceRecordType; id: string } | null): Prisma.VoiceNoteWhereInput {
+  return { tenantId: auth.tenantId, userId: auth.userId, ...(record ? { [record.type === 'deal' ? 'dealId' : `${record.type}Id`]: record.id } : {}) };
+}
 import { ActivitiesService } from '../crm/activities.service';
 import { ContactsService } from '../crm/contacts.service';
 import { LeadsService } from '../crm/leads.service';
@@ -75,7 +87,7 @@ export class VoiceNotesService {
   list(auth: AuthContext, record: { type: VoiceRecordType; id: string } | null): Promise<VoiceNote[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.voiceNote.findMany({
-        where: { tenantId: auth.tenantId, userId: auth.userId, ...(record ? { [record.type === 'deal' ? 'dealId' : `${record.type}Id`]: record.id } : {}) },
+        where: voiceWhere(auth, record),
         orderBy: { createdAt: 'desc' },
         take: 50,
       });
@@ -120,6 +132,17 @@ export class VoiceNotesService {
       });
       return this.view(tx, row);
     });
+  }
+
+  /** Every voice note of mine the list shows (no cap of 50), for "delete all" (ADR 0096). */
+  matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(voiceNoteListQuerySchema, query);
+    const record = q.type && q.id ? { type: q.type, id: q.id } : null;
+    return this.prisma.run(auth, async (tx) => (await tx.voiceNote.findMany({ where: voiceWhere(auth, record), select: { id: true } })).map((r) => r.id));
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'voice-notes', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   async remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
