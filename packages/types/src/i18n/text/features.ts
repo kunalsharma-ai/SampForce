@@ -45,9 +45,6 @@ export const features = {
   'SMS': ['SMS', 'SMS', 'SMS', 'الرسائل النصية'],
   'SampBidx': ['SampBidx', 'SampBidx', 'SampBidx', 'SampBidx'],
   'Chat with SampBidx team': ['Chat con el equipo de SampBidx', 'Discussion avec l’équipe SampBidx', 'Chat mit dem SampBidx-Team', 'الدردشة مع فريق SampBidx'],
-  'Slack': ['Slack', 'Slack', 'Slack', 'Slack'],
-  'Microsoft Teams': ['Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams'],
-  'Zoom': ['Zoom', 'Zoom', 'Zoom', 'Zoom'],
   'DocuSign': ['DocuSign', 'DocuSign', 'DocuSign', 'DocuSign'],
   'WhatsApp': ['WhatsApp', 'WhatsApp', 'WhatsApp', 'WhatsApp'],
 
@@ -244,9 +241,6 @@ export const features = {
     'Health-Scores, Abwanderungsrisiko, Eskalationen und Verlängerungen.',
     'درجات الصحة وخطر فقدان العملاء والتصعيدات والتجديدات.',
   ],
-  'CRM alerts in Slack channels.': ['Alertas del CRM en canales de Slack.', 'Alertes du CRM dans les canaux Slack.', 'CRM-Benachrichtigungen in Slack-Kanälen.', 'تنبيهات CRM في قنوات Slack.'],
-  'CRM alerts in Teams channels.': ['Alertas del CRM en canales de Teams.', 'Alertes du CRM dans les canaux Teams.', 'CRM-Benachrichtigungen in Teams-Kanälen.', 'تنبيهات CRM في قنوات Teams.'],
-  'Zoom meetings and transcripts.': ['Reuniones y transcripciones de Zoom.', 'Réunions et transcriptions Zoom.', 'Zoom-Besprechungen und Transkripte.', 'اجتماعات Zoom ونصوصها.'],
   'Send contracts and proposals for e-signature.': [
     'Envía contratos y propuestas para firma electrónica.',
     'Envoyez contrats et propositions en signature électronique.',

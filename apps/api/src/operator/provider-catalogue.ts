@@ -77,7 +77,7 @@ const priceMap = (v: string) => {
 
 /**
  * Every deployment-wide provider SampForce reads keys for, in the order the operator console lists them.
- * Per-workspace providers (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments, Teams webhooks)
+ * Per-workspace providers (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments)
  * are entered by each workspace admin under Settings > Apps and are not here.
  */
 export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
@@ -167,53 +167,6 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       ],
       urls: [{ label: 'Redirect URI (Web)', path: '/api/v1/integrations/microsoft/callback', where: 'App registration > Authentication > Web > Redirect URIs' }],
     },
-  },
-  {
-    key: 'slack', name: 'Slack', usedFor: 'Workspace app: "Post to Slack" workflow steps',
-    fields: [
-      { name: 'SLACK_CLIENT_ID', label: 'Client ID', required: true, help: 'api.slack.com/apps > your app > Basic Information > App Credentials.' },
-      { name: 'SLACK_CLIENT_SECRET', label: 'Client secret', required: true },
-    ],
-    tested: ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET'],
-    checkNote: 'Calls oauth.v2.access with a made-up code. Slack answers "invalid_code" only when the client ID and secret are right. Nothing is installed.',
-    app: { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Slack; the connection is verified with auth.test' },
-    setup: {
-      consoleUrl: 'https://api.slack.com/apps', consoleLabel: 'Slack apps',
-      steps: [
-        'At api.slack.com/apps choose Create New App > From scratch, name it "SampForce" and pick your own Slack workspace to develop in.',
-        'OAuth & Permissions > Redirect URLs: add the redirect URL below and save.',
-        'OAuth & Permissions > Bot Token Scopes: add chat:write, chat:write.public, channels:read and groups:read.',
-        'Manage Distribution: turn on public distribution so other Slack workspaces can install it.',
-        'Basic Information > App Credentials: copy the Client ID and Client Secret, paste them below, save, then press Test connection.',
-      ],
-      urls: [{ label: 'Redirect URL', path: '/api/v1/apps/slack/callback', where: 'OAuth & Permissions > Redirect URLs' }],
-    },
-  },
-  {
-    key: 'zoom', name: 'Zoom', usedFor: 'Workspace app: schedule Zoom meetings from records; transcripts of recorded meetings',
-    fields: [
-      { name: 'ZOOM_CLIENT_ID', label: 'Client ID', required: true, help: 'Zoom App Marketplace > your General app > App Credentials.' },
-      { name: 'ZOOM_CLIENT_SECRET', label: 'Client secret', required: true },
-      { name: 'ZOOM_WEBHOOK_SECRET_TOKEN', label: 'Webhook secret token', required: false, help: 'Features > Access > Secret Token. Needed for transcript import; proven when Zoom sends its first signed event.' },
-    ],
-    tested: ['ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET'],
-    checkNote: "Exchanges a made-up code at Zoom's token endpoint, which checks the client ID and secret first. The webhook token is not part of the test.",
-    app: { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Zoom account; transcript import also needs the webhook secret token' },
-    setup: {
-      consoleUrl: 'https://marketplace.zoom.us/develop/create', consoleLabel: 'Zoom App Marketplace',
-      steps: [
-        'In the Zoom App Marketplace choose Develop > Build App > General App, and pick "User-managed".',
-        'Basic Information > OAuth Information: paste the redirect URL below into "OAuth Redirect URL" and add it to the OAuth allow list too.',
-        'Scopes: add the ones to read the connecting user (user:read:user), create meetings (meeting:write:meeting) and read cloud recordings for transcripts (cloud_recording:read:list_recording_files).',
-        'App Credentials: copy the Client ID and Client Secret, paste them below, save, then press Test connection.',
-        'For transcript import: Features > Access > copy the Secret Token and paste it below as the webhook secret token, and save. Then turn on Event Subscription, paste the event notification URL below, and add the event "Recording > Recording transcript files completed". Zoom checks the URL when you save it; the webhook status here turns green when it does.',
-      ],
-      urls: [
-        { label: 'OAuth redirect URL', path: '/api/v1/apps/zoom/callback', where: 'Basic Information > OAuth Redirect URL, and the OAuth allow list' },
-        { label: 'Event notification endpoint URL', path: '/api/v1/apps/zoom/events', where: 'Features > Access > Event Subscription' },
-      ],
-    },
-    webhook: 'zoom',
   },
   {
     key: 'docusign', name: 'DocuSign', usedFor: 'Workspace app: send contracts for e-signature; signed envelopes mark contracts signed',

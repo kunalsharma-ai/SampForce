@@ -6,7 +6,6 @@ import { PasswordService } from '../src/auth/password.service';
 import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
 import { stripeSignature } from './fixtures/billing-fixture';
 import { DOCUSIGN_APP } from './fixtures/docusign-fixture';
-import { signZoomEvent, ZOOM_APP } from './fixtures/zoom-fixture';
 import { api, appClient, ORIGIN, registerUser, startApp } from './helpers';
 
 /**
@@ -40,8 +39,8 @@ type Row = {
 };
 
 const UNSET = Object.fromEntries(
-  ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET', 'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET',
-    'ZOOM_WEBHOOK_SECRET_TOKEN', 'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'DOCUSIGN_CONNECT_HMAC_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'RAZORPAY_KEY_ID',
+  ['ANTHROPIC_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET',
+    'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'DOCUSIGN_CONNECT_HMAC_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'RAZORPAY_KEY_ID',
     'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'ONLINE_PAYMENTS_ENABLED', 'STRIPE_PRICES', 'RAZORPAY_PLANS', 'STRIPE_AUTOMATIC_TAX', 'PRICING_PUBLISHED', 'SALES_CONTACT_EMAIL', 'AI_MODEL',
     'ENCRYPTION_KEY', 'ENCRYPTION_KEY_PREVIOUS'].map((k) => [k, undefined]),
 );
@@ -95,8 +94,6 @@ describe('integrations set up entirely from the operator console', () => {
       const { url } = (await api(owner).post(connect, {}).expect(200)).body as { url: string };
       return new URL(url).searchParams.get('redirect_uri');
     };
-    expect(await sent('slack', { SLACK_CLIENT_ID: 'slack-guide-id', SLACK_CLIENT_SECRET: 'slack-guide-secret' }, '/apps/slack/connect')).toBe(urlOf(all.find((r) => r.key === 'slack')!, 'Redirect URL'));
-    expect(await sent('zoom', { ZOOM_CLIENT_ID: 'zoom-guide-id', ZOOM_CLIENT_SECRET: 'zoom-guide-secret' }, '/apps/zoom/connect')).toBe(urlOf(all.find((r) => r.key === 'zoom')!, 'OAuth redirect URL'));
     expect(await sent('docusign', { DOCUSIGN_INTEGRATION_KEY: 'ds-guide-key', DOCUSIGN_SECRET_KEY: 'ds-guide-secret' }, '/apps/docusign/connect')).toBe(urlOf(all.find((r) => r.key === 'docusign')!, 'Redirect URI'));
     expect(await sent('google', { GOOGLE_CLIENT_ID: 'g-guide-id', GOOGLE_CLIENT_SECRET: 'g-guide-secret' }, '/integrations/google/connect')).toBe(urlOf(all.find((r) => r.key === 'google')!, 'Authorised redirect URI'));
     expect(await sent('microsoft', { MICROSOFT_CLIENT_ID: 'm-guide-id', MICROSOFT_CLIENT_SECRET: 'm-guide-secret' }, '/integrations/microsoft/connect')).toBe(urlOf(all.find((r) => r.key === 'microsoft')!, 'Redirect URI (Web)'));
@@ -169,13 +166,6 @@ describe('integrations set up entirely from the operator console', () => {
     // An event signed with the old secret is refused, and the console says why.
     await http().post('/api/v1/billing/webhooks/stripe').set('content-type', 'application/json').set('stripe-signature', stripeSignature(body, undefined, 'whsec_console_checkout_1')).send(body).expect(400);
     expect((await row('stripe')).webhook).toMatchObject({ state: 'rejected', lastRejected: { reason: 'The signature did not match the webhook signing secret.' } });
-
-    // Zoom checks the event URL when it is saved in Zoom: that signed check alone turns the status green.
-    await admin.post('/providers/zoom/keys', { values: { ZOOM_WEBHOOK_SECRET_TOKEN: ZOOM_APP.webhookSecret } }).expect(200);
-    const z = signZoomEvent({ event: 'endpoint.url_validation', payload: { plainToken: 'plain-token-1' } });
-    const res = await http().post('/api/v1/apps/zoom/events').set(z.headers).send(z.raw).expect(200);
-    expect(res.body).toMatchObject({ plainToken: 'plain-token-1' });
-    expect((await row('zoom')).webhook).toMatchObject({ state: 'verified', lastVerified: { event: 'endpoint.url_validation' } });
 
     // DocuSign: an event with the wrong HMAC is refused and shown as such. Nothing about the body is kept.
     await admin.post('/providers/docusign/keys', { values: { DOCUSIGN_CONNECT_HMAC_KEY: DOCUSIGN_APP.hmac } }).expect(200);

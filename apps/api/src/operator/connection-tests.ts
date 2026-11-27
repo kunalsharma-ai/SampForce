@@ -50,10 +50,6 @@ export class ConnectionTests {
     private readonly mailer: MailerService,
   ) {}
 
-  private appRedirect(app: string): string {
-    return `${trim(this.env.PUBLIC_WEB_URL)}/api/v1/apps/${app}/callback`;
-  }
-
   private mailboxRedirect(provider: string): string {
     return `${trim(this.env.PUBLIC_WEB_URL)}/api/v1/integrations/${provider}/callback`;
   }
@@ -147,21 +143,6 @@ export class ConnectionTests {
       client_id: this.env.MICROSOFT_CLIENT_ID ?? '', client_secret: this.env.MICROSOFT_CLIENT_SECRET ?? '',
     });
     return judgeOAuth('Microsoft', res.status, await readJson(res));
-  }
-
-  /** Slack answers 200 with `ok: false`; `invalid_code` means the client ID and secret were accepted. */
-  async slack(): Promise<string> {
-    const res = await this.post(`${trim(this.env.SLACK_API_BASE_URL)}/oauth.v2.access`, { code: PROBE_CODE, redirect_uri: this.appRedirect('slack') }, [this.env.SLACK_CLIENT_ID ?? '', this.env.SLACK_CLIENT_SECRET ?? '']);
-    const body = await readJson(res);
-    const error = String(body.error ?? '');
-    if (error === 'invalid_code' || error === 'bad_redirect_uri') return 'Slack accepted the client ID and secret (the test code was refused, as expected). Nothing was connected.';
-    if (error === 'invalid_client_id' || error === 'bad_client_secret' || error === 'invalid_client') throw new Error(`Slack refused the client ID or secret (${error}).`);
-    throw new Error(`Slack answered ${res.status}${error ? ` ${error}` : ''}.`);
-  }
-
-  async zoom(): Promise<string> {
-    const res = await this.post(`${trim(this.env.ZOOM_AUTH_BASE_URL)}/oauth/token`, { grant_type: 'authorization_code', code: PROBE_CODE, redirect_uri: this.appRedirect('zoom') }, [this.env.ZOOM_CLIENT_ID ?? '', this.env.ZOOM_CLIENT_SECRET ?? '']);
-    return judgeOAuth('Zoom', res.status, await readJson(res));
   }
 
   async docusign(): Promise<string> {

@@ -1,6 +1,6 @@
 # ADR 0033: Microsoft Teams through Teams Workflows webhooks
 
-- Status: Accepted
+- Status: Superseded by ADR 0097 (Microsoft Teams removed 2026-11-27)
 - Date: 2026-11-01
 - Part of: Enhancement programme, integrations (builds on ADR 0032)
 

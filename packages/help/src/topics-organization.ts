@@ -125,11 +125,11 @@ export const organizationHelp = {
   'page.integrations': {
     title: 'Integrations',
     what: [
-      'Connections between SampForce and your other tools: your mailbox and calendar, workspace apps such as Slack, the browser extension, Zapier, API keys and webhooks.',
-      'Conexiones entre SampForce y tus otras herramientas: buzón y calendario, apps como Slack, la extensión del navegador, Zapier, claves de API y webhooks.',
-      'Les liens entre SampForce et vos autres outils : messagerie et agenda, applications comme Slack, extension de navigateur, Zapier, clés d’API et webhooks.',
-      'Verbindungen zwischen SampForce und Ihren anderen Tools: Postfach und Kalender, Apps wie Slack, Browsererweiterung, Zapier, API-Schlüssel und Webhooks.',
-      'الروابط بين SampForce وأدواتك الأخرى: البريد والتقويم وتطبيقات مثل Slack وإضافة المتصفح وZapier ومفاتيح API وخطافات الويب.',
+      'Connections between SampForce and your other tools: your mailbox and calendar, workspace apps such as DocuSign, the browser extension, Zapier, API keys and webhooks.',
+      'Conexiones entre SampForce y tus otras herramientas: buzón y calendario, apps como DocuSign, la extensión del navegador, Zapier, claves de API y webhooks.',
+      'Les liens entre SampForce et vos autres outils : messagerie et agenda, applications comme DocuSign, extension de navigateur, Zapier, clés d’API et webhooks.',
+      'Verbindungen zwischen SampForce und Ihren anderen Tools: Postfach und Kalender, Apps wie DocuSign, Browsererweiterung, Zapier, API-Schlüssel und Webhooks.',
+      'الروابط بين SampForce وأدواتك الأخرى: البريد والتقويم وتطبيقات مثل DocuSign وإضافة المتصفح وZapier ومفاتيح API وخطافات الويب.',
     ],
     how: [
       'Press Connect on a card and sign in to the other service. Each card shows whether it is connected and when it last synced.',
@@ -197,11 +197,11 @@ export const organizationHelp = {
   'integrations.apps': {
     title: 'Workspace apps',
     what: [
-      'Apps the whole workspace shares, such as Slack, Microsoft Teams, Zoom, payments, WhatsApp and SMS.',
-      'Apps que comparte todo el espacio, como Slack, Microsoft Teams, Zoom, pagos, WhatsApp y SMS.',
-      'Les applications partagées par tout l’espace, comme Slack, Microsoft Teams, Zoom, paiements, WhatsApp et SMS.',
-      'Apps, die der ganze Arbeitsbereich teilt, etwa Slack, Microsoft Teams, Zoom, Zahlungen, WhatsApp und SMS.',
-      'تطبيقات تتشاركها مساحة العمل كلها، مثل Slack وMicrosoft Teams وZoom والمدفوعات وواتساب والرسائل النصية.',
+      'Apps the whole workspace shares, such as DocuSign, payments, WhatsApp and SMS.',
+      'Apps que comparte todo el espacio, como DocuSign, pagos, WhatsApp y SMS.',
+      'Les applications partagées par tout l’espace, comme DocuSign, paiements, WhatsApp et SMS.',
+      'Apps, die der ganze Arbeitsbereich teilt, etwa DocuSign, Zahlungen, WhatsApp und SMS.',
+      'تطبيقات تتشاركها مساحة العمل كلها، مثل DocuSign والمدفوعات وواتساب والرسائل النصية.',
     ],
     how: [
       'An administrator connects each app once and chooses which events it receives.',

@@ -1,6 +1,6 @@
 # ADR 0034: Zoom meetings scheduled from records, with transcripts imported only for those meetings
 
-- Status: Accepted
+- Status: Superseded by ADR 0097 (Zoom removed 2026-11-27)
 - Date: 2026-11-01
 - Part of: Enhancement programme, integrations (builds on ADR 0032)
 

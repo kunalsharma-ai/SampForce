@@ -83,10 +83,10 @@ describe('plan features', () => {
     await api(launch).get('/sequences').expect(200);
     await api(launch).get('/email-templates').expect(200);
     expect((await api(launch).get('/forecast')).body.error.code).toBe('FEATURE_NOT_IN_PLAN');
-    expect((await api(launch).get('/apps/slack/channels')).body.error.code).toBe('FEATURE_NOT_IN_PLAN');
+    expect((await api(launch).get('/apps/docusign/events')).body.error.code).toBe('FEATURE_NOT_IN_PLAN');
     // Listing apps and disconnecting one always work.
     await api(launch).get('/apps').expect(200);
-    expect((await api(launch).del('/apps/slack')).body?.error?.code).not.toBe('FEATURE_NOT_IN_PLAN');
+    expect((await api(launch).del('/apps/docusign')).body?.error?.code).not.toBe('FEATURE_NOT_IN_PLAN');
   });
 
   it('an unpaid or canceled paid plan falls back to Free’s features, and paying brings them back', async () => {

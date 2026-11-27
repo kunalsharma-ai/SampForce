@@ -4,7 +4,7 @@ import { PrismaService } from './prisma.service';
 import { fingerprintOf } from './provider-keys';
 
 /** Deployment-wide webhooks whose signing secret is entered in the operator console (ADR 0053). */
-export const RECEIPT_PROVIDERS = ['stripe', 'razorpay', 'zoom', 'docusign', 'website'] as const;
+export const RECEIPT_PROVIDERS = ['stripe', 'razorpay', 'docusign', 'website'] as const;
 export type ReceiptProvider = (typeof RECEIPT_PROVIDERS)[number];
 
 export const WEBHOOK_RECEIPT_PREFIX = 'webhook_receipt:';
@@ -13,7 +13,6 @@ export const WEBHOOK_RECEIPT_PREFIX = 'webhook_receipt:';
 export const RECEIPT_SECRET = {
   stripe: 'STRIPE_WEBHOOK_SECRET',
   razorpay: 'RAZORPAY_WEBHOOK_SECRET',
-  zoom: 'ZOOM_WEBHOOK_SECRET_TOKEN',
   docusign: 'DOCUSIGN_CONNECT_HMAC_KEY',
   website: 'WEBSITE_WEBHOOK_SECRET',
 } as const satisfies Record<ReceiptProvider, keyof ApiEnv>;

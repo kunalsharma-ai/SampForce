@@ -10,9 +10,6 @@
 | Apollo.io (people search and email reveal for Prospect Lists and the extension) | **Mock Mode** without a key: search returns labelled sample people on `.example` domains that can never reach the CRM, exports or sequences. With a key it is **Pending Configuration** until the first successful call, then Connected. Tested against a local stand-in only; the request and response shapes follow Apollo's published docs and have not been checked against Apollo with a real key. | Needs `APOLLO_API_KEY` (server secret, a master key for `people/bulk_match`). Optional `APOLLO_API_BASE_URL`, `PROSPECT_DAILY_LIMIT` (provider calls per person per 24 hours, default 100) |
 | Hunter.io email verification (Prospect Lists) | **Pending Configuration** without a key: the Verify button explains it needs one and no status is ever guessed. Tested against a local stand-in only. | Needs `HUNTER_API_KEY` (the same key as the Email Finder) |
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
-| Slack (workspace app: post to channels from workflows) | **Pending Configuration** until `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are set; then Not connected until an admin installs it. Implemented and tested against a local stand-in of Slack's Web API only. Not yet tested against Slack with a real app. | Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` (server secrets) |
-| Microsoft Teams (workspace app: post to channels from workflows) | **Not connected** until an admin adds a channel. A channel is saved only after Teams accepts a welcome card, so a listed channel has worked at least once. Implemented and tested against a local stand-in of Teams Workflows webhooks only; not yet tested against Teams. | No deployment secret. Each channel's Workflows URL is a workspace secret, stored encrypted |
-| Zoom (workspace app: schedule meetings from records; import transcripts of recorded meetings) | **Pending Configuration** until `ZOOM_CLIENT_ID` and `ZOOM_CLIENT_SECRET` are set; transcript import is separately Pending Configuration until `ZOOM_WEBHOOK_SECRET_TOKEN` is set. Implemented and tested against a local stand-in of Zoom's OAuth, REST API v2 and event notifications only; not yet tested against Zoom. | Needs `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_WEBHOOK_SECRET_TOKEN` (server secrets) |
 | DocuSign (workspace app: send contracts for e-signature) | **Pending Configuration** until `DOCUSIGN_INTEGRATION_KEY` and `DOCUSIGN_SECRET_KEY` are set; automatic status updates are separately Pending Configuration until `DOCUSIGN_CONNECT_HMAC_KEY` is set ("Check status" works without it). Implemented and tested against a local stand-in of DocuSign's OAuth, eSignature REST API v2.1 and Connect only; not yet tested against DocuSign. | Needs `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY`, `DOCUSIGN_CONNECT_HMAC_KEY` (server secrets); `DOCUSIGN_AUTH_BASE_URL` for the demo environment |
 | Card payments on proposals (workspace app: customers pay accepted proposals into the workspace's own Stripe or Razorpay account) | **Not connected** until an admin saves keys; keys are saved only after a read that charges nothing succeeds. Shows a warning until the first signed webhook arrives. A proposal is marked paid only by the provider's signed webhook with the exact amount asked. Implemented and tested against a local stand-in of Stripe Checkout Sessions and Razorpay Payment Links only; not yet tested against either provider. | No deployment secret. Each workspace's keys and webhook secret are workspace secrets, stored encrypted |
 | WhatsApp Business (workspace app: one-to-one messages from contact records and approved workflow steps, through the workspace's own Cloud API number) | **Not connected** until an admin saves credentials; they are saved only after a read of the number succeeds (nothing is sent). Replies and delivery status are Pending Configuration until Meta's first signed webhook arrives. Implemented and tested against a local stand-in of Meta's Graph API (Cloud API) only; not yet tested against Meta. | No deployment secret. Each workspace's System User token and App Secret are workspace secrets, stored encrypted. Optional `WHATSAPP_API_BASE_URL` (default Graph API v21.0) |
@@ -62,92 +59,12 @@ first time someone connects or uses them.
 4. Create a client secret. Set `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and `MICROSOFT_TENANT`
    (`common` for multi-tenant, or a directory id).
 
-## Setting up Slack
+## Removed: Slack, Microsoft Teams and Zoom
 
-Slack is a workspace app: one admin installs it for the whole SampForce workspace, and workflows post to
-channels with a "Post to Slack" step. Nobody's personal Slack account is used.
-
-1. At api.slack.com/apps create an app ("From scratch"). Under **OAuth & Permissions** add the redirect URL
-   `<PUBLIC_WEB_URL>/api/v1/apps/slack/callback` and the bot scopes `chat:write`, `chat:write.public`,
-   `channels:read`, `groups:read`.
-2. Under **Basic Information** copy the Client ID and Client Secret into `SLACK_CLIENT_ID` and
-   `SLACK_CLIENT_SECRET` in the deployment's secret manager. Never put them in the web or extension bundles.
-3. Restart the API. Integrations then shows Slack as Not connected instead of Pending Configuration, and an admin
-   (integrations:manage) can press **Connect Slack**.
-4. After installing, pick a default channel and press **Send test message**. That is the first live call: until it
-   succeeds, treat Slack as untested. Private channels need the bot invited (`/invite @YourApp`).
-
-How it behaves:
-
-- The bot token is stored encrypted (SecretBox) in `app_connections`, one row per workspace, under row-level security.
-  It is never sent to the browser.
-- Every post and failure is recorded in `app_events` and shown as "Recent Slack activity". A revoked or uninstalled
-  app changes the status to **Needs reconnecting** and the workflow step fails with a clear reason instead of retrying
-  forever. Reconnecting clears it.
-- Message text from workflows is escaped (`&`, `<`, `>`), so record data cannot trigger `@channel` or fake links, and
-  each message ends with a link back to the record.
-- Disconnect revokes the token at Slack (`auth.revoke`) and deletes it.
-- The Slack row on the operator Providers page shows whether the two secrets are set. There is no live check there,
-  because Slack has no call that proves an app's client secret without a workspace installing it; the test message is
-  the check.
-
-## Setting up Microsoft Teams
-
-Teams uses the **Workflows** app in Teams, which Microsoft recommends as it retires Office 365 connector webhooks.
-No Entra ID app registration or SampForce-wide secret is needed.
-
-1. In Teams, open the channel, choose **Workflows** and the template **Send webhook alerts to a channel** (or build a
-   Power Automate flow with the trigger "When a Teams webhook request is received" and the action "Post card in a chat
-   or channel"). Copy the URL it shows.
-2. In SampForce, Integrations, Microsoft Teams: enter a channel name and paste the URL, then **Add channel**. SampForce
-   posts a welcome card first and saves the channel only if Teams accepts it.
-3. Add up to 20 channels and pick a default. Workflow steps "Post to Slack or Teams" with Microsoft Teams chosen post
-   an Adaptive Card with the message and an "Open in SampForce" button.
-
-How it behaves:
-
-- Only `https` URLs on `*.logic.azure.com` or `*.powerplatform.com` are accepted, and they must resolve to public
-  addresses; redirects are refused. Old `webhook.office.com` URLs are refused with an explanation, because Microsoft is retiring them.
-- The URL is the secret: it is sealed with SecretBox, never returned to the browser, and only a 12-character
-  fingerprint goes to the audit log.
-- If Teams answers 401, 403, 404 or 410 (the workflow was deleted, turned off or its URL changed), that channel is
-  marked "Not accepting messages" and the app shows **Needs attention** until a post to it succeeds again or it is
-  removed. A 429 is reported as rate limiting.
-- Removing a channel deletes its URL; SampForce cannot turn off the workflow in Teams, so the page reminds the admin to.
-- Record values cannot add their own links to the card (markdown link syntax is broken up).
-
-## Setting up Zoom
-
-Zoom is a workspace app: an admin connects the company's Zoom account once. People then schedule Zoom meetings from
-any lead, contact or deal, in their own Zoom user (matched by their SampForce email), and the meeting is logged on the
-record. If the organiser chooses cloud recording and confirms participants' consent, the transcript is added to
-meeting notes after the meeting, ready for the existing AI meeting summary and review.
-
-1. In the Zoom App Marketplace, create a **General app**, choose **admin-managed**, and set the OAuth redirect URL
-   to `<PUBLIC_WEB_URL>/api/v1/apps/zoom/callback`.
-2. Add the scopes for: viewing users (`user:read:user:admin`), creating meetings for users
-   (`meeting:write:meeting:admin`), and reading cloud recordings (`cloud_recording:read:list_recording_files:admin`).
-   The scope names are from Zoom's granular-scope list at the time of writing; check them in the Marketplace.
-3. Under **Access**, turn on **Event subscription**. Use the endpoint URL `<PUBLIC_WEB_URL>/api/v1/apps/zoom/events`,
-   and subscribe to **Recording: Transcript files have completed** and **App deauthorized**. Turn on
-   "include a download token". Copy the **Secret Token**.
-4. Set `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_WEBHOOK_SECRET_TOKEN` in the deployment's secret manager and
-   restart the API. Then press **Validate** on the event subscription in Zoom. SampForce answers Zoom's URL validation
-   challenge.
-5. A workspace admin presses **Connect Zoom** under Integrations. Scheduling the first meeting is the first live call.
-
-How it behaves:
-
-- Access and refresh tokens are sealed with SecretBox. Refreshes are serialised per connection (Zoom rotates refresh
-  tokens). A refused refresh shows **Needs reconnecting**.
-- If the person's email is not a user in the Zoom account, scheduling fails with that explanation. Nothing is created.
-- Events must carry a valid `x-zm-signature` (HMAC-SHA256 of `v0:{timestamp}:{body}`) no more than 5 minutes old.
-  Events for Zoom accounts or meetings SampForce does not know are ignored. **Only meetings scheduled from SampForce
-  with recording chosen are ever imported.**
-- The worker downloads the WebVTT transcript, at most 5 MB, following only checked public redirects. It stores the
-  text and speaker segments in meeting notes, with the organiser's consent recorded. An expired link is reported
-  and not retried; other failures are retried up to 3 times.
-- **App deauthorized** (the app was removed in Zoom) deletes the connection. Meeting history stays.
+The Slack, Microsoft Teams and Zoom workspace apps were removed on 2026-11-27 (ADR 0097). Their cards, the "Post to
+Slack or Teams" workflow step, Zoom meeting scheduling and transcript import, and their operator console entries are
+gone. The next database set-up deletes what they stored. Meeting links to Zoom or Teams found on calendar events are
+still recognised and shown with the meeting.
 
 ## Setting up DocuSign
 

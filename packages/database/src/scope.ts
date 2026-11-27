@@ -115,7 +115,7 @@ const WORKER_ALL = new Set([
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
 // Contact: the follow-up cadence job (ADR 0096) finds contacts whose period after the first email has passed; it reads ids only and moves each one inside its own workspace.
-const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'ZoomMeeting']);
+const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

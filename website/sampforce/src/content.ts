@@ -98,8 +98,8 @@ export const loop = [
     step: '02',
     title: 'Engage',
     head: 'Follow up on autopilot, never off script.',
-    body: 'Email sequences from your own Gmail or Outlook, a drag-and-drop email designer, meetings, Slack, Teams, SMS and WhatsApp. Automations are simulated before they run, so nothing surprises a customer.',
-    points: ['Sequences with tracking and unsubscribe', 'Visual Automation Studio with simulation', 'Slack, Teams, Zoom, Twilio, WhatsApp'],
+    body: 'Email sequences from your own Gmail or Outlook, a drag-and-drop email designer, meetings, SMS and WhatsApp. Automations are simulated before they run, so nothing surprises a customer.',
+    points: ['Sequences with tracking and unsubscribe', 'Visual Automation Studio with simulation', 'Twilio SMS and WhatsApp'],
     image: automation,
     color: 'var(--violet)',
   },
@@ -199,7 +199,7 @@ export const security = {
 };
 
 export const integrationList = [
-  'Gmail', 'Google Calendar', 'Outlook', 'Microsoft 365', 'Slack', 'Microsoft Teams', 'Zoom', 'DocuSign', 'Stripe', 'Razorpay',
+  'Gmail', 'Google Calendar', 'Outlook', 'Microsoft 365', 'DocuSign', 'Stripe', 'Razorpay',
   'Twilio SMS', 'WhatsApp', 'Zapier', 'Apollo.io', 'Hunter.io', 'Deepgram', 'Claude AI', 'Webhooks', 'REST API', 'SMTP',
 ];
 

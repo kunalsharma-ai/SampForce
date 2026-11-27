@@ -56,30 +56,6 @@ export default defineConfig({
       env: { LOGO_FIXTURE_PORT: '4310' },
     },
     {
-      // Local stand-in for the Slack Web API and its consent screen, so the Slack app connects end to end.
-      command: 'npx tsx test/fixtures/slack-fixture.ts',
-      cwd: '../api',
-      url: 'http://127.0.0.1:4500/health',
-      reuseExistingServer: !process.env.CI,
-      env: { SLACK_FIXTURE_PORT: '4500' },
-    },
-    {
-      // Local stand-in for Teams Workflows webhook URLs.
-      command: 'npx tsx test/fixtures/teams-fixture.ts',
-      cwd: '../api',
-      url: 'http://127.0.0.1:4600/health',
-      reuseExistingServer: !process.env.CI,
-      env: { TEAMS_FIXTURE_PORT: '4600' },
-    },
-    {
-      // Local stand-in for Zoom OAuth, the meetings API and transcript downloads.
-      command: 'npx tsx test/fixtures/zoom-fixture.ts',
-      cwd: '../api',
-      url: 'http://127.0.0.1:4700/health',
-      reuseExistingServer: !process.env.CI,
-      env: { ZOOM_FIXTURE_PORT: '4700' },
-    },
-    {
       // Local stand-in for DocuSign OAuth and the eSignature REST API.
       command: 'npx tsx test/fixtures/docusign-fixture.ts',
       cwd: '../api',
@@ -175,17 +151,6 @@ export default defineConfig({
         SMTP_URL: 'smtp://127.0.0.1:4400',
         MAIL_FROM: 'SampForce <no-reply@dealflow.test>',
         PUBLIC_WEB_URL: 'http://localhost:3000',
-        // Not real Slack credentials: Slack calls go to the stand-in above.
-        SLACK_CLIENT_ID: 'slack-client-id',
-        SLACK_CLIENT_SECRET: 'slack-client-secret',
-        SLACK_AUTH_BASE_URL: 'http://127.0.0.1:4500',
-        SLACK_API_BASE_URL: 'http://127.0.0.1:4500/api',
-        // Not real Zoom credentials: Zoom calls go to the stand-in above.
-        ZOOM_CLIENT_ID: 'zoom-client-id',
-        ZOOM_CLIENT_SECRET: 'zoom-client-secret',
-        ZOOM_WEBHOOK_SECRET_TOKEN: 'zoom-webhook-secret',
-        ZOOM_AUTH_BASE_URL: 'http://127.0.0.1:4700',
-        ZOOM_API_BASE_URL: 'http://127.0.0.1:4700/v2',
         // Not real DocuSign credentials: DocuSign calls go to the stand-in above.
         DOCUSIGN_INTEGRATION_KEY: 'ds-integration-key',
         DOCUSIGN_SECRET_KEY: 'ds-secret-key',

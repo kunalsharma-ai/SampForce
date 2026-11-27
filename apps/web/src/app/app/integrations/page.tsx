@@ -21,7 +21,7 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
 export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-8">
-      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned." />
+      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as DocuSign, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned." />
       <Suspense>
         <MailboxConnections />
       </Suspense>

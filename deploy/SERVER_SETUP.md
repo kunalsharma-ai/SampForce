@@ -135,7 +135,7 @@ all defaults). Nobody types a secret. Save `.env` and `mongo/keyfile` in your pa
 | Where | What | Why |
 |---|---|---|
 | `.env` | Database passwords, `DOMAIN`, `ACME_EMAIL` | The database passwords are needed to reach the database at all. Caddy needs `DOMAIN` for the certificate before the app starts |
-| The database | Every API key and integration setting (Anthropic, SMTP, Stripe, Razorpay, Google, Microsoft, Slack, Zoom, DocuSign, Apollo, Hunter, Deepgram, Zapier), plan and checkout settings, `ENCRYPTION_KEY` and the session signing secrets | API keys are entered in the operator console in step 8 and encrypted with `ENCRYPTION_KEY`. The API creates `ENCRYPTION_KEY` and the signing secrets on its first start |
+| The database | Every API key and integration setting (Anthropic, SMTP, Stripe, Razorpay, Google, Microsoft, DocuSign, Apollo, Hunter, Deepgram, Zapier), plan and checkout settings, `ENCRYPTION_KEY` and the session signing secrets | API keys are entered in the operator console in step 8 and encrypted with `ENCRYPTION_KEY`. The API creates `ENCRYPTION_KEY` and the signing secrets on its first start |
 
 Because the encryption key is kept in the database next to what it encrypts, **a database backup can open every
 stored API key**. Keep backup files as private as the keys themselves (encrypted storage, limited access). In
@@ -193,7 +193,7 @@ by SampForce's own database client, so there is no separate database check to ru
    on a provider for the steps, a link to its console and the redirect or webhook URLs to copy into it, then
    **Add keys** and **Test connection**. Keys apply within 10 seconds, no restart. Add SMTP first so password-reset
    emails work. Online payments, price ids, the AI model and the pricing page are under **Plans and online
-   checkout** and **Anthropic**. For Stripe, Razorpay, Zoom and DocuSign the card also shows when a signed webhook
+   checkout** and **Anthropic**. For Stripe, Razorpay and DocuSign the card also shows when a signed webhook
    has arrived. The bottom of the page lists the few settings that stay in the `.env` file, and why.
 3. **Bank details.** Console **Settings**: the payment instructions printed on offline invoices.
 4. **First workspace.** Open `https://crm.yourcompany.com/signup` and create your company's workspace. Turn on

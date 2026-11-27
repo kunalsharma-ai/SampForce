@@ -455,7 +455,7 @@ export const HELP_FAQS: readonly HelpFaq[] = [
 
   // ── Apps & integrations ──────────────────────────────────────────────────────────────────────────────────────────
   f('apps.connect', 'apps', { permission: 'integrations:manage', guide: 'page.integrations' },
-    ['How do I connect Slack, Zoom, WhatsApp or another app?', '¿Cómo conecto Slack, Zoom, WhatsApp u otra app?', 'Comment connecter Slack, Zoom, WhatsApp ou une autre application ?', 'Wie verbinde ich Slack, Zoom, WhatsApp oder eine andere App?', 'كيف أربط Slack أو Zoom أو WhatsApp أو تطبيقًا آخر؟'],
+    ['How do I connect DocuSign, WhatsApp or another app?', '¿Cómo conecto DocuSign, WhatsApp u otra app?', 'Comment connecter DocuSign, WhatsApp ou une autre application ?', 'Wie verbinde ich DocuSign, WhatsApp oder eine andere App?', 'كيف أربط DocuSign أو WhatsApp أو تطبيقًا آخر؟'],
     [
       'Open Integrations, find the app and choose Connect. Follow the sign-in or setup steps it shows. The apps listed are the ones your plan includes; each shows whether it is connected and working.',
       'Abre Integraciones, busca la app y elige Conectar. Sigue los pasos que muestre. Las apps listadas son las que incluye tu plan; cada una indica si está conectada y funcionando.',
@@ -709,11 +709,11 @@ export const HELP_FAQS: readonly HelpFaq[] = [
   f('ai.meetingRecordings', 'ai', { feature: 'meeting_intelligence', guide: 'page.meetingRecord' },
     ['Can SampForce summarise my meetings?', '¿Puede SampForce resumir mis reuniones?', 'SampForce peut-il résumer mes réunions ?', 'Kann SampForce meine Meetings zusammenfassen?', 'هل يستطيع SampForce تلخيص اجتماعاتي؟'],
     [
-      'Yes. Recorded meetings, including Zoom meetings when Zoom is connected, get a transcript and an AI summary with the next steps, kept on the meeting record.',
-      'Sí. Las reuniones grabadas, también las de Zoom si está conectado, reciben una transcripción y un resumen de IA con los próximos pasos, guardados en el registro de la reunión.',
-      'Oui. Les réunions enregistrées, y compris sur Zoom quand il est connecté, reçoivent une transcription et un résumé IA avec les prochaines étapes, conservés sur la fiche de réunion.',
-      'Ja. Aufgezeichnete Meetings, auch Zoom-Meetings bei verbundenem Zoom, erhalten ein Transkript und eine KI-Zusammenfassung mit den nächsten Schritten am Meeting-Datensatz.',
-      'نعم. تحصل الاجتماعات المسجلة، ومنها اجتماعات Zoom عند ربطه، على نص وملخص بالذكاء الاصطناعي مع الخطوات التالية، محفوظة على سجل الاجتماع.',
+      'Yes. Recorded meetings get a transcript and an AI summary with the next steps, kept on the meeting record.',
+      'Sí. Las reuniones grabadas reciben una transcripción y un resumen de IA con los próximos pasos, guardados en el registro de la reunión.',
+      'Oui. Les réunions enregistrées reçoivent une transcription et un résumé IA avec les prochaines étapes, conservés sur la fiche de réunion.',
+      'Ja. Aufgezeichnete Meetings erhalten ein Transkript und eine KI-Zusammenfassung mit den nächsten Schritten am Meeting-Datensatz.',
+      'نعم. تحصل الاجتماعات المسجلة على نص وملخص بالذكاء الاصطناعي مع الخطوات التالية، محفوظة على سجل الاجتماع.',
     ]),
   f('insights.attribution', 'insights', { feature: 'revenue_attribution' },
     ['How is revenue shared when several people win a deal?', '¿Cómo se reparten los ingresos cuando varias personas ganan una oportunidad?', 'Comment le chiffre d’affaires est-il partagé quand plusieurs personnes gagnent une affaire ?', 'Wie wird der Umsatz aufgeteilt, wenn mehrere Personen einen Deal gewinnen?', 'كيف تُقسَّم الإيرادات عندما يفوز عدة أشخاص بصفقة؟'],

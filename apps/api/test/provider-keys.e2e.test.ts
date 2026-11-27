@@ -10,9 +10,7 @@ import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
 import { type BillingFixture, startBillingFixture } from './fixtures/billing-fixture';
 import { DOCUSIGN_APP, startDocusignFixture } from './fixtures/docusign-fixture';
 import { type ProviderFixture, startProviderFixture } from './fixtures/provider-fixture';
-import { SLACK_CLIENT, type SlackFixture, startSlackFixture } from './fixtures/slack-fixture';
 import { type SmtpFixture, startSmtpFixture } from './fixtures/smtp-fixture';
-import { startZoomFixture, ZOOM_APP } from './fixtures/zoom-fixture';
 import { api, appClient, ORIGIN, registerUser, startApp } from './helpers';
 
 function setEnv(vars: Record<string, string | undefined>): () => void {
@@ -46,18 +44,16 @@ type Row = { key: string; state: string; configured: boolean; env: Field[]; last
 
 /** Every env var a provider here might read: unset for the whole suite so only what a test sets is in play. */
 const UNSET = Object.fromEntries(
-  ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'SMTP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET',
-    'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET', 'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET',
+  ['ANTHROPIC_API_KEY', 'SMTP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET',
+    'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET',
     'RAZORPAY_WEBHOOK_SECRET', 'ZAPIER_INVITE_URL', 'APOLLO_API_KEY', 'HUNTER_API_KEY', 'DEEPGRAM_API_KEY', 'ENCRYPTION_KEY', 'ENCRYPTION_KEY_PREVIOUS'].map((k) => [k, undefined]),
 );
 
 describe('provider keys entered in the operator console (stand-ins)', () => {
-  let slack: SlackFixture;
   let ai: AiFixture;
   let smtp: SmtpFixture;
   let google: ProviderFixture;
   let billing: BillingFixture;
-  let zoom: Awaited<ReturnType<typeof startZoomFixture>>;
   let docusign: Awaited<ReturnType<typeof startDocusignFixture>>;
   let restore: () => void;
   const apps: INestApplication[] = [];
@@ -84,14 +80,13 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
   const field = (r: Row, name: string) => r.env.find((f) => f.name === name)!;
 
   beforeAll(async () => {
-    [slack, ai, smtp, google, billing, zoom, docusign] = await Promise.all([startSlackFixture(), createAiFixture(), startSmtpFixture(), startProviderFixture(), startBillingFixture(), startZoomFixture(), startDocusignFixture()]);
+    [ai, smtp, google, billing, docusign] = await Promise.all([createAiFixture(), startSmtpFixture(), startProviderFixture(), startBillingFixture(), startDocusignFixture()]);
     restore = setEnv({
       ...UNSET,
       OPERATOR_JWT_SECRET: 'operator-secret-that-is-at-least-32-chars',
-      SLACK_AUTH_BASE_URL: slack.url, SLACK_API_BASE_URL: `${slack.url}/api`,
       AI_API_BASE_URL: ai.url,
       GOOGLE_TOKEN_URL: `${google.url}/google/token`, MICROSOFT_LOGIN_BASE_URL: `${google.url}/ms`,
-      ZOOM_AUTH_BASE_URL: zoom.url, STRIPE_API_BASE_URL: billing.url, RAZORPAY_API_BASE_URL: billing.url,
+      STRIPE_API_BASE_URL: billing.url, RAZORPAY_API_BASE_URL: billing.url,
       PROVIDER_KEYS_REFRESH_SECONDS: '1',
     });
     await clean();
@@ -104,65 +99,65 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
   afterAll(async () => {
     for (const app of apps) await app.close();
     await clean();
-    await Promise.all([slack.close(), ai.close(), smtp.close(), google.close(), billing.close(), zoom.close(), docusign.close()]);
+    await Promise.all([ai.close(), smtp.close(), google.close(), billing.close(), docusign.close()]);
     restore();
   });
 
   it('saves keys sealed, shows them masked, logs each change by fingerprint, and the app uses them at once', async () => {
-    const { app, admin, support } = await boot();
+    const { app, admin, support } = await boot({ DOCUSIGN_AUTH_BASE_URL: docusign.url });
     const owner = await registerUser(app, 'Keys Live Ltd');
-    const before = ((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'slack')!;
+    const before = ((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'docusign')!;
     expect(before.state).toBe('pending_configuration');
-    expect(field(await row(admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ set: false, source: 'missing', hint: null, secret: true });
+    expect(field(await row(admin, 'docusign'), 'DOCUSIGN_SECRET_KEY')).toMatchObject({ set: false, source: 'missing', hint: null, secret: true });
 
     // Support operators can look, not change.
-    await support.post('/providers/slack/keys', { values: { SLACK_CLIENT_ID: 'x' } }).expect(403);
+    await support.post('/providers/docusign/keys', { values: { DOCUSIGN_INTEGRATION_KEY: 'x' } }).expect(403);
 
-    const saved = (await admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_ID: ` ${SLACK_CLIENT.id} `, SLACK_CLIENT_SECRET: SLACK_CLIENT.secret } }).expect(200)).body as Row;
+    const saved = (await admin.post('/providers/docusign/keys', { values: { DOCUSIGN_INTEGRATION_KEY: ` ${DOCUSIGN_APP.key} `, DOCUSIGN_SECRET_KEY: DOCUSIGN_APP.secret } }).expect(200)).body as Row;
     expect(saved).toMatchObject({ state: 'configured', configured: true });
-    expect(field(saved, 'SLACK_CLIENT_SECRET')).toMatchObject({ set: true, source: 'console', hint: SLACK_CLIENT.secret.slice(-4), updatedBy: adminEmail });
+    expect(field(saved, 'DOCUSIGN_SECRET_KEY')).toMatchObject({ set: true, source: 'console', hint: DOCUSIGN_APP.secret.slice(-4), updatedBy: adminEmail });
     // Values never come back, from either endpoint.
     for (const body of [saved, (await support.get('/providers').expect(200)).body]) {
-      expect(JSON.stringify(body)).not.toContain(SLACK_CLIENT.secret);
-      expect(JSON.stringify(body)).not.toContain(SLACK_CLIENT.id);
+      expect(JSON.stringify(body)).not.toContain(DOCUSIGN_APP.secret);
+      expect(JSON.stringify(body)).not.toContain(DOCUSIGN_APP.key);
     }
     // Sealed at rest.
     const db = appClient();
-    const stored = await db.platformSecret.findUnique({ where: { name: 'SLACK_CLIENT_SECRET' } });
+    const stored = await db.platformSecret.findUnique({ where: { name: 'DOCUSIGN_SECRET_KEY' } });
     await db.$disconnect();
     expect(stored!.valueEnc.startsWith('v1.')).toBe(true);
-    expect(stored!.valueEnc).not.toContain(SLACK_CLIENT.secret);
+    expect(stored!.valueEnc).not.toContain(DOCUSIGN_APP.secret);
 
     const log = (await admin.get('/audit-log').expect(200)).body as { action: string; operator: { email: string }; metadata: Record<string, unknown> }[];
-    const sets = log.filter((l) => l.action === 'provider_key.set' && l.metadata.provider === 'slack' && l.operator.email === adminEmail);
-    expect(sets.map((l) => l.metadata.name).sort()).toEqual(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET']);
+    const sets = log.filter((l) => l.action === 'provider_key.set' && l.metadata.provider === 'docusign' && l.operator.email === adminEmail);
+    expect(sets.map((l) => l.metadata.name).sort()).toEqual(['DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY']);
     expect(sets[0]!.operator.email).toBe(adminEmail);
     expect(sets.every((l) => /^[0-9a-f]{12}$/.test(String(l.metadata.fingerprint)))).toBe(true);
-    expect(JSON.stringify(log)).not.toContain(SLACK_CLIENT.secret);
+    expect(JSON.stringify(log)).not.toContain(DOCUSIGN_APP.secret);
 
-    // No restart: the same running app now offers Slack and sends the new client id to Slack.
-    const after = ((await api(owner).get('/apps').expect(200)).body as { key: string; state: string; missingConfig: string[] }[]).find((a) => a.key === 'slack')!;
+    // No restart: the same running app now offers DocuSign and sends the new integration key to DocuSign.
+    const after = ((await api(owner).get('/apps').expect(200)).body as { key: string; state: string; missingConfig: string[] }[]).find((a) => a.key === 'docusign')!;
     expect(after.state).not.toBe('pending_configuration');
     expect(after.missingConfig).toEqual([]);
-    const { url } = (await api(owner).post('/apps/slack/connect', {}).expect(200)).body as { url: string };
-    expect(new URL(url).searchParams.get('client_id')).toBe(SLACK_CLIENT.id);
+    const { url } = (await api(owner).post('/apps/docusign/connect', {}).expect(200)).body as { url: string };
+    expect(new URL(url).searchParams.get('client_id')).toBe(DOCUSIGN_APP.key);
 
     // Test connection with the console keys, then with a wrong secret.
-    expect((await admin.post('/providers/slack/check').expect(200)).body).toMatchObject({ state: 'verified', lastCheck: { ok: true, stale: false } });
-    await admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_SECRET: 'not-the-right-secret' } }).expect(200);
-    expect((await row(admin, 'slack')).state).toBe('configured'); // a new key makes the old test stale
-    expect((await admin.post('/providers/slack/check').expect(200)).body).toMatchObject({ state: 'failed', lastCheck: { ok: false, message: 'Slack refused the client ID or secret (invalid_client_id).' } });
+    expect((await admin.post('/providers/docusign/check').expect(200)).body).toMatchObject({ state: 'verified', lastCheck: { ok: true, stale: false } });
+    await admin.post('/providers/docusign/keys', { values: { DOCUSIGN_SECRET_KEY: 'not-the-right-secret' } }).expect(200);
+    expect((await row(admin, 'docusign')).state).toBe('configured'); // a new key makes the old test stale
+    expect((await admin.post('/providers/docusign/check').expect(200)).body).toMatchObject({ state: 'failed', lastCheck: { ok: false, message: 'DocuSign refused the client ID or secret (invalid_client).' } });
   });
 
   it('removing a console value falls back to the environment variable; non-secrets are shown in full', async () => {
-    const { admin } = await boot({ SLACK_CLIENT_ID: 'env-slack-client-id', SLACK_CLIENT_SECRET: 'env-slack-client-secret' });
+    const { admin } = await boot({ DOCUSIGN_INTEGRATION_KEY: 'env-docusign-client-id', DOCUSIGN_SECRET_KEY: 'env-docusign-client-secret' });
     // Left from the previous test: the console value wins over the environment.
-    expect(field(await row(admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'console', hint: 'cret' });
-    const cleared = (await admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_ID: null, SLACK_CLIENT_SECRET: null } }).expect(200)).body as Row;
-    expect(field(cleared, 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'environment', set: true, hint: 'cret', updatedBy: null });
-    expect(field(cleared, 'SLACK_CLIENT_ID')).toMatchObject({ source: 'environment', hint: 't-id' });
+    expect(field(await row(admin, 'docusign'), 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'console', hint: 'cret' });
+    const cleared = (await admin.post('/providers/docusign/keys', { values: { DOCUSIGN_INTEGRATION_KEY: null, DOCUSIGN_SECRET_KEY: null } }).expect(200)).body as Row;
+    expect(field(cleared, 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'environment', set: true, hint: 'cret', updatedBy: null });
+    expect(field(cleared, 'DOCUSIGN_INTEGRATION_KEY')).toMatchObject({ source: 'environment', hint: 't-id' });
     const log = (await admin.get('/audit-log').expect(200)).body as { action: string; metadata: Record<string, unknown> }[];
-    expect(log.filter((l) => l.action === 'provider_key.cleared').map((l) => l.metadata.name)).toEqual(expect.arrayContaining(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET']));
+    expect(log.filter((l) => l.action === 'provider_key.cleared').map((l) => l.metadata.name)).toEqual(expect.arrayContaining(['DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY']));
 
     const mail = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'SampForce <no-reply@dealflow.test>', SMTP_URL: null } }).expect(200)).body as Row;
     expect(field(mail, 'MAIL_FROM')).toMatchObject({ secret: false, hint: 'SampForce <no-reply@dealflow.test>' });
@@ -177,10 +172,10 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     expect(hash.error.message).toMatch(/%23/);
     const port = (await admin.post('/providers/smtp/keys', { values: { SMTP_URL: 'smtps://user%40example.com:pass@smtppro.zoho.in:587' } }).expect(400)).body;
     expect(port.error.message).toMatch(/Port 587 uses STARTTLS/);
-    expect((await admin.post('/providers/slack/keys', { values: { HUNTER_API_KEY: 'k' } }).expect(400)).body.error.message).toBe('Slack does not use HUNTER_API_KEY.');
-    await admin.post('/providers/slack/keys', { values: { ENCRYPTION_KEY: 'k'.repeat(40) } }).expect(400);
-    await admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_ID: 'line\nbreak' } }).expect(400);
-    await admin.post('/providers/slack/keys', { values: {} }).expect(400);
+    expect((await admin.post('/providers/docusign/keys', { values: { HUNTER_API_KEY: 'k' } }).expect(400)).body.error.message).toBe('DocuSign does not use HUNTER_API_KEY.');
+    await admin.post('/providers/docusign/keys', { values: { ENCRYPTION_KEY: 'k'.repeat(40) } }).expect(400);
+    await admin.post('/providers/docusign/keys', { values: { DOCUSIGN_INTEGRATION_KEY: 'line\nbreak' } }).expect(400);
+    await admin.post('/providers/docusign/keys', { values: {} }).expect(400);
     await admin.post('/providers/zapier/keys', { values: { ZAPIER_INVITE_URL: 'not a url' } }).expect(400);
     await admin.post('/providers/nope/keys', { values: { X_Y: 'a' } }).expect(400);
     // Nothing was stored by any refused request.
@@ -256,7 +251,7 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     expect(smtp.messages.at(-1)!.to).toEqual([owner.email]);
   });
 
-  it('connection tests for Google, Microsoft, Zoom, DocuSign, Stripe, Razorpay and Zapier', async () => {
+  it('connection tests for Google, Microsoft, DocuSign, Stripe, Razorpay and Zapier', async () => {
     // Tests are limited to 10 a minute per operator session, so this spreads them over a few running apps.
     let admin = (await boot({ DOCUSIGN_AUTH_BASE_URL: docusign.url })).admin;
     let used = 0;
@@ -268,8 +263,6 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     expect(await check('google', { GOOGLE_CLIENT_ID: 'g-client', GOOGLE_CLIENT_SECRET: 'g-secret' })).toMatchObject({ ok: true, message: 'Google accepted the client ID and secret (the test code was refused, as expected). Nothing was connected.' });
     expect(await check('google', { GOOGLE_CLIENT_SECRET: 'g-wrong-secret' })).toMatchObject({ ok: false, message: 'Google refused the client ID or secret (invalid_client): The OAuth client was not found..' });
     expect(await check('microsoft', { MICROSOFT_CLIENT_ID: 'm-client', MICROSOFT_CLIENT_SECRET: 'm-secret', MICROSOFT_TENANT: 'contoso.onmicrosoft.com' })).toMatchObject({ ok: true });
-    expect(await check('zoom', { ZOOM_CLIENT_ID: ZOOM_APP.id, ZOOM_CLIENT_SECRET: ZOOM_APP.secret })).toMatchObject({ ok: true });
-    expect(await check('zoom', { ZOOM_CLIENT_SECRET: 'zoom-wrong' })).toMatchObject({ ok: false, message: 'Zoom refused the client ID or secret (invalid_client): Invalid client_id or client_secret.' });
     expect(await check('docusign', { DOCUSIGN_INTEGRATION_KEY: DOCUSIGN_APP.key, DOCUSIGN_SECRET_KEY: DOCUSIGN_APP.secret })).toMatchObject({ ok: true });
     expect(await check('docusign', { DOCUSIGN_SECRET_KEY: 'ds-wrong' })).toMatchObject({ ok: false });
     expect(await check('stripe', { STRIPE_SECRET_KEY: 'sk_test_fixture', STRIPE_WEBHOOK_SECRET: 'whsec_x' })).toMatchObject({ ok: true, message: 'Key accepted (test mode). Nothing was charged.' });
@@ -305,54 +298,54 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     await clean();
     const prodKey = randomBytes(32).toString('base64');
     const production = { NODE_ENV: 'production', ALLOW_INSECURE_COOKIES: 'true', ENCRYPTION_KEY: prodKey, ALLOW_PRIVATE_NETWORK_TARGETS: undefined };
-    const oldServer = { ...production, SLACK_CLIENT_ID: 'env-slack-client-id', SLACK_CLIENT_SECRET: 'env-slack-client-secret-wxyz', PRICING_PUBLISHED: 'true', MICROSOFT_TENANT: 'common' };
+    const oldServer = { ...production, DOCUSIGN_INTEGRATION_KEY: 'env-docusign-client-id', DOCUSIGN_SECRET_KEY: 'env-docusign-client-secret-wxyz', PRICING_PUBLISHED: 'true', MICROSOFT_TENANT: 'common' };
 
     // A server installed before ADR 0059 starts with keys in its settings file: they are copied into the database.
     const first = await boot(oldServer);
-    const slackRow = await row(first.admin, 'slack');
-    expect(field(slackRow, 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'console', imported: true, set: true, hint: 'wxyz', updatedBy: null });
-    expect(field(slackRow, 'SLACK_CLIENT_ID')).toMatchObject({ source: 'console', imported: true });
+    const dsRow = await row(first.admin, 'docusign');
+    expect(field(dsRow, 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'console', imported: true, set: true, hint: 'wxyz', updatedBy: null });
+    expect(field(dsRow, 'DOCUSIGN_INTEGRATION_KEY')).toMatchObject({ source: 'console', imported: true });
     expect(field(await row(first.admin, 'checkout'), 'PRICING_PUBLISHED')).toMatchObject({ source: 'console', imported: true, hint: 'true' });
     // A value equal to the built-in default is not copied: the default applies anyway.
     expect(field(await row(first.admin, 'microsoft'), 'MICROSOFT_TENANT')).toMatchObject({ source: 'default' });
     const db = appClient();
-    const stored = await db.platformSecret.findUniqueOrThrow({ where: { name: 'SLACK_CLIENT_SECRET' } });
-    expect(stored.valueEnc).not.toContain('env-slack-client-secret'); // sealed with ENCRYPTION_KEY
+    const stored = await db.platformSecret.findUniqueOrThrow({ where: { name: 'DOCUSIGN_SECRET_KEY' } });
+    expect(stored.valueEnc).not.toContain('env-docusign-client-secret'); // sealed with ENCRYPTION_KEY
     expect(stored.updatedById).toBeNull();
     const imports = await db.platformAuditLog.findMany({ where: { action: 'provider_key.imported' } });
-    expect(imports.map((l) => (l.metadata as { name: string }).name)).toEqual(expect.arrayContaining(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'PRICING_PUBLISHED']));
-    expect(JSON.stringify(imports)).not.toContain('env-slack-client-secret');
-    // The app really uses the database value: Slack is set up for workspaces.
+    expect(imports.map((l) => (l.metadata as { name: string }).name)).toEqual(expect.arrayContaining(['DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'PRICING_PUBLISHED']));
+    expect(JSON.stringify(imports)).not.toContain('env-docusign-client-secret');
+    // The app really uses the database value: DocuSign is set up for workspaces.
     const owner = await registerUser(first.app, 'Keys Prod Ltd');
-    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'slack')!.state).not.toBe('pending_configuration');
+    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'docusign')!.state).not.toBe('pending_configuration');
 
     // Removing a key in the console removes it: the environment value is not a fallback in production.
-    const cleared = (await first.admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_SECRET: null } }).expect(200)).body as Row;
-    expect(field(cleared, 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
-    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'slack')!.state).toBe('pending_configuration');
+    const cleared = (await first.admin.post('/providers/docusign/keys', { values: { DOCUSIGN_SECRET_KEY: null } }).expect(200)).body as Row;
+    expect(field(cleared, 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'missing', set: false });
+    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'docusign')!.state).toBe('pending_configuration');
 
     // A restart with the same settings file does not bring the removed key back.
     const restarted = await boot(oldServer);
-    expect(field(await row(restarted.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
-    expect(field(await row(restarted.admin, 'slack'), 'SLACK_CLIENT_ID')).toMatchObject({ source: 'console', imported: true });
+    expect(field(await row(restarted.admin, 'docusign'), 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'missing', set: false });
+    expect(field(await row(restarted.admin, 'docusign'), 'DOCUSIGN_INTEGRATION_KEY')).toMatchObject({ source: 'console', imported: true });
 
     // A key typed into the console is not overwritten by a different value left in the file.
-    await restarted.admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_SECRET: 'console-slack-secret-1234' } }).expect(200);
-    const again = await boot({ ...oldServer, SLACK_CLIENT_SECRET: 'another-env-slack-secret-5678' });
-    expect(field(await row(again.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'console', imported: false, hint: '1234', updatedBy: adminEmail });
+    await restarted.admin.post('/providers/docusign/keys', { values: { DOCUSIGN_SECRET_KEY: 'console-docusign-secret-1234' } }).expect(200);
+    const again = await boot({ ...oldServer, DOCUSIGN_SECRET_KEY: 'another-env-docusign-secret-5678' });
+    expect(field(await row(again.admin, 'docusign'), 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'console', imported: false, hint: '1234', updatedBy: adminEmail });
 
     // A brand-new install has nothing in its settings file: everything is entered in the console, nothing comes from env.
     await clean();
     const fresh = await boot(production);
-    expect(field(await row(fresh.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
+    expect(field(await row(fresh.admin, 'docusign'), 'DOCUSIGN_SECRET_KEY')).toMatchObject({ source: 'missing', set: false });
     expect(field(await row(fresh.admin, 'checkout'), 'PRICING_PUBLISHED')).toMatchObject({ source: 'default' });
 
     // The API and the worker start at the same moment: both import, exactly one row is written, neither fails.
     await clean();
     const keys = first.app.get(ProviderKeysService);
     const [a, b] = await Promise.all([keys.importFromEnvironment(), keys.importFromEnvironment()]);
-    expect([...a, ...b].filter((n) => n === 'SLACK_CLIENT_SECRET')).toHaveLength(1);
-    expect(await db.platformSecret.count({ where: { name: 'SLACK_CLIENT_SECRET' } })).toBe(1);
+    expect([...a, ...b].filter((n) => n === 'DOCUSIGN_SECRET_KEY')).toHaveLength(1);
+    expect(await db.platformSecret.count({ where: { name: 'DOCUSIGN_SECRET_KEY' } })).toBe(1);
     await db.$disconnect();
     await clean(); // the rest of the suite runs outside production with the development key
   }, 60_000);

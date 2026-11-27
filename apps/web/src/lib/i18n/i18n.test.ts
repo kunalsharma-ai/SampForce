@@ -184,10 +184,9 @@ describe('page phrases', () => {
     ['email sequence labels', [...Object.values(MERGE_FIELDS), ...Object.values(RULE_ACTION_LABELS), ...Object.values(ENROLLMENT_LABEL), ...Object.values(EMAIL_TONE_LABELS), ...Object.values(EMAIL_BLOCK_LABELS), 'Draft', 'Active', 'Paused', 'Archived']],
     ['sequence analytics template names', [...source('../../../../api/src/sequences/analytics.service.ts').matchAll(/name: id === 'none' \? '([^']+)' : \(templates\.get\(id\) \?\? '([^']+)'\)/g)].flatMap((m) => [m[1]!, m[2]!])],
     ['email design validation messages', [...source('../../../../../packages/types/src/email-design.ts').matchAll(/(?:regex|refine|max|min)\([^,']*, '([^']+)'\)|message: '([^']+)'/g)].map((m) => (m[1] ?? m[2])!)],
-    // Inbox and meetings: shared labels, meeting-note stages, Zoom transcript states, and the compose and meeting analysis checks.
+    // Inbox and meetings: shared labels, meeting-note stages, and the compose and meeting analysis checks.
     ['inbox and meeting labels', [...Object.values(INBOX_CATEGORY_LABELS), ...Object.values(EMAIL_INTENT_LABELS), ...Object.values(EMAIL_NEXT_ACTION_LABELS), ...Object.values(MEETING_PLATFORM_LABELS)]],
     ['meeting note stages', [...source('../../components/meetings/record-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
-    ['Zoom transcript states', [...source('../../components/meetings/zoom-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
     ['compose and meeting analysis checks', [...source('../../../../../packages/types/src/meetings.ts').matchAll(/min\(1, '([^']+)'\)|message: '([^']+)'/g), ...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:subject|body): z\.string\(\)(?:\.trim\(\))?\.min\(1, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     ['AI availability reasons', [...source('../../../../api/src/ai/gateway.service.ts').matchAll(/\? '([^']+\.)'/g)].map((m) => m[1]!).filter((r) => !r.startsWith('An API key'))],
     // Quotes, contracts, approvals and billing: statuses from lib/revenue and lib/billing, bid and proposal templates,

@@ -438,7 +438,7 @@ export class OperatorService {
       anthropic: () => this.tests.anthropic(),
       openai: () => this.tests.compatible('openai'), gemini: () => this.tests.compatible('gemini'), groq: () => this.tests.compatible('groq'),
       openrouter: () => this.tests.openrouter(), mistral: () => this.tests.compatible('mistral'), custom_ai: () => this.tests.compatible('custom_ai'), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
-      slack: () => this.tests.slack(), zoom: () => this.tests.zoom(), docusign: () => this.tests.docusign(),
+      docusign: () => this.tests.docusign(),
       smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), website_enquiries: () => this.tests.websiteEnquiries(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
     };
     const fingerprint = this.fingerprint(p);

@@ -53,9 +53,6 @@ export const FEATURE_KEYS = [
   'client_portal',
   'customer_success',
   // Apps
-  'slack',
-  'teams',
-  'zoom',
   'docusign',
   'card_payments',
   'whatsapp',
@@ -186,9 +183,6 @@ export const FEATURES: FeatureDef[] = [
   { key: 'client_portal', group: 'Revenue', label: 'Client portal', description: 'A signed-in portal where customers follow projects and approve proposals.', defaultFrom: 'professional', paths: ['/app/portal'] },
   { key: 'customer_success', group: 'Revenue', label: 'Customer success', description: 'Health scores, churn risk, escalations and renewals.', defaultFrom: 'professional', paths: ['/app/customer-success'] },
 
-  { key: 'slack', group: 'Apps', label: 'Slack', description: 'CRM alerts in Slack channels.', defaultFrom: 'growth', paths: [] },
-  { key: 'teams', group: 'Apps', label: 'Microsoft Teams', description: 'CRM alerts in Teams channels.', defaultFrom: 'growth', paths: [] },
-  { key: 'zoom', group: 'Apps', label: 'Zoom', description: 'Zoom meetings and transcripts.', defaultFrom: 'growth', paths: [] },
   { key: 'docusign', group: 'Apps', label: 'DocuSign', description: 'Send contracts and proposals for e-signature.', defaultFrom: 'professional', paths: [] },
   { key: 'card_payments', group: 'Apps', label: 'Card payments', description: 'Take card payments on proposals.', defaultFrom: 'professional', paths: [] },
   { key: 'whatsapp', group: 'Apps', label: 'WhatsApp', description: 'WhatsApp Business messages from CRM records.', defaultFrom: 'professional', paths: [] },
@@ -264,7 +258,7 @@ export function withParents(list: readonly FeatureKey[]): FeatureKey[] {
 }
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
-export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
+export const APP_FEATURES = { docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
 
 export const FEATURE_BY_KEY: Record<FeatureKey, FeatureDef> = Object.fromEntries(FEATURES.map((f) => [f.key, f])) as Record<FeatureKey, FeatureDef>;
 

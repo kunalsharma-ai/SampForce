@@ -87,7 +87,7 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 ## Credentials required for live integrations
 
 None are configured. Each needs provider credentials and, in some cases, provider review before it can be
-enabled: Google Workspace, Microsoft 365, Slack, Zoom, Twilio, WhatsApp Business, Stripe, Razorpay,
+enabled: Google Workspace, Microsoft 365, Twilio, WhatsApp Business, Stripe, Razorpay,
 DocuSign, and AI providers (Anthropic, OpenAI, Google). See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) §2E.
 
 AI features use Anthropic's Claude when `ANTHROPIC_API_KEY` is set on the API and worker. They have been tested

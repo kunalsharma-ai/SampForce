@@ -1,6 +1,6 @@
 # ADR 0032: Workspace apps, starting with Slack
 
-- Status: Accepted
+- Status: Superseded by ADR 0097 (Slack removed 2026-11-27). The workspace app framework stays for the other apps.
 - Date: 2026-11-01
 - Part of: Enhancement programme, integrations (Slack, Teams, Zoom, DocuSign, card payments, WhatsApp, Zapier)
 

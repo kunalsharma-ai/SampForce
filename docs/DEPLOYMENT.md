@@ -59,7 +59,7 @@ That is the whole Secret (ADR 0059): only the database connection comes from the
   Because the key travels with the database, **a database backup opens every stored secret**: encrypt backups at rest
   and restrict access to them.
 
-- **API keys** (Apollo, Hunter, Deepgram, Google, Microsoft, Slack, Zoom, DocuSign, Anthropic, SMTP, Zapier, Stripe,
+- **API keys** (Apollo, Hunter, Deepgram, Google, Microsoft, DocuSign, Anthropic, SMTP, Zapier, Stripe,
   Razorpay), the checkout settings (`ONLINE_PAYMENTS_ENABLED`, `STRIPE_PRICES`, `STRIPE_AUTOMATIC_TAX`, `RAZORPAY_PLANS`,
   `PRICING_PUBLISHED`, `SALES_CONTACT_EMAIL`) and `AI_MODEL` are entered in the operator console under Providers,
   sealed with `ENCRYPTION_KEY`, and reach the API and worker within `PROVIDER_KEYS_REFRESH_SECONDS` (default 10)

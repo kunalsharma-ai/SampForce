@@ -311,6 +311,109 @@ export async function retireWebsiteVisitors(prisma: PrismaClient, log: (line: st
   if (overrides + plansChanged) log(`removed website_visitors from ${plansChanged} plans and ${overrides} workspace overrides`);
 }
 
+/** Workspace apps removed on 2026-11-27: Slack, Microsoft Teams and Zoom. */
+export const REMOVED_APPS = { providers: ['SLACK', 'TEAMS', 'ZOOM'], features: ['slack', 'teams', 'zoom'], providerKeys: ['slack', 'zoom'] } as const;
+const REMOVED_PROVIDER_SECRETS = ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET', 'ZOOM_WEBHOOK_SECRET_TOKEN'];
+
+interface StoredNode {
+  id: string;
+  type: string;
+  action?: { type?: string };
+  next?: string | null;
+  onTrue?: string | null;
+  onFalse?: string | null;
+  onReject?: string | null;
+}
+
+/**
+ * Takes the "Post to Slack or Teams" steps out of a workflow definition. Every arrow that pointed at a removed step
+ * now points at the step after it. A wait left with nothing after it is removed too, since a definition may not end
+ * on a wait. Returns null when the definition has no such step. Exported for the tests.
+ */
+export function withoutChatSteps(def: { start: string | null; nodes: StoredNode[] }): { definition: { start: string | null; nodes: StoredNode[] }; removed: Map<string, string | null> } | null {
+  if (!def.nodes.some((n) => n.type === 'action' && n.action?.type === 'post_to_chat')) return null;
+  const removed = new Map<string, string | null>();
+  let nodes = def.nodes;
+  for (;;) {
+    const drop = nodes.filter((n) => (n.type === 'action' && n.action?.type === 'post_to_chat') || (n.type === 'delay' && !n.next));
+    if (!drop.length) break;
+    for (const n of drop) removed.set(n.id, n.next ?? null);
+    // Follows chains of removed steps to the first one that stays.
+    const resolve = (id: string | null | undefined): string | null => {
+      let cur = id ?? null;
+      const seen = new Set<string>();
+      while (cur && removed.has(cur) && !seen.has(cur)) {
+        seen.add(cur);
+        cur = removed.get(cur) ?? null;
+      }
+      return cur;
+    };
+    nodes = nodes
+      .filter((n) => !removed.has(n.id))
+      .map((n) => {
+        const out = { ...n };
+        for (const k of ['next', 'onTrue', 'onFalse', 'onReject'] as const) if (k in out) out[k] = resolve(out[k]);
+        return out;
+      });
+    def = { ...def, start: resolve(def.start), nodes };
+  }
+  const resolveFinal = (id: string | null): string | null => {
+    let cur = id;
+    while (cur && removed.has(cur)) cur = removed.get(cur) ?? null;
+    return cur;
+  };
+  for (const [id, next] of removed) removed.set(id, resolveFinal(next));
+  return { definition: { ...def, nodes }, removed };
+}
+
+/**
+ * Clears out what the removed Slack, Teams and Zoom apps left in the database: their connections and send logs, the
+ * Zoom meetings collection, their console keys, checks and webhook receipts, their plan features and overrides, and
+ * "Post to Slack or Teams" steps in saved workflows (Prisma could not read any of these once the code forgot them).
+ * Notes and activities made from Zoom meetings stay. Idempotent: a second run finds nothing to change.
+ */
+export async function removeChatAndMeetingApps(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const providers = [...REMOVED_APPS.providers];
+  const del = async (collection: string, q: Prisma.InputJsonObject): Promise<number> =>
+    ((await prisma.$runCommandRaw({ delete: collection, deletes: [{ q, limit: 0 }] })) as { n?: number }).n ?? 0;
+
+  const events = await del('app_events', { provider: { $in: providers } });
+  const connections = await del('app_connections', { provider: { $in: providers } });
+  if (events || connections) log(`removed ${connections} Slack, Teams and Zoom connections and ${events} of their events`);
+
+  const existing = (await prisma.$runCommandRaw({ listCollections: 1, filter: { name: 'zoom_meetings' }, nameOnly: true })) as { cursor?: { firstBatch?: unknown[] } };
+  if (existing.cursor?.firstBatch?.length) {
+    await prisma.$runCommandRaw({ drop: 'zoom_meetings' });
+    log('dropped the zoom_meetings collection');
+  }
+
+  const secrets = await del('platform_secrets', { _id: { $in: REMOVED_PROVIDER_SECRETS } });
+  const settings = await del('platform_settings', {
+    _id: { $in: [...REMOVED_APPS.providerKeys.map((k) => `provider_check:${k}`), 'webhook_receipt:zoom', ...REMOVED_PROVIDER_SECRETS.map((k) => `env_import:${k}`)] },
+  });
+  if (secrets || settings) log(`removed ${secrets} Slack and Zoom provider keys and ${settings} of their console records`);
+
+  const overrides = await del('tenant_feature_overrides', { feature: { $in: [...REMOVED_APPS.features] } });
+  if (overrides) log(`removed ${overrides} Slack, Teams and Zoom feature overrides`);
+  const plans = (await prisma.$runCommandRaw({
+    update: 'plans',
+    updates: [{ q: { 'entitlements.features': { $in: [...REMOVED_APPS.features] } }, u: { $pull: { 'entitlements.features': { $in: [...REMOVED_APPS.features] } } }, multi: true }],
+  })) as { nModified?: number };
+  if (plans.nModified) log(`took Slack, Teams and Zoom out of ${plans.nModified} plans`);
+
+  const versions = (await prisma.workflowVersion.findRaw({ filter: { 'definition.nodes.action.type': 'post_to_chat' } })) as unknown as Array<{ _id: string; definition: { start: string | null; nodes: StoredNode[] } }>;
+  for (const v of versions) {
+    const out = withoutChatSteps(v.definition);
+    if (!out) continue;
+    await prisma.workflowVersion.update({ where: { id: v._id }, data: { definition: { ...v.definition, ...out.definition } as unknown as Prisma.InputJsonValue } });
+    // A run waiting on a removed step moves on to the step after it.
+    for (const [from, to] of out.removed) {
+      await prisma.workflowExecution.updateMany({ where: { versionId: v._id, currentNode: from }, data: { currentNode: to } });
+    }
+  }
+  if (versions.length) log(`removed "Post to Slack or Teams" steps from ${versions.length} workflow versions`);
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
@@ -320,4 +423,5 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await eraseRecentPageHistory(prisma, log);
   await upgradeSupportTicketStatuses(prisma, log);
   await retireWebsiteVisitors(prisma, log);
+  await removeChatAndMeetingApps(prisma, log);
 }

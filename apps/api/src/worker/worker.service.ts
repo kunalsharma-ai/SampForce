@@ -1,4 +1,3 @@
-import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
@@ -44,8 +43,6 @@ export interface WorkerTick {
   /** Website enquiries pulled from the website API, and SampForce statuses sent back to it (ADR 0095). */
   websiteEnquiries: number;
   prospectImports: number;
-  /** Zoom transcripts imported into meeting notes. */
-  zoomTranscripts: number;
   /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
   reminders: number;
   /** Contacts moved into Follow-ups once the period after their first email passed (ADR 0096). */
@@ -94,7 +91,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly gamification: GamificationService,
     private readonly websiteEnquiries: WebsiteEnquirySync,
     private readonly prospects: ProspectsService,
-    private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
     private readonly reminders: CrmRemindersService,
     private readonly cadence: FollowUpCadenceService,
@@ -159,7 +155,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const badges = await this.gamification.sweep();
     const websiteEnquiries = await this.websiteEnquiries.sweep();
     const prospectImports = await this.prospects.sweep();
-    const zoomTranscripts = await this.zoom.importDue();
     // Before reminders, so a follow-up created now is in this pass's morning summary.
     const cadenceMoves = await this.cadence.moveDue();
     const reminders = await this.reminders.sweep();
@@ -180,7 +175,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, zoomTranscripts, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

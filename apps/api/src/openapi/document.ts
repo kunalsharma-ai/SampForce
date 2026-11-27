@@ -207,14 +207,6 @@ import {
   PROVIDER_CHECK_KEYS,
   PROVIDER_KEYS,
   providerKeysUpdateSchema,
-  slackSettingsSchema,
-  slackTestSchema,
-  teamsAddChannelSchema,
-  teamsChannelId,
-  teamsSettingsSchema,
-  teamsTestSchema,
-  zoomMeetingCreateSchema,
-  zoomMeetingListQuery,
   docusignListQuery,
   docusignSendSchema,
   docusignVoidSchema,
@@ -521,29 +513,16 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp']) }) };
-  action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
+  const appParam = { params: z.object({ app: z.enum(['docusign', 'payments', 'whatsapp', 'twilio', 'sampbidx']) }) };
+  action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (DocuSign, card payments, WhatsApp, SMS, SampBidx) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
-  r.registerPath({ method: 'get', path: '/apps/{app}/callback', tags: ['Workspace apps'], summary: 'OAuth redirect target; stores the bot token encrypted and redirects to the Integrations page',
+  r.registerPath({ method: 'get', path: '/apps/{app}/callback', tags: ['Workspace apps'], summary: 'OAuth redirect target (DocuSign); stores the token encrypted and redirects to the Integrations page',
     request: { ...appParam, query: z.object({ code: z.string().optional(), state: z.string().optional(), error: z.string().optional() }) }, responses: { 302: { description: 'Back to /app/integrations' } } });
   r.registerPath({ method: 'delete', path: '/apps/{app}', tags: ['Workspace apps'], summary: 'Disconnect: revokes the token at the provider and deletes it (integrations:manage)', security: secured,
     request: appParam, responses: { 204: ok('Disconnected'), ...errors } });
   r.registerPath({ method: 'get', path: '/apps/{app}/events', tags: ['Workspace apps'], summary: 'Last 50 sends and failures (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Events'), ...errors } });
-  action('get', '/apps/slack/channels', 'Workspace apps', 'Public and private Slack channels the bot can see (automation:manage)');
-  action('put', '/apps/slack/settings', 'Workspace apps', 'Set the default channel for workflow posts (integrations:manage)', slackSettingsSchema);
-  action('post', '/apps/slack/test', 'Workspace apps', 'Post a test message to a channel or the default channel; 5 a minute (integrations:manage)', slackTestSchema);
-  action('get', '/apps/teams/channels', 'Workspace apps', 'Teams channels added in Integrations, without their URLs (automation:manage)');
-  action('post', '/apps/teams/channels', 'Workspace apps', 'Add a Teams channel by its Workflows URL; saved only if Teams accepts a welcome card; 10 a minute (integrations:manage)', teamsAddChannelSchema);
-  r.registerPath({ method: 'delete', path: '/apps/teams/channels/{id}', tags: ['Workspace apps'], summary: 'Remove a Teams channel; removing the last one disconnects Teams (integrations:manage)', security: secured,
-    request: { params: z.object({ id: teamsChannelId }) }, responses: { 200: ok('App status'), ...notFound, ...errors } });
-  action('put', '/apps/teams/settings', 'Workspace apps', 'Set the default Teams channel (integrations:manage)', teamsSettingsSchema);
-  action('post', '/apps/teams/test', 'Workspace apps', 'Post a test card to a Teams channel; 5 a minute (integrations:manage)', teamsTestSchema);
-  action('post', '/apps/zoom/meetings', 'Workspace apps', "Schedule a Zoom meeting in the caller's Zoom user (by SampForce email), linked to one lead, contact or deal and logged as an activity; recording needs the organiser's consent confirmation (activities:write)", zoomMeetingCreateSchema);
-  action('get', '/apps/zoom/meetings', 'Workspace apps', 'Zoom meetings scheduled from SampForce, with transcript status (activities:read)', undefined, { query: zoomMeetingListQuery });
-  r.registerPath({ method: 'post', path: '/apps/zoom/events', tags: ['Workspace apps'], summary: "Zoom event notifications (endpoint.url_validation, recording.transcript_completed, app_deauthorized); authenticated by Zoom's x-zm-signature only. Transcripts are imported only for recorded meetings scheduled from SampForce",
-    responses: { 200: ok('Handled, or the URL validation answer'), 401: { description: 'Signature check failed' }, 403: { description: 'ZOOM_WEBHOOK_SECRET_TOKEN not set' } } });
   action('post', '/apps/docusign/envelopes', 'Workspace apps', 'Email a draft contract to one signer for e-signature through DocuSign; needs confirm: true; one open envelope per contract (contracts:write)', docusignSendSchema);
   action('get', '/apps/docusign/envelopes', 'Workspace apps', 'Envelopes sent from SampForce and their status (contracts:read)', undefined, { query: docusignListQuery });
   action('post', '/apps/docusign/envelopes/{id}/void', 'Workspace apps', 'Void an envelope still out for signature (contracts:write)', docusignVoidSchema);
