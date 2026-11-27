@@ -27,6 +27,11 @@ import {
   type FeatureGroup,
   type FeatureKey,
   FEATURES,
+  FIELD_ACCESS_CATALOGUE,
+  FIELD_ENTITIES,
+  FIELD_ENTITY_LABEL,
+  hiddenFieldsFor,
+  hiddenSectionsFor,
   WORKSPACE_ACTION_LABEL,
   WORKSPACE_ACTIONS,
   WORKSPACE_LEVEL_LABEL,
@@ -37,7 +42,7 @@ import {
   type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { Ban, Building2, ChevronDown, Crown, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Ban, Building2, ChevronDown, Crown, KeyRound, Lock, Pencil, Plus, Power, PowerOff, Sparkles, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -332,6 +337,10 @@ function grantable(parent: readonly FeatureKey[]): { group: FeatureGroup; items:
   }).filter((g) => g.items.length > 0);
 }
 
+type FieldChoice = 'show' | 'lock' | 'hide';
+const FIELD_CHOICE_LABEL: Record<FieldChoice, string> = { show: 'Show', lock: 'Lock', hide: 'Hide' };
+const FIELD_CHOICE_ALL: Record<FieldChoice, string> = { show: 'Show all', lock: 'Lock all', hide: 'Hide all' };
+
 function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: WorkspaceRow; parent: WorkspaceRow; callerLevel: WorkspaceRow['level']; rules?: WorkspaceRules; onClose: () => void }) {
   const t = useT();
   const { permissions } = useWorkspaceMutations();
@@ -349,6 +358,40 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
   const ruleBlocksDelete = !!rules && row.level !== 'SUPER' && !(row.level === 'MANAGER' ? rules.managerDelete : rules.executiveDelete);
   const ruleModules = rules && row.level !== 'SUPER' ? (row.level === 'MANAGER' ? rules.managerModules : rules.executiveModules) : FEATURE_GROUPS;
   const ruleBlockedModules = FEATURE_GROUPS.filter((g) => !ruleModules.includes(g));
+  // Sections the Console withholds from this level (R8): shown, but they cannot be handed down (ADR 0096).
+  const consoleSections = useMemo(() => new Set<string>(rules && row.level !== 'SUPER' ? hiddenSectionsFor(row.level, rules) : []), [rules, row.level]);
+  const withheld = (key: FeatureKey): boolean => {
+    if (ruleBlockedModules.includes(FEATURE_BY_KEY[key].group)) return true;
+    for (let k: FeatureKey | undefined = key; k; k = FEATURE_BY_KEY[k]?.parent) if (consoleSections.has(k)) return true;
+    return false;
+  };
+  const actionAllowedHere = (g: FeatureGroup, a: WorkspaceAction) => (parent.actions[g] ?? []).includes(a) && !(a === 'delete' && ruleBlocksDelete) && !ruleBlockedModules.includes(g);
+
+  // Field access (ADR 0096): Show, Lock (seen, not changed) or Hide, on top of what is already fixed above.
+  const consoleFields = useMemo(() => new Set(rules && row.level !== 'SUPER' ? hiddenFieldsFor(row.level, rules) : []), [rules, row.level]);
+  const fixedField = (id: string): 'console' | 'parent-hidden' | null => (consoleFields.has(id) ? 'console' : parent.effectiveHiddenFields.includes(id) ? 'parent-hidden' : null);
+  const parentLocked = (id: string) => parent.effectiveLockedFields.includes(id);
+  const [fieldState, setFieldState] = useState<Record<string, FieldChoice>>(() =>
+    Object.fromEntries(FIELD_ACCESS_CATALOGUE.map((f) => [f.id, row.hiddenFields.includes(f.id) ? 'hide' : row.lockedFields.includes(f.id) ? 'lock' : 'show'])),
+  );
+  const choiceOf = (id: string): FieldChoice => (fixedField(id) ? 'hide' : fieldState[id] === 'show' && parentLocked(id) ? 'lock' : (fieldState[id] ?? 'show'));
+  const setField = (id: string, c: FieldChoice) => {
+    setSaved(false);
+    setFieldState((prev) => ({ ...prev, [id]: c }));
+  };
+  const setEntityFields = (entity: string, c: FieldChoice) => {
+    setSaved(false);
+    setFieldState((prev) => ({ ...prev, ...Object.fromEntries(FIELD_ACCESS_CATALOGUE.filter((f) => f.entity === entity && !fixedField(f.id)).map((f) => [f.id, c === 'show' && parentLocked(f.id) ? 'lock' : c])) }));
+  };
+  const fieldCounts = FIELD_ACCESS_CATALOGUE.reduce((n, f) => ({ ...n, [choiceOf(f.id)]: n[choiceOf(f.id)] + 1 }), { show: 0, lock: 0, hide: 0 } as Record<FieldChoice, number>);
+
+  /** Everything SampForce allows this level and the workspace above has: every section, action and field. */
+  const grantEverything = () => {
+    setSaved(false);
+    setFeatures(new Set(parent.features.filter((f) => !withheld(f))));
+    setActions(Object.fromEntries(modules.map((g) => [g, WORKSPACE_ACTIONS.filter((a) => actionAllowedHere(g, a))])));
+    setFieldState(Object.fromEntries(FIELD_ACCESS_CATALOGUE.map((f) => [f.id, parentLocked(f.id) ? 'lock' : 'show'])));
+  };
 
   const toggleFeature = (key: FeatureKey, on: boolean) => {
     setSaved(false);
@@ -379,7 +422,7 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
     setFeatures((prev) => {
       const next = new Set(prev);
       for (const i of groups.find((g) => g.group === group)?.items ?? []) {
-        if (on) next.add(i.key);
+        if (on && !withheld(i.key)) next.add(i.key);
         else next.delete(i.key);
       }
       return next;
@@ -388,11 +431,18 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
 
   const save = () => {
     const input: WorkspacePermissionsInput = {
-      features: FEATURES.map((f) => f.key).filter((k) => features.has(k) && parent.features.includes(k)),
+      features: FEATURES.map((f) => f.key).filter((k) => features.has(k) && parent.features.includes(k) && !withheld(k)),
       // Only what the parent has can be handed down; anything else would be refused.
       actions: Object.fromEntries(Object.entries(actions).map(([k, list]) => [k, (list ?? []).filter((a) => (parent.actions[k] ?? parent.actions[FEATURE_BY_KEY[k as FeatureKey]?.group ?? ''] ?? []).includes(a))])),
       ...(managerSettings ? { canCreateExecutives, canViewOtherManagers, canViewAuditLog } : {}),
-      ...(row.level !== 'SUPER' ? { canChatWithPeers } : {}),
+      ...(row.level !== 'SUPER'
+        ? {
+            canChatWithPeers,
+            // Only this workspace's own choices; what is fixed above applies anyway and stays when that changes.
+            hiddenFields: FIELD_ACCESS_CATALOGUE.filter((f) => !fixedField(f.id) && fieldState[f.id] === 'hide').map((f) => f.id),
+            lockedFields: FIELD_ACCESS_CATALOGUE.filter((f) => !fixedField(f.id) && fieldState[f.id] === 'lock').map((f) => f.id),
+          }
+        : {}),
     };
     permissions.mutate({ id: row.id, input }, { onSuccess: () => setSaved(true) });
   };
@@ -404,6 +454,26 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Choose what {name} may use and do. You can only hand down what {parent} has. Records it created stay; a feature you take away becomes unavailable to it at once.', { name: row.name, parent: parent.name })}
         </DialogDescription>
+        {callerLevel === 'SUPER' && row.level !== 'SUPER' && (
+          <div className="mt-4 flex flex-wrap items-start gap-3 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm" role="note" data-super-rights>
+            <Crown className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden />
+            <p className="min-w-0 flex-1">
+              {t('Your Super Workspace always keeps every right: it can see, change, hide, lock and delete anything. Pass on to {name} any section, action and field SampForce allows its level.', { name: row.name })}
+            </p>
+            <Button type="button" size="sm" variant="outline" onClick={grantEverything} data-grant-everything>
+              <Sparkles className="size-4" aria-hidden />
+              {t('Give everything allowed')}
+            </Button>
+          </div>
+        )}
+        {callerLevel !== 'SUPER' && (
+          <div className="mt-4 flex justify-end">
+            <Button type="button" size="sm" variant="outline" onClick={grantEverything} data-grant-everything>
+              <Sparkles className="size-4" aria-hidden />
+              {t('Give everything allowed')}
+            </Button>
+          </div>
+        )}
         <form
           className="mt-4 space-y-6"
           data-permission-center
@@ -417,7 +487,7 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
               {t('Features')} <span className="font-normal text-muted-foreground">{t('{on} of {all} on', { on: [...features].filter((f) => parent.features.includes(f)).length, all: parent.features.length })}</span>
             </h3>
             {groups.map(({ group, items }) => {
-              const on = items.filter((i) => features.has(i.key)).length;
+              const on = items.filter((i) => features.has(i.key) && !withheld(i.key)).length;
               return (
                 <fieldset key={group} className="rounded-md border border-border p-3" data-module={group}>
                   <legend className="flex w-full flex-wrap items-center gap-2 px-1 text-sm font-medium">
@@ -437,11 +507,20 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
                   <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
                     {items.map(({ key, sub }) => {
                       const def = FEATURE_BY_KEY[key];
-                      const blocked = sub && !!def.parent && !features.has(def.parent);
+                      const kept = withheld(key);
+                      const blocked = kept || (sub && !!def.parent && !features.has(def.parent));
                       return (
-                        <label key={key} className={`flex items-start gap-2 text-sm ${sub ? 'ps-6' : ''} ${blocked ? 'text-muted-foreground' : ''}`} title={t.maybe(def.description)}>
-                          <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={features.has(key)} disabled={blocked} onChange={(e) => toggleFeature(key, e.target.checked)} />
-                          <span>{t.maybe(def.label)}</span>
+                        <label key={key} className={`flex items-start gap-2 text-sm ${sub ? 'ps-6' : ''} ${blocked ? 'text-muted-foreground' : ''}`} title={t.maybe(def.description)} {...(kept ? { 'data-withheld': key } : {})}>
+                          <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={!kept && features.has(key)} disabled={blocked} onChange={(e) => toggleFeature(key, e.target.checked)} />
+                          <span>
+                            {t.maybe(def.label)}
+                            {kept && (
+                              <span className="ms-2 inline-flex items-center gap-1 text-xs text-warning">
+                                <Lock className="size-3" aria-hidden />
+                                {t('Kept back by SampForce')}
+                              </span>
+                            )}
+                          </span>
                         </label>
                       );
                     })}
@@ -487,7 +566,7 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
                         {t.maybe(g)}
                       </th>
                       {WORKSPACE_ACTIONS.map((a) => {
-                        const allowed = (parent.actions[g] ?? []).includes(a) && !(a === 'delete' && ruleBlocksDelete) && !ruleBlockedModules.includes(g);
+                        const allowed = actionAllowedHere(g, a);
                         return (
                           <td key={a} className="px-1 text-center">
                             {allowed ? (
@@ -512,6 +591,83 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
               </table>
             </div>
           </section>
+
+          {row.level !== 'SUPER' && (
+            <section aria-labelledby="pc-fields" className="space-y-3" data-field-access>
+              <h3 id="pc-fields" className="text-sm font-semibold">
+                {t('Fields')}{' '}
+                <span className="font-normal text-muted-foreground" data-field-summary>
+                  {t('{show} shown, {lock} locked, {hide} hidden', { show: fieldCounts.show, lock: fieldCounts.lock, hide: fieldCounts.hide })}
+                </span>
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t('Show: it sees and changes the field. Lock: it sees the field and can fill it in on a new record, but cannot change it. Hide: it never sees it. The workspaces below {name} get the same or less.', { name: row.name })}
+              </p>
+              {FIELD_ENTITIES.map((entity) => (
+                <fieldset key={entity} className="rounded-md border border-border p-3" data-field-entity={entity}>
+                  <legend className="flex w-full flex-wrap items-center gap-2 px-1 text-sm font-medium">{t.maybe(FIELD_ENTITY_LABEL[entity])}</legend>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {(['show', 'lock', 'hide'] as const).map((c) => (
+                      <Button key={c} type="button" size="sm" variant="ghost" onClick={() => setEntityFields(entity, c)}>
+                        {t.maybe(FIELD_CHOICE_ALL[c])}
+                        <span className="sr-only"> {t.maybe(FIELD_ENTITY_LABEL[entity])}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-muted-foreground">
+                          <th scope="col" className="py-1 pe-2 text-start font-medium">
+                            {t('Field')}
+                          </th>
+                          {(['show', 'lock', 'hide'] as const).map((c) => (
+                            <th key={c} scope="col" className="w-16 px-1 py-1 text-center font-medium">
+                              {t.maybe(FIELD_CHOICE_LABEL[c])}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {FIELD_ACCESS_CATALOGUE.filter((f) => f.entity === entity).map((f) => {
+                          const fixed = fixedField(f.id);
+                          const current = choiceOf(f.id);
+                          const label = `${t.maybe(FIELD_ENTITY_LABEL[entity])} ${t.maybe(f.label)}`;
+                          return (
+                            <tr key={f.id} className="border-t border-border" data-field={f.id} data-choice={current}>
+                              <th scope="row" className="py-1.5 pe-2 text-start font-normal">
+                                {t.maybe(f.label)}
+                                {fixed && (
+                                  <span className="ms-2 inline-flex items-center gap-1 text-xs text-warning">
+                                    <Lock className="size-3" aria-hidden />
+                                    {fixed === 'console' ? t('Kept back by SampForce') : t('Hidden from {parent}', { parent: parent.name })}
+                                  </span>
+                                )}
+                                {!fixed && parentLocked(f.id) && <span className="ms-2 text-xs text-muted-foreground">{t('Locked for {parent}', { parent: parent.name })}</span>}
+                              </th>
+                              {(['show', 'lock', 'hide'] as const).map((c) => (
+                                <td key={c} className="px-1 text-center">
+                                  <input
+                                    type="radio"
+                                    className="size-4 accent-primary"
+                                    name={`field-${f.id}`}
+                                    aria-label={t('{field}: {choice}', { field: label, choice: t.maybe(FIELD_CHOICE_LABEL[c]) })}
+                                    checked={current === c}
+                                    disabled={!!fixed || (c === 'show' && parentLocked(f.id))}
+                                    onChange={() => setField(f.id, c)}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </fieldset>
+              ))}
+            </section>
+          )}
 
           {managerSettings && (
             <section aria-labelledby="pc-manager" className="space-y-2">

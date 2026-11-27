@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FEATURE_BY_KEY, FEATURE_GROUPS, FEATURE_KEYS, type FeatureGroup, type FeatureKey, featureKeySchema, normaliseFeatures, withParents } from './features';
+import { FIELD_ACCESS_IDS } from './field-access';
 
 /*
  * The four-level workspace hierarchy (ADR 0071).
@@ -212,6 +213,12 @@ export const workspacePermissionsSchema = z
     canViewAuditLog: z.boolean().optional(),
     /** Manager and Executive Workspaces, set by their parent: chat with workspaces of the same level. */
     canChatWithPeers: z.boolean().optional(),
+    /**
+     * Field access (ADR 0096), set by the workspace above: record fields this workspace never sees, and fields it sees
+     * but cannot change. Whatever the Console withholds from the level, or the parent has hidden, stays hidden anyway.
+     */
+    hiddenFields: z.array(z.enum(FIELD_ACCESS_IDS)).max(FIELD_ACCESS_IDS.length).optional(),
+    lockedFields: z.array(z.enum(FIELD_ACCESS_IDS)).max(FIELD_ACCESS_IDS.length).optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'Change at least one permission');
@@ -326,6 +333,12 @@ export interface WorkspaceRow {
   canViewAuditLog: boolean;
   /** Managers: may chat with other managers. Executives: with the other executives of their team. */
   canChatWithPeers: boolean;
+  /** Field access its parent set on it (ADR 0096): fields hidden from it, and fields it may see but not change. */
+  hiddenFields: string[];
+  lockedFields: string[];
+  /** What applies to it in the end: its own, its parent's and the Console's for its level together. */
+  effectiveHiddenFields: string[];
+  effectiveLockedFields: string[];
   /** Whether the caller may change what this workspace is granted (they are its parent level). */
   editable: boolean;
   department: string | null;

@@ -1,10 +1,9 @@
 import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from '@nestjs/common';
-import { ENTITY_OF_KEY, entityOfPath, type FieldEntity, hiddenFieldsFor, hiddenKeysByEntity } from '@dealflow/types';
+import { ENTITY_OF_KEY, entityOfPath, type FieldEntity, hiddenKeysByEntity } from '@dealflow/types';
 import { from, map, mergeMap, type Observable } from 'rxjs';
 import type { AuthedRequest } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { workspaceLevelOf } from './access';
-import { workspaceRulesFor } from './workspace-rules';
+import { resolveWorkspaceAccess } from './access';
 
 type Hidden = Partial<Record<FieldEntity, string[]>>;
 
@@ -46,11 +45,17 @@ export function dropHidden(body: unknown, entity: FieldEntity, hidden: Hidden): 
   for (const inner of ['patch', 'changes', 'fields']) if (b[inner] && typeof b[inner] === 'object') dropHidden(b[inner], entity, hidden);
 }
 
+/** Whether a write creates a new record (POST to the list itself, such as POST /companies): locked fields may be filled in then. */
+export function createsRecord(method: string, path: string): boolean {
+  return method === 'POST' && /^\/?(api\/v1\/)?[a-z-]+\/?$/.test(path.split('?')[0] ?? '');
+}
+
 /**
- * Field access for Manager and Executive Workspaces (redesign R8, ADR 0092). The Console decides per level which
- * record fields stay hidden; this hides them on the server, so no screen, export of a page or direct API call shows
- * them, and drops them from what those workspaces send, so they cannot change them either. The Super Workspace and
- * API keys (which act for the organisation) see everything.
+ * Field access for Manager and Executive Workspaces (redesign R8, ADR 0092; ADR 0096). The Console decides per level
+ * which record fields stay hidden, and the workspaces above may hide more or lock fields (seen, not changed). This
+ * hides them on the server, so no screen, export of a page or direct API call shows them, and drops them from what
+ * those workspaces send, so they cannot change them either. A locked field can still be filled in on a new record.
+ * The Super Workspace and API keys (which act for the organisation) see and change everything.
  */
 @Injectable()
 export class FieldAccessInterceptor implements NestInterceptor {
@@ -60,18 +65,22 @@ export class FieldAccessInterceptor implements NestInterceptor {
     if (ctx.getType() !== 'http') return next.handle();
     const req = ctx.switchToHttp().getRequest<AuthedRequest & { path?: string; url: string; body?: unknown }>();
     const auth = req.auth;
-    const entity = entityOfPath(req.path ?? req.url);
+    const path = req.path ?? req.url;
+    const entity = entityOfPath(path);
     if (!auth?.workspaceNodeId || !entity) return next.handle();
-    const { tenantId } = auth;
+    const { tenantId, workspaceNodeId } = auth;
     return from(
       this.prisma.run({ tenantId }, async (tx) => {
-        const [level, rules] = await Promise.all([workspaceLevelOf(tx, tenantId, auth.membershipId), workspaceRulesFor(tx, tenantId)]);
-        return hiddenKeysByEntity(hiddenFieldsFor(level, rules));
+        const { fieldAccess } = await resolveWorkspaceAccess(tx, tenantId, workspaceNodeId);
+        return { hidden: hiddenKeysByEntity(fieldAccess.hidden), locked: hiddenKeysByEntity(fieldAccess.locked) };
       }),
     ).pipe(
-      mergeMap((hidden) => {
+      mergeMap(({ hidden, locked }) => {
+        if (req.method !== 'GET') {
+          dropHidden(req.body, entity, hidden);
+          if (!createsRecord(req.method, path)) dropHidden(req.body, entity, locked);
+        }
         if (!Object.keys(hidden).length) return next.handle();
-        if (req.method !== 'GET') dropHidden(req.body, entity, hidden);
         return next.handle().pipe(map((data) => stripHidden(data, entity, hidden)));
       }),
     );

@@ -792,6 +792,11 @@ model WorkspaceNode {
   /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
+  /// Field access the workspace above set (ADR 0096): record fields (FIELD_ACCESS_CATALOGUE ids such as
+  /// `company.primaryEmail`) this workspace and everything below it never see, and fields it sees but cannot change.
+  /// Added to what the Console withholds from the level and to what the parent has hidden or locked.
+  hiddenFields         String[]  @map("hidden_fields")
+  lockedFields         String[]  @map("locked_fields")
   createdById          String?   @map("created_by_id")
   /// Wizard details (W5): the team or department, a short description, and for a Manager Workspace whose records it
   /// sees: TEAM (its own and its executives'; null means TEAM) or OWN (only its own people's).

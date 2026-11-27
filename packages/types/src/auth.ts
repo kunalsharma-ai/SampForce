@@ -94,8 +94,10 @@ export interface MeResponse {
     name: string;
     designation: string;
     actions: Partial<Record<string, string[]>>;
-    /** Record fields the Console hides from this level (`company.primaryEmail`…; R8, ADR 0092). Empty for the Super Workspace. */
+    /** Record fields hidden from this workspace: by the Console for its level (R8, ADR 0092) and by the workspaces above it (ADR 0096). Empty for the Super Workspace. */
     hiddenFields?: string[];
+    /** Record fields this workspace sees but may not change (set by the workspace above it; ADR 0096). */
+    lockedFields?: string[];
     /** Sections the Console withholds from this level; left out of the menu, search and shortcuts like a switched-off page. */
     hiddenSections?: string[];
   };

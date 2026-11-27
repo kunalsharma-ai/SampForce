@@ -21,13 +21,24 @@ export function useCan(permission: Permission): boolean {
 }
 
 /**
- * The properties of a record type the Console hides from this workspace's level (R8, ADR 0092). The server already
+ * The properties of a record type hidden from this workspace: by the Console for its level (R8, ADR 0092) and by the
+ * workspaces above it (ADR 0096). The server already
  * sends them empty and ignores changes; screens use this to leave the inputs out instead of showing blank ones.
  */
 export function useHiddenKeys(entity: FieldEntity | null): Set<string> {
   const { data } = useSession();
   const hidden = data?.workspace?.hiddenFields;
   return useMemo(() => new Set(entity ? (hiddenKeysByEntity(hidden ?? [])[entity] ?? []) : []), [hidden, entity]);
+}
+
+/**
+ * The properties of a record type this workspace sees but may not change (ADR 0096): the workspace above locked them.
+ * The server ignores changes to them except on a new record; edit forms show them read only.
+ */
+export function useLockedKeys(entity: FieldEntity | null): Set<string> {
+  const { data } = useSession();
+  const locked = data?.workspace?.lockedFields;
+  return useMemo(() => new Set(entity ? (hiddenKeysByEntity(locked ?? [])[entity] ?? []) : []), [locked, entity]);
 }
 
 export function useSignOut() {

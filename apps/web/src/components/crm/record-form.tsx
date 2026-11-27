@@ -17,7 +17,7 @@ import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue } from './custom-field-input';
 import { type PickerValue, RecordPicker } from './record-picker';
-import { useHiddenKeys } from '@/lib/session';
+import { useHiddenKeys, useLockedKeys } from '@/lib/session';
 import { Select, Textarea } from './select';
 
 interface Props {
@@ -58,6 +58,8 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   // Fields the Console hides from this level are left out (R8, ADR 0092); the server ignores them anyway.
   const hiddenKeys = useHiddenKeys(entity === 'companies' ? 'company' : entity === 'contacts' ? 'contact' : entity === 'deals' ? 'deal' : null);
   const fields = FIELDS[entity].filter((f) => !(f.createOnly && mode === 'edit') && !hiddenKeys.has(f.name));
+  // Fields the workspace above locked can be filled in on a new record but not changed afterwards (ADR 0096).
+  const lockedKeys = useLockedKeys(mode === 'edit' ? (entity === 'companies' ? 'company' : entity === 'contacts' ? 'contact' : entity === 'deals' ? 'deal' : null) : null);
   // Draft recovery for new records: what was typed survives a closed dialog or a reload on this device.
   const draft = useFormDraft<Record<string, unknown>>(open && mode === 'create' ? `create-${entity}` : null, values, (v) =>
     Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
@@ -145,11 +147,17 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
         <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
             <div key={f.name} className={f.wide ? 'sm:col-span-2' : undefined}>
-              <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name] ?? (f.type === 'pipeline' ? errors.stageId : undefined)} />
+              {lockedKeys.has(f.name) ? (
+                <fieldset disabled data-locked-field={f.name} title={t('Locked by the workspace above yours')} className="opacity-80">
+                  <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name]} />
+                </fieldset>
+              ) : (
+                <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name] ?? (f.type === 'pipeline' ? errors.stageId : undefined)} />
+              )}
             </div>
           ))}
           {custom.data && custom.data.length > 0 && !hiddenKeys.has('customFields') && (
-            <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
+            <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2" disabled={lockedKeys.has('customFields')} {...(lockedKeys.has('customFields') ? { 'data-locked-field': 'customFields' } : {})}>
               <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
               {custom.data.filter((d) => (mode === 'edit' || d.showInForms) && logic.shows(d)).map((d) => (
                 <CustomFieldInput
