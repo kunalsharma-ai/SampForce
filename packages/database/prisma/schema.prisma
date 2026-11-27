@@ -4845,6 +4845,8 @@ model CrmSettings {
   followUpCadence   Json?    @map("follow_up_cadence")
   /// Journey stage names, colours and hidden flags set by the Super Workspace (ADR 0085).
   journeyStages     Json?    @map("journey_stages")
+  /// The company's own special days shown on the home dashboards: [{ id, title, emoji, date, yearly, note }].
+  companyEvents     Json?    @map("company_events")
   updatedById       String?  @map("updated_by_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

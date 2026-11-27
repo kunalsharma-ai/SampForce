@@ -32,6 +32,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { AttributionSection, CurrencySection, DashboardsSection, ExportSection, NotificationsSection, OptionsSection } from './admin-sections';
 import { FollowUpCadenceSection } from './cadence-section';
+import { CompanyEventsSection } from './company-events-section';
 import { CustomFieldsSection } from './custom-fields-section';
 import { JourneySection } from './journey-section';
 
@@ -48,14 +49,15 @@ type Tab =
   | 'follow-up-types'
   | 'follow-up-cadence'
   | 'journey'
+  | 'company-events'
   | 'notifications'
   | 'currency'
   | 'exports'
   | 'dashboards'
   | 'attribution';
-const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'journey', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
+const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'journey', 'company-events', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
 /** Sections only administrators can open (their settings are not readable by everyone). */
-const ADMIN_ONLY: Tab[] = ['notifications', 'exports', 'dashboards', 'attribution'];
+const ADMIN_ONLY: Tab[] = ['company-events', 'notifications', 'exports', 'dashboards', 'attribution'];
 
 export const MEANING_LABELS = {
   NEW: 'New',
@@ -110,6 +112,7 @@ export function CrmConfiguration() {
           { value: 'currency', label: t('Currency') },
           ...(canManage
             ? ([
+                { value: 'company-events', label: t('Company events') },
                 { value: 'notifications', label: t('Notifications') },
                 { value: 'exports', label: t('Export permissions') },
                 { value: 'dashboards', label: t('Dashboards') },
@@ -131,6 +134,7 @@ export function CrmConfiguration() {
       {cadenceOn && tab === 'follow-up-cadence' && <FollowUpCadenceSection />}
       {tab === 'journey' && <JourneySection />}
       {tab === 'currency' && <CurrencySection canManage={canManage} />}
+      {canManage && tab === 'company-events' && <CompanyEventsSection />}
       {canManage && tab === 'notifications' && <NotificationsSection />}
       {canManage && tab === 'exports' && <ExportSection />}
       {canManage && tab === 'dashboards' && <DashboardsSection canManage={canManage} />}

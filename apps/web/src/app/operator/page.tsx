@@ -462,6 +462,7 @@ function Hero({
         </h1>
       }
       line={lineOfTheDay(CONSOLE_LINES, now)}
+      specialDaysPath="/operator/special-days/today"
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         {status}

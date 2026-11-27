@@ -103,3 +103,158 @@
 @media (min-width: 640px) {
   .sf-welcome-avatar { width: 3.5rem; height: 3.5rem; }
 }
+
+/*
+ * The live clock (Kunal, 2026-11-27): a glass card in the banner's colours. Beside the greeting on wide screens
+ * (stacked: day, time, date); a strip under the greeting on tablets and phones (time on one side, date on the other).
+ */
+.sf-clock {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 0.85rem 1rem 1.1rem;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--wb-a) 28%, hsl(var(--border)));
+  background: color-mix(in srgb, hsl(var(--surface)) 78%, transparent);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 18px 36px -24px var(--wb-a);
+  backdrop-filter: blur(10px);
+}
+.dark .sf-clock {
+  background: color-mix(in srgb, hsl(var(--surface)) 70%, transparent);
+}
+.sf-clock::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--wb-a), var(--wb-b), var(--wb-sky-a));
+}
+.sf-clock-meta { text-align: end; }
+.sf-clock-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--wb-sky-a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wb-sky-a) 25%, transparent);
+}
+.sf-clock-seconds {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.4rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.6rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: hsl(var(--background));
+  background: hsl(var(--foreground));
+  box-shadow: 0 6px 14px -8px var(--wb-a);
+}
+.sf-clock-bar {
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: color-mix(in srgb, var(--wb-a) 12%, transparent);
+}
+.sf-clock-bar > span {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--wb-a), var(--wb-b));
+}
+[dir='rtl'] .sf-clock-bar > span { transform-origin: right center; }
+@media (min-width: 1280px) {
+  .sf-clock { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 0.6rem; width: 15.5rem; }
+  .sf-clock-meta { text-align: start; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-clock-colon { animation: sf-clock-blink 1s steps(1, end) infinite; }
+  .sf-clock-dot { animation: sf-clock-pulse 2s ease-in-out infinite; }
+  .sf-clock-bar > span { transition: transform 1s linear; }
+}
+@keyframes sf-clock-blink { 50% { opacity: 0.25; } }
+@keyframes sf-clock-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wb-sky-a) 0%, transparent); } }
+
+/*
+ * Today's special day (Kunal, 2026-11-27): a festive ribbon in its own row, tinted by kind (a public holiday in warm
+ * gold and rose, a world day in sky and violet, a company event in the workspace's own colours), with the day's emoji
+ * in a glowing medallion and a scatter of confetti drawn in the background.
+ */
+.sf-special {
+  --sp-a: #f59e0b;
+  --sp-b: #e11d48;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--sp-a) 40%, hsl(var(--border)));
+  background:
+    radial-gradient(circle at 12% 30%, color-mix(in srgb, var(--sp-a) 45%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 38% 80%, color-mix(in srgb, var(--sp-b) 45%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 18%, color-mix(in srgb, var(--sp-b) 40%, transparent) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 84% 70%, color-mix(in srgb, var(--sp-a) 45%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 94% 22%, color-mix(in srgb, var(--sp-b) 35%, transparent) 0 1.5px, transparent 2.5px),
+    linear-gradient(100deg, color-mix(in srgb, var(--sp-a) 16%, hsl(var(--surface))), color-mix(in srgb, var(--sp-b) 12%, hsl(var(--surface))));
+  box-shadow: 0 16px 32px -24px var(--sp-b);
+}
+.sf-special[data-kind='OBSERVANCE'] { --sp-a: #0ea5e9; --sp-b: #8b5cf6; }
+.sf-special[data-kind='COMPANY'] { --sp-a: var(--wb-a); --sp-b: var(--wb-b); }
+.dark .sf-special {
+  background:
+    radial-gradient(circle at 12% 30%, color-mix(in srgb, var(--sp-a) 55%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 38% 80%, color-mix(in srgb, var(--sp-b) 55%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 18%, color-mix(in srgb, var(--sp-b) 50%, transparent) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 84% 70%, color-mix(in srgb, var(--sp-a) 55%, transparent) 0 2px, transparent 3px),
+    radial-gradient(circle at 94% 22%, color-mix(in srgb, var(--sp-b) 45%, transparent) 0 1.5px, transparent 2.5px),
+    linear-gradient(100deg, color-mix(in srgb, var(--sp-a) 18%, hsl(var(--surface))), color-mix(in srgb, var(--sp-b) 14%, hsl(var(--surface))));
+}
+.sf-special::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--sp-a), var(--sp-b));
+}
+.sf-special-emoji {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  font-size: 1.6rem;
+  line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--sp-a) 30%, #fff));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-a) 35%, transparent), 0 10px 24px -10px var(--sp-b);
+}
+.sf-special-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  background: color-mix(in srgb, hsl(var(--surface)) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sp-a) 35%, hsl(var(--border)));
+}
+.sf-special-chip[data-kind='OBSERVANCE'] { border-color: color-mix(in srgb, #8b5cf6 35%, hsl(var(--border))); }
+@media (prefers-reduced-motion: no-preference) {
+  .sf-special { animation: sf-wb-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .sf-special-emoji { animation: sf-special-bob 3s ease-in-out infinite; }
+}
+@keyframes sf-special-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-6deg); } }
+@media (max-width: 639px) {
+  .sf-clock-meta { text-align: start; }
+}

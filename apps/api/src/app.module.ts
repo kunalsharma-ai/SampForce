@@ -25,6 +25,7 @@ import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
 import { WebsiteEnquiriesModule } from './website-enquiries/website-enquiries.module';
 import { OperatorModule } from './operator/operator.module';
+import { SpecialDaysModule } from './special-days/special-days.module';
 import { MobileModule } from './mobile/mobile.module';
 import { MobileRecordsModule } from './mobile/records/mobile-records.module';
 import { ProfilePhotosModule } from './profile-photos/profile-photos.module';
@@ -98,6 +99,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     RevenueModule,
     BillingModule,
     OperatorModule,
+    SpecialDaysModule,
     MobileModule,
     MobileRecordsModule,
     ProfilePhotosModule,
