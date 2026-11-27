@@ -208,7 +208,7 @@ export function CompanyDetail({ id }: { id: string }) {
             <ChevronDown aria-hidden className="size-4 transition-transform group-open:rotate-180" />
             {t('More about this company')}
           </summary>
-          <div className="mt-4 grid gap-5 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
             <SectionTone color="#2563eb" second="#7c3aed" icon={Route} name="journey">
               <CompanyJourneyCard companyId={id} />
             </SectionTone>
