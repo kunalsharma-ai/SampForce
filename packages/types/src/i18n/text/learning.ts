@@ -1,0 +1,118 @@
+import type { TextTable } from '../catalogue';
+
+/** Learning & Development (ADR 0097): the API's messages and the reasons it gives on the learning pages. */
+export const learningText = {
+  // Access
+  'Only the Super Workspace and managers can build learning modules.': ['Solo el espacio Super y los responsables pueden crear módulos de aprendizaje.', 'Seuls l’espace Super et les managers peuvent créer des modules de formation.', 'Nur der Super-Arbeitsbereich und Manager können Lernmodule erstellen.', 'المساحة الرئيسية والمديرون وحدهم يمكنهم إنشاء وحدات التعلّم.'],
+  'Only the Super Workspace and managers can assign modules and see other people’s learning.': ['Solo el espacio Super y los responsables pueden asignar módulos y ver el aprendizaje de otras personas.', 'Seuls l’espace Super et les managers peuvent assigner des modules et voir la formation des autres.', 'Nur der Super-Arbeitsbereich und Manager können Module zuweisen und das Lernen anderer sehen.', 'المساحة الرئيسية والمديرون وحدهم يمكنهم إسناد الوحدات ورؤية تعلّم الآخرين.'],
+  'Only the Super Workspace can change the learning settings.': ['Solo el espacio Super puede cambiar los ajustes de aprendizaje.', 'Seul l’espace Super peut modifier les paramètres de formation.', 'Nur der Super-Arbeitsbereich kann die Lerneinstellungen ändern.', 'المساحة الرئيسية وحدها يمكنها تغيير إعدادات التعلّم.'],
+  'Only the workspace that made this module can change it.': ['Solo el espacio que creó este módulo puede cambiarlo.', 'Seul l’espace qui a créé ce module peut le modifier.', 'Nur der Arbeitsbereich, der dieses Modul erstellt hat, kann es ändern.', 'مساحة العمل التي أنشأت هذه الوحدة وحدها يمكنها تغييرها.'],
+  'Learning module not found.': ['Módulo de aprendizaje no encontrado.', 'Module de formation introuvable.', 'Lernmodul nicht gefunden.', 'وحدة التعلّم غير موجودة.'],
+  'Certificate not found.': ['Certificado no encontrado.', 'Certificat introuvable.', 'Zertifikat nicht gefunden.', 'الشهادة غير موجودة.'],
+  'Lesson not found.': ['Lección no encontrada.', 'Leçon introuvable.', 'Lektion nicht gefunden.', 'الدرس غير موجود.'],
+  'Note not found.': ['Nota no encontrada.', 'Note introuvable.', 'Notiz nicht gefunden.', 'الملاحظة غير موجودة.'],
+  'Attempt not found.': ['Intento no encontrado.', 'Tentative introuvable.', 'Versuch nicht gefunden.', 'المحاولة غير موجودة.'],
+  'Question not found.': ['Pregunta no encontrada.', 'Question introuvable.', 'Frage nicht gefunden.', 'السؤال غير موجود.'],
+  'Category not found.': ['Categoría no encontrada.', 'Catégorie introuvable.', 'Kategorie nicht gefunden.', 'الفئة غير موجودة.'],
+
+  // Uploads
+  'Give the file a name': ['Ponle un nombre al archivo', 'Donnez un nom au fichier', 'Geben Sie der Datei einen Namen', 'أعطِ الملف اسمًا'],
+  'The file is empty': ['El archivo está vacío', 'Le fichier est vide', 'Die Datei ist leer', 'الملف فارغ'],
+  'This attempt is no longer open for answers.': ['Este intento ya no admite respuestas.', 'Cette tentative n’accepte plus de réponses.', 'Dieser Versuch nimmt keine Antworten mehr an.', 'لم تعد هذه المحاولة تقبل إجابات.'],
+  'Videos and audio can be up to 500 MB.': ['Los vídeos y el audio pueden ocupar hasta 500 MB.', 'Les vidéos et l’audio peuvent atteindre 500 Mo.', 'Videos und Audio dürfen bis zu 500 MB groß sein.', 'يمكن أن يصل حجم الفيديو والصوت إلى 500 ميغابايت.'],
+  'Documents and other files can be up to 50 MB.': ['Los documentos y otros archivos pueden ocupar hasta 50 MB.', 'Les documents et autres fichiers peuvent atteindre 50 Mo.', 'Dokumente und andere Dateien dürfen bis zu 50 MB groß sein.', 'يمكن أن يصل حجم المستندات والملفات الأخرى إلى 50 ميغابايت.'],
+  'This file has already been uploaded.': ['Este archivo ya se ha subido.', 'Ce fichier a déjà été envoyé.', 'Diese Datei wurde bereits hochgeladen.', 'تم رفع هذا الملف بالفعل.'],
+  'That part is not in this file.': ['Esa parte no pertenece a este archivo.', 'Cette partie n’appartient pas à ce fichier.', 'Dieser Teil gehört nicht zu dieser Datei.', 'هذا الجزء ليس من هذا الملف.'],
+  'That part is not the size it should be. Try the upload again.': ['Esa parte no tiene el tamaño correcto. Vuelve a intentar la subida.', 'Cette partie n’a pas la bonne taille. Recommencez l’envoi.', 'Dieser Teil hat nicht die richtige Größe. Laden Sie erneut hoch.', 'هذا الجزء ليس بالحجم الصحيح. أعد محاولة الرفع.'],
+  'Some of the file has not arrived yet. Try the upload again.': ['Parte del archivo aún no ha llegado. Vuelve a intentar la subida.', 'Une partie du fichier n’est pas encore arrivée. Recommencez l’envoi.', 'Ein Teil der Datei ist noch nicht angekommen. Laden Sie erneut hoch.', 'لم يصل جزء من الملف بعد. أعد محاولة الرفع.'],
+  'Each part of an upload can be at most 960 KB.': ['Cada parte de una subida puede ocupar como máximo 960 KB.', 'Chaque partie d’un envoi peut faire au plus 960 Ko.', 'Jeder Teil eines Uploads darf höchstens 960 KB groß sein.', 'يمكن أن يكون كل جزء من الرفع 960 كيلوبايت على الأكثر.'],
+  'That file has not finished uploading.': ['Ese archivo aún no ha terminado de subirse.', 'L’envoi de ce fichier n’est pas terminé.', 'Diese Datei ist noch nicht fertig hochgeladen.', 'لم يكتمل رفع هذا الملف.'],
+
+  // Attempts and marking
+  'You cannot take this assessment now.': ['Ahora no puedes hacer esta evaluación.', 'Vous ne pouvez pas passer cette évaluation maintenant.', 'Sie können diesen Test jetzt nicht ablegen.', 'لا يمكنك أداء هذا التقييم الآن.'],
+  'That question is not in this attempt.': ['Esa pregunta no está en este intento.', 'Cette question ne fait pas partie de cette tentative.', 'Diese Frage gehört nicht zu diesem Versuch.', 'هذا السؤال ليس ضمن هذه المحاولة.'],
+  'This attempt has been handed in already.': ['Este intento ya se ha entregado.', 'Cette tentative a déjà été remise.', 'Dieser Versuch wurde bereits abgegeben.', 'تم تسليم هذه المحاولة بالفعل.'],
+  'The time for this attempt has run out. What you saved has been handed in.': ['Se acabó el tiempo de este intento. Se ha entregado lo que guardaste.', 'Le temps de cette tentative est écoulé. Ce que vous avez enregistré a été remis.', 'Die Zeit für diesen Versuch ist abgelaufen. Ihre gespeicherten Antworten wurden abgegeben.', 'انتهى وقت هذه المحاولة. تم تسليم ما حفظته.'],
+  'Answer every required question first ({count} left: {list}).': ['Responde primero todas las preguntas obligatorias (quedan {count}: {list}).', 'Répondez d’abord à toutes les questions obligatoires (reste {count} : {list}).', 'Beantworten Sie zuerst alle Pflichtfragen (noch {count}: {list}).', 'أجب أولًا عن كل الأسئلة المطلوبة (تبقّى {count}: {list}).'],
+  'These answers have been marked already.': ['Estas respuestas ya se han calificado.', 'Ces réponses ont déjà été corrigées.', 'Diese Antworten wurden bereits bewertet.', 'تم تصحيح هذه الإجابات بالفعل.'],
+  'Question {n} is worth at most {marks} marks.': ['La pregunta {n} vale como máximo {marks} puntos.', 'La question {n} vaut au plus {marks} points.', 'Frage {n} ist höchstens {marks} Punkte wert.', 'السؤال {n} يساوي {marks} درجات على الأكثر.'],
+  'Give marks for every written answer ({list}).': ['Pon puntos a todas las respuestas escritas ({list}).', 'Notez toutes les réponses écrites ({list}).', 'Vergeben Sie Punkte für jede schriftliche Antwort ({list}).', 'امنح درجات لكل إجابة مكتوبة ({list}).'],
+  'Start the module to take the assessment.': ['Empieza el módulo para hacer la evaluación.', 'Commencez le module pour passer l’évaluation.', 'Starten Sie das Modul, um den Test abzulegen.', 'ابدأ الوحدة لتؤدي التقييم.'],
+  'This module is not assigned to you.': ['Este módulo no está asignado a ti.', 'Ce module ne vous est pas assigné.', 'Dieses Modul ist Ihnen nicht zugewiesen.', 'هذه الوحدة غير مُسندة إليك.'],
+  'This module is archived: it can no longer be taken.': ['Este módulo está archivado: ya no se puede hacer.', 'Ce module est archivé : il ne peut plus être suivi.', 'Dieses Modul ist archiviert und kann nicht mehr belegt werden.', 'هذه الوحدة مؤرشفة: لم يعد بالإمكان أخذها.'],
+  'You have passed this module.': ['Has aprobado este módulo.', 'Vous avez réussi ce module.', 'Sie haben dieses Modul bestanden.', 'لقد اجتزت هذه الوحدة.'],
+  'Your answers are waiting to be marked.': ['Tus respuestas esperan calificación.', 'Vos réponses attendent d’être corrigées.', 'Ihre Antworten warten auf die Bewertung.', 'إجاباتك بانتظار التصحيح.'],
+  'This module has no assessment yet.': ['Este módulo aún no tiene evaluación.', 'Ce module n’a pas encore d’évaluation.', 'Dieses Modul hat noch keinen Test.', 'لا يوجد تقييم لهذه الوحدة بعد.'],
+  'You have used all your attempts. Ask your manager for another attempt.': ['Has agotado tus intentos. Pide otro intento a tu responsable.', 'Vous avez utilisé toutes vos tentatives. Demandez-en une autre à votre manager.', 'Sie haben alle Versuche aufgebraucht. Bitten Sie Ihren Manager um einen weiteren.', 'استنفدت كل محاولاتك. اطلب من مديرك محاولة أخرى.'],
+  'Finish the lessons first ({done} of {all} done).': ['Termina primero las lecciones ({done} de {all} hechas).', 'Terminez d’abord les leçons ({done} sur {all} terminées).', 'Schließen Sie zuerst die Lektionen ab ({done} von {all} erledigt).', 'أنهِ الدروس أولًا (أُنجز {done} من {all}).'],
+
+  // Assigning
+  'Publish the module before assigning it.': ['Publica el módulo antes de asignarlo.', 'Publiez le module avant de l’assigner.', 'Veröffentlichen Sie das Modul vor der Zuweisung.', 'انشر الوحدة قبل إسنادها.'],
+  'You can only assign modules to people in your own part of the organisation.': ['Solo puedes asignar módulos a personas de tu parte de la organización.', 'Vous ne pouvez assigner des modules qu’aux personnes de votre partie de l’organisation.', 'Sie können Module nur Personen in Ihrem Teil der Organisation zuweisen.', 'يمكنك إسناد الوحدات فقط إلى أشخاص في قسمك من المؤسسة.'],
+  'Nobody matches who you chose.': ['Nadie coincide con lo que elegiste.', 'Personne ne correspond à votre choix.', 'Niemand entspricht Ihrer Auswahl.', 'لا أحد يطابق ما اخترته.'],
+  'Choose a deadline in the future.': ['Elige una fecha límite futura.', 'Choisissez une échéance dans le futur.', 'Wählen Sie eine Frist in der Zukunft.', 'اختر موعدًا نهائيًا في المستقبل.'],
+
+  // Building modules
+  'That category does not exist.': ['Esa categoría no existe.', 'Cette catégorie n’existe pas.', 'Diese Kategorie gibt es nicht.', 'هذه الفئة غير موجودة.'],
+  'The responsible manager must be someone in a Super or Manager Workspace you manage.': ['El responsable debe ser alguien de un espacio Super o de responsable que gestiones.', 'Le manager responsable doit appartenir à un espace Super ou manager que vous gérez.', 'Der verantwortliche Manager muss zu einem Super- oder Manager-Arbeitsbereich gehören, den Sie verwalten.', 'يجب أن يكون المدير المسؤول شخصًا في مساحة رئيسية أو مساحة مدير تديرها.'],
+  'Not ready to publish: {problems}': ['Aún no se puede publicar: {problems}', 'Pas encore publiable : {problems}', 'Noch nicht veröffentlichbar: {problems}', 'غير جاهزة للنشر: {problems}'],
+  'This module has learning history. Archive it instead, so results and certificates are kept.': ['Este módulo tiene historial de aprendizaje. Archívalo para conservar resultados y certificados.', 'Ce module a un historique de formation. Archivez-le plutôt, pour garder résultats et certificats.', 'Dieses Modul hat einen Lernverlauf. Archivieren Sie es stattdessen, damit Ergebnisse und Zertifikate erhalten bleiben.', 'لهذه الوحدة سجل تعلّم. أرشفها بدلًا من ذلك للاحتفاظ بالنتائج والشهادات.'],
+  'That link is not a video SampForce can play. Use a YouTube, Vimeo, Loom, Wistia or Dailymotion link, or a link to an .mp4 or .webm file.': [
+    'Ese enlace no es un vídeo que SampForce pueda reproducir. Usa un enlace de YouTube, Vimeo, Loom, Wistia o Dailymotion, o un enlace a un archivo .mp4 o .webm.',
+    'Ce lien n’est pas une vidéo que SampForce peut lire. Utilisez un lien YouTube, Vimeo, Loom, Wistia ou Dailymotion, ou un lien vers un fichier .mp4 ou .webm.',
+    'Dieser Link ist kein Video, das SampForce abspielen kann. Nutzen Sie einen Link zu YouTube, Vimeo, Loom, Wistia oder Dailymotion oder zu einer .mp4- oder .webm-Datei.',
+    'هذا الرابط ليس فيديو يمكن لـ SampForce تشغيله. استخدم رابط YouTube أو Vimeo أو Loom أو Wistia أو Dailymotion، أو رابط ملف ‎.mp4 أو ‎.webm.',
+  ],
+  'Paste the video link or upload the video.': ['Pega el enlace del vídeo o sube el vídeo.', 'Collez le lien de la vidéo ou envoyez la vidéo.', 'Fügen Sie den Videolink ein oder laden Sie das Video hoch.', 'ألصق رابط الفيديو أو ارفع الفيديو.'],
+  'Write the lesson text.': ['Escribe el texto de la lección.', 'Rédigez le texte de la leçon.', 'Schreiben Sie den Text der Lektion.', 'اكتب نص الدرس.'],
+  'Upload the file for this lesson.': ['Sube el archivo de esta lección.', 'Envoyez le fichier de cette leçon.', 'Laden Sie die Datei für diese Lektion hoch.', 'ارفع ملف هذا الدرس.'],
+  'The list changed while you were reordering. Reload and try again.': ['La lista cambió mientras reordenabas. Recarga e inténtalo de nuevo.', 'La liste a changé pendant le réordonnancement. Rechargez et réessayez.', 'Die Liste hat sich beim Umsortieren geändert. Laden Sie neu und versuchen Sie es erneut.', 'تغيّرت القائمة أثناء إعادة الترتيب. أعد التحميل وحاول مجددًا.'],
+  'That lesson is not in this module.': ['Esa lección no está en este módulo.', 'Cette leçon ne fait pas partie de ce module.', 'Diese Lektion gehört nicht zu diesem Modul.', 'هذا الدرس ليس ضمن هذه الوحدة.'],
+  'No lesson has text SampForce could read, so no questions were drafted. Add a written lesson, a document, a video with captions or a pasted transcript, or write the questions yourself.': [
+    'Ninguna lección tiene texto que SampForce pudiera leer, así que no se redactaron preguntas. Añade una lección escrita, un documento, un vídeo con subtítulos o una transcripción, o escribe tú las preguntas.',
+    'Aucune leçon n’a de texte lisible par SampForce, donc aucune question n’a été rédigée. Ajoutez une leçon écrite, un document, une vidéo sous-titrée ou une transcription, ou rédigez les questions vous-même.',
+    'Keine Lektion hat Text, den SampForce lesen konnte, daher wurden keine Fragen entworfen. Fügen Sie eine schriftliche Lektion, ein Dokument, ein Video mit Untertiteln oder ein Transkript hinzu oder schreiben Sie die Fragen selbst.',
+    'لا يوجد درس بنص تمكّن SampForce من قراءته، لذا لم تُصغ أي أسئلة. أضف درسًا مكتوبًا أو مستندًا أو فيديو بترجمة نصية أو نصًا مكتوبًا، أو اكتب الأسئلة بنفسك.',
+  ],
+  'There is already a category with that name.': ['Ya existe una categoría con ese nombre.', 'Une catégorie porte déjà ce nom.', 'Es gibt bereits eine Kategorie mit diesem Namen.', 'توجد فئة بهذا الاسم بالفعل.'],
+  'Add at least one lesson.': ['Añade al menos una lección.', 'Ajoutez au moins une leçon.', 'Fügen Sie mindestens eine Lektion hinzu.', 'أضف درسًا واحدًا على الأقل.'],
+  'Add at least one question to the assessment (or approve drafted ones).': ['Añade al menos una pregunta a la evaluación (o aprueba las redactadas).', 'Ajoutez au moins une question à l’évaluation (ou approuvez celles rédigées).', 'Fügen Sie dem Test mindestens eine Frage hinzu (oder geben Sie entworfene frei).', 'أضف سؤالًا واحدًا على الأقل إلى التقييم (أو وافق على الأسئلة المصاغة).'],
+  'Review the drafted questions ({n}): approve or remove each one.': ['Revisa las preguntas redactadas ({n}): aprueba o elimina cada una.', 'Relisez les questions rédigées ({n}) : approuvez ou supprimez chacune.', 'Prüfen Sie die entworfenen Fragen ({n}): jede freigeben oder entfernen.', 'راجع الأسئلة المصاغة ({n}): وافق على كل منها أو احذفه.'],
+  'The lesson “{title}” has no video.': ['La lección «{title}» no tiene vídeo.', 'La leçon « {title} » n’a pas de vidéo.', 'Die Lektion „{title}“ hat kein Video.', 'الدرس «{title}» بلا فيديو.'],
+  'The lesson “{title}” has no text.': ['La lección «{title}» no tiene texto.', 'La leçon « {title} » n’a pas de texte.', 'Die Lektion „{title}“ hat keinen Text.', 'الدرس «{title}» بلا نص.'],
+  'The lesson “{title}” has no file.': ['La lección «{title}» no tiene archivo.', 'La leçon « {title} » n’a pas de fichier.', 'Die Lektion „{title}“ hat keine Datei.', 'الدرس «{title}» بلا ملف.'],
+  'The questions need marks.': ['Las preguntas necesitan puntos.', 'Les questions doivent avoir des points.', 'Die Fragen brauchen Punkte.', 'تحتاج الأسئلة إلى درجات.'],
+  'There is too little text in this lesson to draft questions from.': ['Esta lección tiene muy poco texto para redactar preguntas.', 'Cette leçon a trop peu de texte pour en tirer des questions.', 'Diese Lektion hat zu wenig Text, um Fragen zu entwerfen.', 'نص هذا الدرس قليل جدًا لصياغة أسئلة منه.'],
+  'This lesson has no text SampForce can read.': ['Esta lección no tiene texto que SampForce pueda leer.', 'Cette leçon n’a pas de texte lisible par SampForce.', 'Diese Lektion hat keinen Text, den SampForce lesen kann.', 'لا يحتوي هذا الدرس على نص يمكن لـ SampForce قراءته.'],
+
+  // Shared schema messages
+  'Give it a title of at least 3 characters': ['Ponle un título de al menos 3 caracteres', 'Donnez-lui un titre d’au moins 3 caractères', 'Geben Sie einen Titel mit mindestens 3 Zeichen ein', 'أعطه عنوانًا من 3 أحرف على الأقل'],
+  'Paste the full link, starting with https://': ['Pega el enlace completo, empezando por https://', 'Collez le lien complet, commençant par https://', 'Fügen Sie den vollständigen Link ein, beginnend mit https://', 'ألصق الرابط كاملًا بدءًا من https://'],
+  'Every option needs text': ['Cada opción necesita texto', 'Chaque option doit avoir un texte', 'Jede Option braucht Text', 'كل خيار يحتاج إلى نص'],
+  'Write the question': ['Escribe la pregunta', 'Rédigez la question', 'Schreiben Sie die Frage', 'اكتب السؤال'],
+  'Choose who to assign it to': ['Elige a quién asignarlo', 'Choisissez à qui l’assigner', 'Wählen Sie, wem es zugewiesen wird', 'اختر من تُسنده إليه'],
+  'Write a note or add a bookmark': ['Escribe una nota o añade un marcador', 'Rédigez une note ou ajoutez un signet', 'Schreiben Sie eine Notiz oder setzen Sie ein Lesezeichen', 'اكتب ملاحظة أو أضف إشارة مرجعية'],
+  'Give the category a name': ['Ponle un nombre a la categoría', 'Donnez un nom à la catégorie', 'Geben Sie der Kategorie einen Namen', 'أعطِ الفئة اسمًا'],
+} as const satisfies TextTable;
+
+/** Learning notifications: stored in English and translated when opened. */
+export const learningNotifications = {
+  'Your certificate is ready': ['Tu certificado está listo', 'Votre certificat est prêt', 'Ihr Zertifikat ist fertig', 'شهادتك جاهزة'],
+  'Learning answers to mark': ['Respuestas de aprendizaje por calificar', 'Réponses de formation à corriger', 'Lernantworten zu bewerten', 'إجابات تعلّم بانتظار التصحيح'],
+  'You passed a learning module': ['Has aprobado un módulo de aprendizaje', 'Vous avez réussi un module de formation', 'Sie haben ein Lernmodul bestanden', 'اجتزت وحدة تعليمية'],
+  'Learning module completed': ['Módulo de aprendizaje completado', 'Module de formation terminé', 'Lernmodul abgeschlossen', 'اكتملت وحدة تعليمية'],
+  'Learning result: not passed yet': ['Resultado de aprendizaje: aún no aprobado', 'Résultat de formation : pas encore réussi', 'Lernergebnis: noch nicht bestanden', 'نتيجة التعلّم: لم تنجح بعد'],
+  '{title}: {score}% of {needed}% needed. {next}': ['{title}: {score} % de {needed} % necesario. {next}', '{title} : {score} % sur {needed} % requis. {next}', '{title}: {score} % von {needed} % erforderlich. {next}', '{title}: {score}% من {needed}% المطلوبة. {next}'],
+  'Your answers have been marked': ['Tus respuestas se han calificado', 'Vos réponses ont été corrigées', 'Ihre Antworten wurden bewertet', 'تم تصحيح إجاباتك'],
+  'Mandatory training assigned to you': ['Se te ha asignado formación obligatoria', 'Une formation obligatoire vous est assignée', 'Ihnen wurde eine Pflichtschulung zugewiesen', 'أُسند إليك تدريب إلزامي'],
+  'Learning module assigned to you': ['Se te ha asignado un módulo de aprendizaje', 'Un module de formation vous est assigné', 'Ihnen wurde ein Lernmodul zugewiesen', 'أُسندت إليك وحدة تعليمية'],
+  'Your learning assignment was updated': ['Se actualizó tu asignación de aprendizaje', 'Votre formation assignée a été mise à jour', 'Ihre Lernzuweisung wurde aktualisiert', 'تم تحديث التعلّم المُسند إليك'],
+  'New learning module published': ['Nuevo módulo de aprendizaje publicado', 'Nouveau module de formation publié', 'Neues Lernmodul veröffentlicht', 'نُشرت وحدة تعليمية جديدة'],
+  'Learning deadline approaching': ['Se acerca una fecha límite de aprendizaje', 'Échéance de formation proche', 'Lernfrist rückt näher', 'اقترب موعد نهائي للتعلّم'],
+  '{title} · due {date}': ['{title} · vence el {date}', '{title} · échéance le {date}', '{title} · fällig am {date}', '{title} · مستحق في {date}'],
+  'Learning module due today': ['Módulo de aprendizaje que vence hoy', 'Module de formation à rendre aujourd’hui', 'Lernmodul heute fällig', 'وحدة تعليمية مستحقة اليوم'],
+  'Learning module overdue': ['Módulo de aprendizaje vencido', 'Module de formation en retard', 'Lernmodul überfällig', 'وحدة تعليمية متأخرة'],
+  '{title} · was due {date}': ['{title} · venció el {date}', '{title} · était dû le {date}', '{title} · war fällig am {date}', '{title} · كان مستحقًا في {date}'],
+  'Learning overdue in your team': ['Aprendizaje vencido en tu equipo', 'Formation en retard dans votre équipe', 'Überfälliges Lernen in Ihrem Team', 'تعلّم متأخر في فريقك'],
+  '{name} · {title} · was due {date}': ['{name} · {title} · venció el {date}', '{name} · {title} · était dû le {date}', '{name} · {title} · war fällig am {date}', '{name} · {title} · كان مستحقًا في {date}'],
+} as const satisfies TextTable;

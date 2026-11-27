@@ -152,7 +152,7 @@ describe('learning & development', () => {
       expect(q.sourceExcerpt!.length).toBeGreaterThan(10);
     }
     expect(gen.module.keyPoints.length).toBeGreaterThan(0);
-    expect(gen.module.publishProblems.join(' ')).toMatch(/Review the 6 drafted questions/);
+    expect(gen.module.publishProblems.join(' ')).toMatch(/Review the drafted questions \(6\)/);
     // Drafted questions do not count until reviewed: publishing is refused.
     expect((await api(manager).post(`/learning/modules/${moduleId}/publish`, {}).expect(400)).body.error.code).toBe('LEARNING_NOT_READY');
 
@@ -321,7 +321,7 @@ describe('learning & development', () => {
       res.on('end', () => cb(null, Buffer.concat(chunks)));
     }).expect(200);
     const wb = new Workbook();
-    await wb.xlsx.load(xlsx.body as Buffer);
+    await wb.xlsx.load(xlsx.body as never);
     const ws = wb.worksheets[0]!;
     expect(ws.getRow(1).values).toEqual(expect.arrayContaining(['Employee name', 'Module', 'Best score %', 'Result', 'Certificate ID']));
     expect(ws.getRow(2).getCell(1).value).toBe('Ravi Executive');

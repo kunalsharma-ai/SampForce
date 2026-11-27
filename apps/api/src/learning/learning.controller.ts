@@ -101,6 +101,11 @@ export class LearningController {
     return this.learner.player(auth, id);
   }
 
+  @Get('modules/:id/lessons/:lessonId/text')
+  lessonText(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Param('lessonId', uuid) lessonId: string) {
+    return this.learner.lessonText(auth, id, lessonId);
+  }
+
   @Post('modules/:id/enrol')
   @HttpCode(200)
   enrol(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {

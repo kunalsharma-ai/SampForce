@@ -170,7 +170,10 @@ export function markAnswer(q: SnapQuestion, a: AnswerInput | undefined): StoredR
       if (!right.size) return full(false);
       let hits = 0;
       let wrong = 0;
-      for (const id of chosen) (right.has(id) ? hits++ : wrong++);
+      for (const id of chosen) {
+        if (right.has(id)) hits++;
+        else wrong++;
+      }
       // Each right option chosen earns its share; each wrong one takes a share away.
       return part((hits - wrong) / right.size);
     }

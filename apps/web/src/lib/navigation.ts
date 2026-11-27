@@ -39,6 +39,7 @@ import {
   UserPlus,
   Users,
   Workflow,
+  GraduationCap,
 } from 'lucide-react';
 
 export type ModuleStatus = 'available' | 'planned';
@@ -97,6 +98,8 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Works on an office network without internet', 'Messages wait on your device while offline', 'Read receipts, files, search and record links'] },
   { slug: 'achievements', label: 'My achievements', icon: Trophy, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Your achievements, lead and sales target progress, badges and celebration settings.', capabilities: [] },
+  { slug: 'learning', label: 'Learning & Development', icon: GraduationCap, group: 'Workspace', status: 'available', phase: 6,
+    summary: 'Learning modules with videos, documents and written lessons, assessments, scores, achievements and certificates.', capabilities: [] },
   { slug: 'team-status', label: 'Team status', icon: UserCheck, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Who is working, on a break, away or checked out, with today’s check-in times (redesign R1).', capabilities: [] },
   { slug: 'leads', label: 'Leads', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,

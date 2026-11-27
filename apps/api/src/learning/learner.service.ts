@@ -303,6 +303,17 @@ export class LearningLearnerService {
     };
   }
 
+  /** A lesson's readable text, for the reading view of documents and presentations that cannot be shown as they are. */
+  lessonText(auth: AuthContext, moduleId: string, lessonId: string): Promise<{ text: string | null; source: string | null; note: string | null }> {
+    return this.prisma.run(auth, async (tx) => {
+      const c = await learningCaller(tx, auth);
+      await this.reach(tx, c, moduleId);
+      const l = await tx.learningLesson.findFirst({ where: { id: lessonId, tenantId: auth.tenantId, moduleId }, select: { text: true, textSource: true, textNote: true, textStatus: true } });
+      if (!l) throw notFound('Lesson');
+      return { text: l.textStatus === 'READY' ? (l.text ?? null) : null, source: l.textSource ?? null, note: l.textNote ?? null };
+    });
+  }
+
   /** Starts an open module the person was not assigned: it becomes an optional assignment of their own. */
   enrol(auth: AuthContext, moduleId: string): Promise<PlayerView> {
     return this.prisma.run(auth, async (tx) => {
@@ -311,7 +322,7 @@ export class LearningLearnerService {
       if (!m || m.status !== 'PUBLISHED' || m.visibility !== 'OPEN' || !openModuleReaches(c.org, m.ownerNodeId, c.nodeId)) throw notFound();
       let a = await tx.learningAssignment.findFirst({ where: { moduleId, userId: auth.userId, tenantId: auth.tenantId } });
       if (!a) {
-        a = await tx.learningAssignment.create({ data: { tenantId: auth.tenantId, moduleId, userId: auth.userId, workspaceNodeId: c.nodeId, assignedById: auth.userId, mandatory: false, openedAt: new Date(), dueAt: null } });
+        a = await tx.learningAssignment.create({ data: { tenantId: auth.tenantId, moduleId, userId: auth.userId, workspaceNodeId: c.nodeId, assignedById: auth.userId, mandatory: false, openedAt: new Date(), dueAt: null, remindersSent: [], activeDays: [], lessonProgress: {} } });
       } else if (a.removedAt) {
         a = await tx.learningAssignment.update({ where: { id: a.id }, data: { removedAt: null } });
       }

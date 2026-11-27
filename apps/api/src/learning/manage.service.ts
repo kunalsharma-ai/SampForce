@@ -9,7 +9,6 @@ import {
   type LearningAssignmentStatus,
   type LearningManageView,
   type LearningReportQuery,
-  learningModuleNumber,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -17,7 +16,7 @@ import { PrismaService } from '../common/prisma.service';
 import { toXlsx } from '../crm/import-export.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertManager, inScope, type LearningCaller, learningCaller, manageableModules, moduleForManager, type Person, peopleById, peopleInScope } from './access';
-import { type AssignmentRec, assignmentRow, attemptsAllowed, avg, categoriesById, type ModuleRec, moduleRows } from './views';
+import { type AssignmentRec, assignmentRow, avg, categoriesById, type ModuleRec, moduleRows } from './views';
 
 const notFound = (what = 'Assignment') => new NotFoundException({ code: 'NOT_FOUND', message: `${what} not found.` });
 const DAY = 86_400_000;

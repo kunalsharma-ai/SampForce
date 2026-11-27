@@ -834,7 +834,7 @@ export function publishProblems(m: Pick<ModuleRec, 'title'>, lessons: { kind: st
   const approved = questions.filter((q) => q.approved);
   if (!approved.length) out.push('Add at least one question to the assessment (or approve drafted ones).');
   const waiting = questions.length - approved.length;
-  if (waiting > 0) out.push(`Review the ${waiting} drafted question${waiting === 1 ? '' : 's'}: approve or remove ${waiting === 1 ? 'it' : 'them'}.`);
+  if (waiting > 0) out.push(`Review the drafted questions (${waiting}): approve or remove each one.`);
   for (const l of lessons) {
     if (l.kind === 'VIDEO' && !l.videoUrl && !l.fileId) out.push(`The lesson “${l.title}” has no video.`);
     else if (l.kind === 'TEXT' && !l.body?.trim()) out.push(`The lesson “${l.title}” has no text.`);

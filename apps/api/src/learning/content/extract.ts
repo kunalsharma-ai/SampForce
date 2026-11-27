@@ -34,8 +34,8 @@ const letters = (s: string) => (s.match(/\p{L}/gu) ?? []).length;
 export function tidy(text: string): string {
   return text
     .replace(/\r\n?/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\u0000/g, '')
+    .replace(/[\u00a0\t]+/g, ' ')
+    .replaceAll('\u0000', '')
     .split('\n')
     .map((l) => l.replace(/ {2,}/g, ' ').trim())
     .join('\n')
