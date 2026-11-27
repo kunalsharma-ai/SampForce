@@ -134,6 +134,7 @@ export const NOTIFICATION_CATEGORIES = [
   // Employee of the Month and improvement plans (ADR 0102).
   { key: 'recognition', label: 'Employee of the Month targets and awards', types: ['recognition.'] },
   { key: 'pip', label: 'Performance improvement plans', types: ['pip.'] },
+  { key: 'learning', label: 'Learning & Development', types: ['learning.'] },
 ] as const;
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORIES)[number]['key'];
 const CATEGORY_KEYS = NOTIFICATION_CATEGORIES.map((c) => c.key) as [NotificationCategoryKey, ...NotificationCategoryKey[]];

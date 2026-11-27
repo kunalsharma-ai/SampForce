@@ -21,11 +21,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { MobileModule } from '../mobile/mobile.module';
 import { CompanyClosureService } from '../tenants/company-closure.service';
 import { MyOrganizationModule } from '../my-organization/my-organization.module';
+import { LearningModule } from '../learning/learning.module';
 import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
-  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, WebsiteEnquiriesModule, ProspectsModule, MobileModule, CrmModule, MyOrganizationModule],
+  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, WebsiteEnquiriesModule, ProspectsModule, MobileModule, CrmModule, MyOrganizationModule, LearningModule],
   providers: [WorkerService, CrmRemindersService, CompanyLogosService, CompanyEnrichmentService, HunterClient, NotificationsService, CompanyClosureService],
   exports: [WorkerService],
 })

@@ -6346,3 +6346,329 @@ model OrgShare {
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("org_shares")
 }
+
+// ───────────── Learning & Development (ADR 0097) ─────────────
+
+/// A learning category (Sales, Communication...). The Super Workspace manages them for the whole organisation.
+model LearningCategory {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  name       String
+  nameKey    String    @map("name_key")
+  color      String    @default("#2563eb")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@unique([tenantId, nameKey])
+  @@map("learning_categories")
+}
+
+/// A learning module: lessons, an assessment and the rules for passing it.
+model LearningModule {
+  id                 String    @id @default(uuid()) @map("_id")
+  tenantId           String    @map("tenant_id")
+  /// Per organisation, shown as LRN-0001.
+  number             Int
+  title              String
+  categoryId         String?   @map("category_id")
+  description        String?
+  objectives         String[]
+  keyPoints          String[]  @map("key_points")
+  instructions       String?
+  /// BEGINNER, INTERMEDIATE or ADVANCED.
+  level              String    @default("BEGINNER")
+  /// Set by the author; otherwise worked out from the lessons and questions.
+  estimatedMinutes   Int?      @map("estimated_minutes")
+  mandatory          Boolean   @default(true)
+  /// ASSIGNED (only the people it is assigned to) or OPEN (anyone in the owner's branch may take it).
+  visibility         String    @default("ASSIGNED")
+  passingScore       Int       @default(80) @map("passing_score")
+  maxAttempts        Int       @default(3) @map("max_attempts")
+  timeLimitMinutes   Int?      @map("time_limit_minutes")
+  dueAt              DateTime? @map("due_at")
+  dueInDays          Int?      @map("due_in_days")
+  certificate        Boolean   @default(true)
+  showAnswers        Boolean   @default(true) @map("show_answers")
+  shuffleQuestions   Boolean   @default(false) @map("shuffle_questions")
+  /// DRAFT, PUBLISHED or ARCHIVED.
+  status             String    @default("DRAFT")
+  createdById        String    @map("created_by_id")
+  /// The workspace that owns it: null for the Super Workspace, else the Manager Workspace whose manager made it.
+  ownerNodeId        String?   @map("owner_node_id")
+  responsibleUserId  String?   @map("responsible_user_id")
+  reminderDaysBefore Int[]     @map("reminder_days_before")
+  remindOnDueDay     Boolean   @default(true) @map("remind_on_due_day")
+  overdueEveryDays   Int?      @map("overdue_every_days")
+  publishedAt        DateTime? @map("published_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, updatedAt(sort: Desc)])
+  @@map("learning_modules")
+}
+
+/// One lesson (chapter) of a module: a video, a file, or written text.
+model LearningLesson {
+  id             String   @id @default(uuid()) @map("_id")
+  tenantId       String   @map("tenant_id")
+  moduleId       String   @map("module_id")
+  position       Int
+  title          String
+  /// VIDEO, AUDIO, DOCUMENT, PRESENTATION, SPREADSHEET, IMAGE, TEXT or FILE.
+  kind           String
+  body           String?
+  videoUrl       String?  @map("video_url")
+  /// The video's provider details (VideoInfo) found when the link was pasted.
+  video          Json?
+  fileId         String?  @map("file_id")
+  captionsFileId String?  @map("captions_file_id")
+  transcript     String?
+  objectives     String[]
+  minutes        Int?
+  required       Boolean  @default(true)
+  allowDownload  Boolean  @default(true) @map("allow_download")
+  /// NONE, READY or UNREADABLE: whether SampForce could read the lesson's text.
+  textStatus     String   @default("NONE") @map("text_status")
+  /// DOCUMENT, OCR, CAPTIONS, TRANSCRIPT or WRITTEN.
+  textSource     String?  @map("text_source")
+  /// The readable text (headings as "# " lines), for the reading view and question drafting.
+  text           String?
+  textParts      Int?     @map("text_parts")
+  textNote       String?  @map("text_note")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, moduleId, position])
+  @@index([moduleId])
+  @@map("learning_lessons")
+}
+
+/// An uploaded learning file. The bytes are kept in parts (LearningFilePart) so videos can be larger than a document.
+model LearningFile {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  name         String
+  contentType  String    @map("content_type")
+  sizeBytes    Int       @map("size_bytes")
+  parts        Int
+  /// Parts received so far; the file is usable once all have arrived.
+  received     Int       @default(0)
+  sha256       String?
+  uploadedById String    @map("uploaded_by_id")
+  /// Set when it belongs to a learner's answer (a file-upload question) rather than to a lesson.
+  attemptId    String?   @map("attempt_id")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, uploadedById, createdAt(sort: Desc)])
+  @@map("learning_files")
+}
+
+model LearningFilePart {
+  id       String @id @default(uuid()) @map("_id")
+  tenantId String @map("tenant_id")
+  fileId   String @map("file_id")
+  index    Int
+  data     Bytes
+
+  @@unique([fileId, index])
+  @@index([tenantId, fileId])
+  @@map("learning_file_parts")
+}
+
+/// An assessment question of a module, or a question kept in the organisation's question bank (moduleId null).
+model LearningQuestion {
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @map("tenant_id")
+  moduleId          String?  @map("module_id")
+  position          Int
+  /// MCQ, MULTI, TRUE_FALSE, FILL_BLANK, MATCHING, SHORT, LONG, SCENARIO, PRACTICAL or FILE_UPLOAD.
+  type              String
+  text              String
+  instructions      String?
+  /// [{ id, text }]
+  options           Json     @default("[]")
+  correctOptionIds  String[] @map("correct_option_ids")
+  correctBoolean    Boolean? @map("correct_boolean")
+  /// For each blank, the accepted answers.
+  blanks            Json     @default("[]")
+  /// [{ id, left, right }]
+  pairs             Json     @default("[]")
+  acceptedAnswers   String[] @map("accepted_answers")
+  rubric            String?
+  marks             Float    @default(1)
+  difficulty        String   @default("MEDIUM")
+  explanation       String?
+  required          Boolean  @default(true)
+  lessonId          String?  @map("lesson_id")
+  /// MANUAL, GENERATED, BANK or AI.
+  source            String   @default("MANUAL")
+  sourceExcerpt     String?  @map("source_excerpt")
+  approved          Boolean  @default(true)
+  categoryId        String?  @map("category_id")
+  createdById       String   @map("created_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, moduleId, position])
+  @@index([moduleId])
+  @@map("learning_questions")
+}
+
+/// A module assigned to one person (or taken by them from the open modules), with their progress.
+model LearningAssignment {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  moduleId         String    @map("module_id")
+  userId           String    @map("user_id")
+  /// The person's workspace when it was assigned (null = Super Workspace).
+  workspaceNodeId  String?   @map("workspace_node_id")
+  assignedById     String    @map("assigned_by_id")
+  assignedAt       DateTime  @default(now()) @map("assigned_at")
+  dueAt            DateTime? @map("due_at")
+  mandatory        Boolean   @default(true)
+  note             String?
+  /// NOT_STARTED, IN_PROGRESS, AWAITING_MARKING, COMPLETED or FAILED.
+  status           String    @default("NOT_STARTED")
+  startedAt        DateTime? @map("started_at")
+  openedAt         DateTime? @map("opened_at")
+  completedAt      DateTime? @map("completed_at")
+  /// { [lessonId]: { percent, positionSeconds, doneAt, seconds } }
+  lessonProgress   Json      @default("{}") @map("lesson_progress")
+  lastLessonId     String?   @map("last_lesson_id")
+  progress         Int       @default(0)
+  secondsSpent     Int       @default(0) @map("seconds_spent")
+  attemptsUsed     Int       @default(0) @map("attempts_used")
+  extraAttempts    Int       @default(0) @map("extra_attempts")
+  bestScore        Float?    @map("best_score")
+  lastScore        Float?    @map("last_score")
+  passed           Boolean?
+  certificateId    String?   @map("certificate_id")
+  /// Reminder keys already sent ("before:3:2026-12-01", "due:2026-12-01", "overdue:2026-12-04").
+  remindersSent    String[]  @map("reminders_sent")
+  removedAt        DateTime? @map("removed_at")
+  /// Days the person learned something, YYYY-MM-DD in the workspace time zone (for the streak).
+  activeDays       String[]  @map("active_days")
+
+  @@unique([moduleId, userId])
+  @@index([tenantId, userId, status])
+  @@index([tenantId, moduleId])
+  @@index([tenantId, status, dueAt])
+  @@map("learning_assignments")
+}
+
+/// One go at a module's assessment, with the questions as they were then, the answers and the marks.
+model LearningAttempt {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  assignmentId String    @map("assignment_id")
+  moduleId     String    @map("module_id")
+  userId       String    @map("user_id")
+  number       Int
+  /// IN_PROGRESS, AWAITING_MARKING or MARKED.
+  status       String    @default("IN_PROGRESS")
+  /// The questions with their answer key when the attempt started, so later edits never change a result.
+  questions    Json
+  answers      Json      @default("{}")
+  /// [{ questionId, marks, maxMarks, correct, feedback }]
+  results      Json?
+  score        Float?
+  autoScore    Float     @default(0) @map("auto_score")
+  maxScore     Float     @map("max_score")
+  percent      Float?
+  passed       Boolean?
+  feedback     String?
+  markedById   String?   @map("marked_by_id")
+  markedAt     DateTime? @map("marked_at")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  expiresAt    DateTime? @map("expires_at")
+  submittedAt  DateTime? @map("submitted_at")
+
+  @@unique([assignmentId, number])
+  @@index([tenantId, status, submittedAt])
+  @@index([tenantId, userId, submittedAt(sort: Desc)])
+  @@index([assignmentId])
+  @@map("learning_attempts")
+}
+
+/// A learner's note or bookmark in a module.
+model LearningNote {
+  id              String   @id @default(uuid()) @map("_id")
+  tenantId        String   @map("tenant_id")
+  userId          String   @map("user_id")
+  moduleId        String   @map("module_id")
+  lessonId        String?  @map("lesson_id")
+  body            String?
+  bookmark        Boolean  @default(false)
+  positionSeconds Float?   @map("position_seconds")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, userId, moduleId, createdAt(sort: Desc)])
+  @@map("learning_notes")
+}
+
+/// A certificate issued for a completed module. One per assignment; the code verifies it on the public page.
+model LearningCertificate {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  /// SF-2026-000123 style, per organisation.
+  number         String
+  /// The verification code printed on it and in its QR code.
+  code           String    @unique
+  userId         String    @map("user_id")
+  moduleId       String    @map("module_id")
+  assignmentId   String    @unique @map("assignment_id")
+  attemptId      String?   @map("attempt_id")
+  recipientName  String    @map("recipient_name")
+  moduleTitle    String    @map("module_title")
+  category       String?
+  score          Float
+  completedAt    DateTime  @map("completed_at")
+  issuedAt       DateTime  @default(now()) @map("issued_at")
+  issuerName     String    @map("issuer_name")
+  signatoryName  String?   @map("signatory_name")
+  signatoryTitle String?   @map("signatory_title")
+  template       String    @default("CLASSIC")
+  accentColor    String    @default("#2563eb") @map("accent_color")
+  revokedAt      DateTime? @map("revoked_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, userId, issuedAt(sort: Desc)])
+  @@map("learning_certificates")
+}
+
+/// Changes to a module, for its history (who changed what, when).
+model LearningModuleEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  moduleId  String   @map("module_id")
+  actorId   String?  @map("actor_id")
+  kind      String
+  summary   String
+  at        DateTime @default(now())
+
+  @@index([tenantId, moduleId, at(sort: Desc)])
+  @@map("learning_module_events")
+}
+
+/// The organisation's learning settings: certificate look and signatory, defaults and reminders.
+model LearningSettings {
+  id                  String  @id @default(uuid()) @map("_id")
+  tenantId            String  @unique @map("tenant_id")
+  issuerName          String? @map("issuer_name")
+  signatoryName       String? @map("signatory_name")
+  signatoryTitle      String? @map("signatory_title")
+  template            String  @default("CLASSIC")
+  accentColor         String  @default("#2563eb") @map("accent_color")
+  defaultPassingScore Int     @default(80) @map("default_passing_score")
+  defaultMaxAttempts  Int     @default(3) @map("default_max_attempts")
+  reminderDaysBefore  Int[]   @map("reminder_days_before")
+  remindOnDueDay      Boolean @default(true) @map("remind_on_due_day")
+  overdueEveryDays    Int?    @default(2) @map("overdue_every_days")
+  managersCreate      Boolean @default(true) @map("managers_create")
+  moduleCounter       Int     @default(0) @map("module_counter")
+  certificateCounter  Int     @default(0) @map("certificate_counter")
+
+  @@map("learning_settings")
+}

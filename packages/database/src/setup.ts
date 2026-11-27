@@ -414,6 +414,27 @@ export async function removeChatAndMeetingApps(prisma: PrismaClient, log: (line:
   if (versions.length) log(`removed "Post to Slack or Teams" steps from ${versions.length} workflow versions`);
 }
 
+/**
+ * Features shipped for every workspace level (ADR 0097: Learning & Development). A Manager or Executive Workspace only
+ * gets what the workspace above granted it, and existing workspaces were granted their list before the feature
+ * existed, so the feature is added to every existing workspace once (a counter marks it done). The workspace above can
+ * take it away again in the Permission Center, and that choice is kept.
+ */
+export const SHIPPED_WORKSPACE_FEATURES = ['learning'] as const;
+
+export async function shipWorkspaceFeatures(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  for (const key of SHIPPED_WORKSPACE_FEATURES) {
+    const marker = `workspace-feature-shipped:${key}`;
+    if (await prisma.counter.findUnique({ where: { id: marker } })) continue;
+    const res = (await prisma.$runCommandRaw({
+      update: 'workspace_nodes',
+      updates: [{ q: { features: { $ne: key } }, u: { $addToSet: { features: key } }, multi: true }],
+    })) as { nModified?: number };
+    if (res.nModified) log(`added ${key} to ${res.nModified} workspaces`);
+    await prisma.counter.create({ data: { id: marker, value: 1 } });
+  }
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
@@ -424,4 +445,5 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await upgradeSupportTicketStatuses(prisma, log);
   await retireWebsiteVisitors(prisma, log);
   await removeChatAndMeetingApps(prisma, log);
+  await shipWorkspaceFeatures(prisma, log);
 }

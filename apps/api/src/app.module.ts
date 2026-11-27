@@ -58,6 +58,7 @@ import { AvailabilityModule } from './availability/availability.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { TaskPlansModule } from './task-plans/task-plans.module';
 import { RecognitionModule } from './recognition/recognition.module';
+import { LearningModule } from './learning/learning.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 import { AuditRequiredInterceptor } from './operator/audit-required.interceptor';
@@ -94,6 +95,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     AchievementsModule,
     TaskPlansModule,
     RecognitionModule,
+    LearningModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,

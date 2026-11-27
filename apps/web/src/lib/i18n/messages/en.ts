@@ -54,6 +54,7 @@ export const en = {
   'module.rfqs': 'RFQs',
   'module.chat': 'Team chat',
   'module.achievements': 'My achievements',
+  'module.learning': 'Learning & Development',
   'module.team-status': 'Team status',
   'module.activities': 'Sales Activities',
   'module.communication': 'Email & Communication',
@@ -343,6 +344,23 @@ export const en = {
   'count.tasksCreatedFromMeeting_other': '{count} tasks created from this meeting.',
   'count.inSequences_one': 'In {count} sequence',
   'count.inSequences_other': 'In {count} sequences',
+  // Learning & Development (ADR 0097)
+  'learning.streak_one': '{count}-day streak',
+  'learning.streak_other': '{count}-day streak',
+  'learning.certificates_one': '{count} certificate',
+  'learning.certificates_other': '{count} certificates',
+  'learning.lessons_one': '{count} lesson',
+  'learning.lessons_other': '{count} lessons',
+  'learning.marks_one': '{count} mark',
+  'learning.marks_other': '{count} marks',
+  'learning.questions_one': '{count} question',
+  'learning.questions_other': '{count} questions',
+  'learning.attemptsLeft_one': '{count} attempt left',
+  'learning.attemptsLeft_other': '{count} attempts left',
+  'learning.drafted_one': '{count} question drafted for your review.',
+  'learning.drafted_other': '{count} questions drafted for your review.',
+  'learning.questionsToMark_one': '{count} question to mark',
+  'learning.questionsToMark_other': '{count} questions to mark',
 } as const;
 
 export type ShellKey = keyof typeof en;

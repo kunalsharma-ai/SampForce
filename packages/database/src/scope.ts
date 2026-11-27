@@ -93,6 +93,8 @@ export const LOOKUP_FIELDS = {
   ScimToken: { fields: ['tokenHash'], extra: { revokedAt: null } },
   SsoConnection: { fields: ['loginSlug'], extra: { enabled: true } },
   Subscription: { fields: ['providerCustomerId', 'providerSubscriptionId'], extra: {} },
+  // Learning certificates (ADR 0097): the public verification page finds a certificate by its code.
+  LearningCertificate: { fields: ['code'], extra: {} },
 } as const;
 export type LookupModel = keyof typeof LOOKUP_FIELDS;
 
@@ -124,7 +126,8 @@ const WORKER_ALL = new Set([
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
 // Contact: the follow-up cadence job (ADR 0096) finds contacts whose period after the first email has passed; it reads ids only and moves each one inside its own workspace.
-const WORKER_READ = new Set(['ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'OrgDocument', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
+// LearningAssignment: learning deadline reminders (ADR 0097) find the workspaces with assignments due; each is sent in its context.
+const WORKER_READ = new Set(['LearningAssignment', 'ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'OrgDocument', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

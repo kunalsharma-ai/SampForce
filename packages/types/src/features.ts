@@ -110,6 +110,8 @@ export const FEATURE_KEYS = [
   // ADR 0082: the Leads and Accounts pages, hidden until the Console Admin switches them on.
   'leads_section',
   'accounts_section',
+  // ADR 0097: Learning & Development.
+  'learning',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -238,6 +240,8 @@ export const FEATURES: FeatureDef[] = [
   // switches them on. Companies and their contacts are where leads are worked now.
   { key: 'leads_section', group: 'CRM', label: 'Inbound contacts page', description: 'The separate page for inbound contacts. Hidden unless the Console Admin switches it on; companies and contacts hold them otherwise.', defaultFrom: 'free', paths: [], exactPaths: ['/app/leads'], parent: 'lead_management', since: 4, optIn: true },
   { key: 'accounts_section', group: 'CRM', label: 'Accounts page', description: 'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.', defaultFrom: 'free', paths: ['/app/accounts'], parent: 'account_management', since: 4, optIn: true },
+  // ADR 0097: learning modules, assessments and certificates, for every workspace level.
+  { key: 'learning', group: 'Communication', label: 'Learning & Development', description: 'Learning modules with videos, documents and written lessons, assessments with marks, progress dashboards and certificates.', defaultFrom: 'free', paths: ['/app/learning'], since: 6 },
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
