@@ -11,6 +11,7 @@ import {
   type ManagerDashboardView,
   type SuperDashboard,
   TARGET_METRIC_LABEL,
+  TARGET_METRICS,
   type TargetMetric,
   type TargetRow,
   WORKSPACE_DASHBOARD_PERIOD_LABEL,
@@ -369,7 +370,8 @@ function targetsFor(rows: TargetRow[] | undefined, pick: (t: TargetRow) => boole
   const now = Date.now();
   const running = (rows ?? []).filter((t) => pick(t) && new Date(`${t.startsOn}T00:00:00Z`).getTime() <= now && now < new Date(`${t.endsOn}T00:00:00Z`).getTime() + 86_400_000);
   const out: { metric: TargetMetric; amount: number; achieved: number; percent: number; currency: string | null }[] = [];
-  for (const metric of ['REVENUE', 'LEADS', 'DEALS_WON', 'CALLS'] as const) {
+  // Revenue first, then the other metrics in their usual order.
+  for (const metric of ['REVENUE', ...TARGET_METRICS.filter((m) => m !== 'REVENUE')] as TargetMetric[]) {
     const list = running.filter((t) => t.metric === metric);
     if (!list.length) continue;
     const amount = list.reduce((a, t) => a + t.amount, 0);

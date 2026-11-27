@@ -142,4 +142,52 @@ describe('targets and tasks down the hierarchy', () => {
     const audit = await db.auditLog.findMany({ where: { tenantId: superAdmin.tenantId, entityId: created.id } });
     expect(audit.map((a) => a.action).sort()).toEqual(['task.assigned', 'task.commented', 'task.completed']);
   });
+  it('R7: the assignee acknowledges, starts and blocks a task, and comments get reactions', async () => {
+    const t = (await api(manager).post('/assigned-tasks', { title: 'Send the panel book to Kantar', workspaceId: executiveId }).expect(201)).body;
+    expect(t).toMatchObject({ progress: 'NEW', acknowledgedAt: null, canProgress: false });
+    expect((await api(executive).get(`/assigned-tasks/${t.id}`).expect(200)).body.canProgress).toBe(true);
+
+    // Only the assignee says where it stands; blocking needs a reason.
+    expect((await api(manager).post(`/assigned-tasks/${t.id}/progress`, { progress: 'ACKNOWLEDGED' }).expect(403)).body.error.code).toBe('TASK_PROGRESS_FORBIDDEN');
+    await api(executive).post(`/assigned-tasks/${t.id}/progress`, { progress: 'BLOCKED' }).expect(400);
+    const ack = (await api(executive).post(`/assigned-tasks/${t.id}/progress`, { progress: 'ACKNOWLEDGED' }).expect(200)).body;
+    expect(ack.progress).toBe('ACKNOWLEDGED');
+    expect(ack.acknowledgedAt).not.toBeNull();
+    await api(executive).post(`/assigned-tasks/${t.id}/progress`, { progress: 'IN_PROGRESS' }).expect(200);
+    const blocked = (await api(executive).post(`/assigned-tasks/${t.id}/progress`, { progress: 'BLOCKED', reason: 'Waiting for the client’s logo files' }).expect(200)).body;
+    expect(blocked).toMatchObject({ progress: 'BLOCKED', blockedReason: 'Waiting for the client’s logo files', acknowledgedAt: ack.acknowledgedAt });
+
+    // The manager hears about each step, the block as high priority, and sees it in the history.
+    const told = (await api(manager).get('/notifications').expect(200)).body.items.filter((n: { title: string }) => n.title.includes('Send the panel book'));
+    expect(told.map((n: { title: string }) => n.title)).toEqual(expect.arrayContaining(['Task acknowledged: Send the panel book to Kantar', 'Task in progress: Send the panel book to Kantar', 'Task blocked: Send the panel book to Kantar']));
+    const seen = (await api(manager).get(`/assigned-tasks/${t.id}`).expect(200)).body;
+    expect(seen.history.filter((h: { kind: string }) => h.kind === 'progress').map((h: { changes: { field: string; to: string }[] }) => h.changes[0]!.to)).toEqual(['ACKNOWLEDGED', 'IN_PROGRESS', 'BLOCKED']);
+
+    // Reactions on comments: add, see who, take back.
+    const withComment = (await api(executive).post(`/assigned-tasks/${t.id}/comments`, { body: 'Chasing them today.' }).expect(201)).body;
+    const commentId = withComment.commentList[0].id;
+    const reacted = (await api(manager).post(`/assigned-tasks/${t.id}/comments/${commentId}/reactions`, { emoji: '👍' }).expect(200)).body;
+    expect(reacted.commentList[0].reactions).toEqual([{ emoji: '👍', count: 1, mine: true, names: ['Rahul Sharma'] }]);
+    const both = (await api(executive).post(`/assigned-tasks/${t.id}/comments/${commentId}/reactions`, { emoji: '👍' }).expect(200)).body;
+    expect(both.commentList[0].reactions[0]).toMatchObject({ count: 2, mine: true });
+    const back = (await api(manager).post(`/assigned-tasks/${t.id}/comments/${commentId}/reactions`, { emoji: '👍' }).expect(200)).body;
+    expect(back.commentList[0].reactions).toEqual([{ emoji: '👍', count: 1, mine: false, names: ['Priya Sharma'] }]);
+    await api(manager).post(`/assigned-tasks/${t.id}/comments/${commentId}/reactions`, { emoji: '💩' }).expect(400);
+    await api(executive2).post(`/assigned-tasks/${t.id}/comments/${commentId}/reactions`, { emoji: '👍' }).expect(404);
+
+    // A finished task's progress is closed.
+    await api(executive).patch(`/assigned-tasks/${t.id}`, { status: 'DONE' }).expect(200);
+    expect((await api(executive).post(`/assigned-tasks/${t.id}/progress`, { progress: 'IN_PROGRESS' }).expect(400)).body.error.code).toBe('TASK_NOT_OPEN');
+  });
+
+  it('R7: targets cover half-yearly and yearly periods and the new metrics', async () => {
+    const yearStart = `${today.slice(0, 4)}-01-01`;
+    const y = (await api(superAdmin).post('/targets', { workspaceId: managerId, metric: 'MEETINGS', period: 'YEARLY', startsOn: yearStart, amount: 120 }).expect(201)).body;
+    expect(y).toMatchObject({ metric: 'MEETINGS', period: 'YEARLY', amount: 120 });
+    expect(y.endsOn.slice(0, 10)).toBe(`${today.slice(0, 4)}-12-31`);
+    const h = (await api(superAdmin).post('/targets', { workspaceId: managerId, metric: 'EMAILS_SENT', period: 'HALF_YEARLY', startsOn: yearStart, amount: 500 }).expect(201)).body;
+    expect(h.endsOn.slice(0, 10)).toBe(`${today.slice(0, 4)}-06-30`);
+    for (const metric of ['FOLLOW_UPS_DONE', 'RFQS', 'CONVERSIONS'])
+      await api(superAdmin).post('/targets', { workspaceId: managerId, metric, period: 'MONTHLY', startsOn: monthStart, amount: 3 }).expect(201);
+  });
 });
