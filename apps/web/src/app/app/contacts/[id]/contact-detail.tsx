@@ -15,6 +15,7 @@ import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
 import { EmployeeCommunicationCard } from '@/components/crm/employee-activity';
+import { CallButton } from '@/components/calls/call-button';
 import { EmployeeDetails, EmployeeRelationship } from '@/components/crm/employee-profile';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { RecordWebActivityCard } from '@/components/visitors/visitors';
@@ -38,6 +39,7 @@ export function ContactDetail({ id }: { id: string }) {
         title={c.fullName}
         subtitle={[c.jobTitle, c.company?.name].filter(Boolean).join(' · ') || undefined}
         row={c as unknown as Record<string, unknown>}
+        actions={<CallButton companyId={c.company?.id ?? null} contactId={id} name={c.fullName} variant="chip" />}
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

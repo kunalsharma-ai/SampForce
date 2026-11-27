@@ -92,7 +92,7 @@ export const PRODUCT_BRIEFS: readonly ProductBrief[] = [
       ['Department rankings and revenue analytics', 'Ranking por departamento y análisis de ingresos', 'Classement des services et analyse du chiffre d’affaires', 'Abteilungsranking und Umsatzanalysen', 'ترتيب الأقسام وتحليلات الإيرادات'],
       ['Follow-ups due today and overdue, in one view', 'Seguimientos para hoy y atrasados, en una vista', 'Relances du jour et en retard, dans une vue', 'Heute fällige und überfällige Nachfassaktionen in einer Ansicht', 'المتابعات المستحقة اليوم والمتأخرة في عرض واحد'],
     ]),
-  b('work', 'feature', 'work', { icon: 'list-checks', tone: 4 }, ['follow_up_management', 'task_management', 'sales_target_management', 'activity_tracking', 'instructions'], ['page.followUps', 'page.tasks', 'page.targets', 'page.meetings'],
+  b('work', 'feature', 'work', { icon: 'list-checks', tone: 4 }, ['follow_up_management', 'task_management', 'sales_target_management', 'activity_tracking', 'instructions'], ['page.followUps', 'page.calls', 'page.tasks', 'page.targets', 'page.meetings'],
     ['Follow-ups, tasks, targets and meetings', 'Seguimientos, tareas, objetivos y reuniones', 'Relances, tâches, objectifs et réunions', 'Nachfassaktionen, Aufgaben, Ziele und Meetings', 'المتابعات والمهام والأهداف والاجتماعات'],
     ['Never miss the next step', 'No te pierdas nunca el siguiente paso', 'Ne manquez jamais l’étape suivante', 'Nie wieder den nächsten Schritt verpassen', 'لا تفوّت الخطوة التالية أبدًا'],
     [

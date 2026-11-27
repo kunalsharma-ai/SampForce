@@ -28,9 +28,20 @@ export interface TwSent {
   statusCallback: string | null;
 }
 
+/** A call placed through POST /Calls.json (click-to-call, ADR 0088). */
+export interface TwCall {
+  sid: string;
+  to: string;
+  from: string;
+  twiml: string;
+  statusCallback: string | null;
+  statusCallbackEvents: string[];
+}
+
 export interface TwilioFixture {
   url: string;
   sent: TwSent[];
+  placed: TwCall[];
   calls: string[];
   close(): Promise<void>;
 }
@@ -70,6 +81,7 @@ const ACCOUNTS: Record<string, { friendly_name: string; type: string }> = {
 
 export async function startTwilioFixture(port = 0): Promise<TwilioFixture> {
   const sent: TwSent[] = [];
+  const placed: TwCall[] = [];
   const calls: string[] = [];
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://fixture');
@@ -81,7 +93,7 @@ export async function startTwilioFixture(port = 0): Promise<TwilioFixture> {
       if (u.pathname === '/health') return void res.writeHead(200).end('ok');
       calls.push(`${req.method} ${u.pathname}`);
       const [user, pass] = Buffer.from((req.headers.authorization ?? '').replace(/^Basic /, ''), 'base64').toString().split(':');
-      const m = /^\/2010-04-01\/Accounts\/(AC[a-f0-9]{32})(\.json|\/IncomingPhoneNumbers\.json|\/Messages\.json)$/.exec(u.pathname);
+      const m = /^\/2010-04-01\/Accounts\/(AC[a-f0-9]{32})(\.json|\/IncomingPhoneNumbers\.json|\/Messages\.json|\/Calls\.json)$/.exec(u.pathname);
       if (!m) return void err(404, 20404, 'The requested resource was not found');
       const sid = m[1]!;
       if (user !== sid || pass !== TW.token || !ACCOUNTS[sid]) return void err(401, 20003, 'Authenticate');
@@ -108,11 +120,23 @@ export async function startTwilioFixture(port = 0): Promise<TwilioFixture> {
         sent.push({ sid: msgSid, to, from, body, statusCallback: f.get('StatusCallback') });
         return void json(201, { sid: msgSid, account_sid: sid, to, from, body, status: 'queued', num_segments: String(smsSegments(body).segments), direction: 'outbound-api', error_code: null, error_message: null, api_version: '2010-04-01' });
       }
+      if (req.method === 'POST' && m[2] === '/Calls.json') {
+        const f = new URLSearchParams(raw);
+        const to = f.get('To') ?? '';
+        const from = f.get('From') ?? '';
+        if (!/^\+[1-9]\d{7,14}$/.test(to)) return void err(400, 21211, `The 'To' number ${to} is not a valid phone number.`);
+        if (from !== TW.number && from !== TW.voiceOnly) return void err(400, 21210, `The source phone number provided, ${from}, is not yet verified for your account.`);
+        if (!f.get('Twiml') && !f.get('Url')) return void err(400, 21205, 'Url parameter is required.');
+        if ((f.get('Twiml') ?? '').includes(`>${TW.landline}<`)) return void err(400, 21215, `Account not authorized to call ${TW.landline}.`);
+        const callSid = `CA${randomBytes(16).toString('hex')}`;
+        placed.push({ sid: callSid, to, from, twiml: f.get('Twiml') ?? '', statusCallback: f.get('StatusCallback'), statusCallbackEvents: f.getAll('StatusCallbackEvent') });
+        return void json(201, { sid: callSid, account_sid: sid, to, from, status: 'queued', direction: 'outbound-api', api_version: '2010-04-01' });
+      }
       err(405, 20004, 'Method not allowed');
     });
   });
   await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, sent, calls, close: () => new Promise((r) => server.close(() => r())) };
+  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, sent, placed, calls, close: () => new Promise((r) => server.close(() => r())) };
 }
 
 // Run on its own (Playwright): `tsx test/fixtures/twilio-fixture.ts`, port from TWILIO_FIXTURE_PORT.
