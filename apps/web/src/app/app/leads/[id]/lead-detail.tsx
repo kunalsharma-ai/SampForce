@@ -18,7 +18,6 @@ import { Select } from '@/components/crm/select';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
-import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
@@ -109,7 +108,6 @@ export function LeadDetail({ id }: { id: string }) {
           <RecordMeetings target={{ leadId: id }} />
           <RecordZoomMeetings target={{ leadId: id }} />
           <RecordVoiceNotes record={{ type: 'lead', id, name: l.fullName }} />
-          <RecordWebActivityCard type="lead" id={id} />
           <RecordSequences leadId={id} email={l.email} />
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />

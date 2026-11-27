@@ -450,7 +450,7 @@ export const engagement = {
     'Personen, die Sie vielleicht kontaktieren möchten, außerhalb des CRM, bis Sie sie hinzufügen. Fügen Sie sie manuell, aus CSV- oder Excel-Dateien, über die Browsererweiterung oder aus Apollo.io hinzu, senden Sie dann eine Liste an eine Sequenz und verfolgen Sie die Ergebnisse.',
     'أشخاص قد ترغب في التواصل معهم، يبقون خارج CRM حتى تضيفهم. أضفهم يدويًا أو من ملفات CSV أو Excel أو من إضافة المتصفح أو من Apollo.io، ثم أرسل القائمة إلى تسلسل وتابع نتائجها.',
   ],
-  'Website Visitors': ['Visitantes del sitio web', 'Visiteurs du site', 'Website-Besucher', 'زوار الموقع'],
+  'Website Enquiry': ['Consultas del sitio web', 'Demandes du site web', 'Website-Anfragen', 'استفسارات الموقع'],
   'Visits to your own website from a consent-aware tracking script: important pages, repeat visits, campaigns and enquiries, linked to your leads and contacts.': [
     'Visitas a tu propio sitio web registradas por un script de seguimiento que respeta el consentimiento: páginas importantes, visitas repetidas, campañas y consultas, vinculadas a tus leads y contactos.',
     'Les visites de votre propre site web via un script de suivi respectueux du consentement : pages importantes, visites répétées, campagnes et demandes, liées à vos prospects et contacts.',

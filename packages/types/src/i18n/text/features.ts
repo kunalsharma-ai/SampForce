@@ -62,8 +62,8 @@ export const features = {
   'Email finder': ['Buscador de correos', 'Recherche d’e-mails', 'E-Mail-Suche', 'البحث عن البريد'],
   'Prospect lists': ['Listas de prospectos', 'Listes de prospection', 'Interessentenlisten', 'قوائم العملاء المستهدفين'],
   'Browser extension': ['Extensión del navegador', 'Extension de navigateur', 'Browsererweiterung', 'إضافة المتصفح'],
+  'Website enquiries': ['Consultas del sitio web', 'Demandes du site web', 'Website-Anfragen', 'استفسارات الموقع الإلكتروني'],
   'Segments and lead forms': ['Segmentos y formularios de leads', 'Segments et formulaires de prospects', 'Segmente und Lead-Formulare', 'الشرائح ونماذج العملاء المحتملين'],
-  'Website visitors': ['Visitantes del sitio web', 'Visiteurs du site web', 'Website-Besucher', 'زوار الموقع'],
   'Meeting recordings': ['Grabaciones de reuniones', 'Enregistrements de réunions', 'Besprechungsaufzeichnungen', 'تسجيلات الاجتماعات'],
   'Voice to CRM': ['Voz al CRM', 'Voix vers le CRM', 'Sprache ins CRM', 'من الصوت إلى CRM'],
   'AI assistant and agents': ['Asistente y agentes de IA', 'Assistant et agents IA', 'KI-Assistent und Agenten', 'المساعد والوكلاء بالذكاء الاصطناعي'],
@@ -172,11 +172,11 @@ export const features = {
     'Kampagnen-Tracking mit Erstkontakt-Attribution.',
     'تتبّع الحملات مع الإسناد إلى أول تواصل.',
   ],
-  'Consent-aware website tracking and enquiries.': [
-    'Seguimiento del sitio web y consultas que respetan el consentimiento.',
-    'Suivi du site web et demandes respectueux du consentement.',
-    'Einwilligungsbewusstes Website-Tracking und Anfragen.',
-    'تتبّع الموقع والاستفسارات مع احترام الموافقة.',
+  'Every enquiry, download form, live chat lead, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.': [
+    'Cada consulta, formulario de descarga, lead del chat, suscripción al boletín y reseña de tu sitio web, en tiempo real, con conversión en empresas y empleados.',
+    'Chaque demande, formulaire de téléchargement, prospect du chat, inscription à la newsletter et avis de votre site web, en temps réel, avec conversion en entreprises et employés.',
+    'Jede Anfrage, jedes Download-Formular, jeder Live-Chat-Lead, jede Newsletter-Anmeldung und Bewertung von Ihrer Unternehmenswebsite in Echtzeit, mit Umwandlung in Unternehmen und Mitarbeitende.',
+    'كل استفسار ونموذج تنزيل وعميل محتمل من الدردشة المباشرة واشتراك في النشرة ومراجعة من موقع شركتك، لحظة بلحظة، مع تحويلها إلى شركات وموظفين.',
   ],
   'Meeting recordings, transcripts and AI summaries.': [
     'Grabaciones de reuniones, transcripciones y resúmenes con IA.',

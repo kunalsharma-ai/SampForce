@@ -247,6 +247,70 @@ export async function upgradeSupportTicketStatuses(prisma: PrismaClient, log: (l
   if (res.nModified) log(`moved ${res.nModified} support queries from old statuses to new ones`);
 }
 
+/** The collections Website Visitors (ADR 0029) kept. The feature was removed for Website Enquiry (ADR 0095). */
+export const RETIRED_VISITOR_COLLECTIONS = ['web_events', 'web_sessions', 'web_visitors', 'visitor_settings'] as const;
+
+/**
+ * Removes what Website Visitors (ADR 0029) left behind once the feature itself is gone (ADR 0095, Kunal 2026-11-27:
+ * "remove website visitor completely"). Idempotent; once done it changes nothing.
+ *
+ *  - Its four collections (anonymous page views, sessions, visitors and the tracking settings) are dropped: no code
+ *    reads them any more, and keeping browsing history nobody can see or erase is worse for privacy than deleting it.
+ *    Leads and contacts that enquiries created are ordinary CRM records and stay.
+ *  - The visitors:read and visitors:manage permissions leave every role. Custom roles get the matching Website
+ *    Enquiry permission instead (read stays read, manage becomes write); built-in roles get what their definition
+ *    says, as for every new permission.
+ *  - Workflows started by "They show high intent on your website" can never run again: they are paused and moved to
+ *    the bin (deleted_at), so they disappear from the list but their history stays.
+ *  - Unsent high-intent events and the notifications that pointed at the removed page are deleted.
+ *  - Plan lists and per-workspace overrides lose the website_visitors feature key, and notification settings the
+ *    category of high-intent visitors.
+ */
+export async function retireWebsiteVisitors(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const existing = new Set(
+    ((await prisma.$runCommandRaw({ listCollections: 1, nameOnly: true })) as { cursor?: { firstBatch?: { name: string }[] } }).cursor?.firstBatch?.map((c) => c.name) ?? [],
+  );
+  for (const name of RETIRED_VISITOR_COLLECTIONS) {
+    if (!existing.has(name)) continue;
+    await prisma.$runCommandRaw({ drop: name });
+    log(`dropped ${name} (Website Visitors removed)`);
+  }
+  const run = async (command: Record<string, unknown>): Promise<number> => {
+    const res = (await prisma.$runCommandRaw(command as Prisma.InputJsonObject)) as { n?: number; nModified?: number };
+    return res.nModified ?? res.n ?? 0;
+  };
+  const builtIn = await run({
+    update: 'roles',
+    updates: [
+      { q: { is_system: true, key: { $in: ['owner', 'admin', 'manager', 'member', 'viewer'] }, permissions: { $in: ['visitors:read', 'visitors:manage'] } }, u: [{ $set: { permissions: { $setUnion: [{ $setDifference: ['$permissions', ['visitors:read', 'visitors:manage']] }, { $cond: [{ $in: ['$key', ['viewer']] }, ['enquiries:read'], ['enquiries:read', 'enquiries:write']] }] } } }], multi: true },
+    ],
+  });
+  const custom = await run({
+    update: 'roles',
+    updates: [
+      { q: { is_system: { $ne: true }, permissions: 'visitors:manage' }, u: { $addToSet: { permissions: { $each: ['enquiries:read', 'enquiries:write'] } } }, multi: true },
+      { q: { is_system: { $ne: true }, permissions: 'visitors:read' }, u: { $addToSet: { permissions: 'enquiries:read' } }, multi: true },
+      { q: { permissions: { $in: ['visitors:read', 'visitors:manage'] } }, u: { $pull: { permissions: { $in: ['visitors:read', 'visitors:manage'] } } }, multi: true },
+    ],
+  });
+  if (builtIn + custom) log(`moved ${builtIn + custom} roles from website visitor permissions to website enquiry permissions`);
+  const workflows = await run({
+    update: 'workflows',
+    updates: [{ q: { trigger_type: 'visitor.high_intent', deleted_at: null }, u: { $set: { status: 'PAUSED', deleted_at: { $date: new Date().toISOString() } } }, multi: true }],
+  });
+  if (workflows) log(`moved ${workflows} high-intent visitor workflows to the bin`);
+  const events = await run({ delete: 'domain_events', deletes: [{ q: { type: { $regex: '^visitor\\.' }, processed_at: null }, limit: 0 }] });
+  const notices = await run({ delete: 'notifications', deletes: [{ q: { $or: [{ type: { $regex: '^visitor\\.' } }, { link: { $regex: '^/app/website-visitors' } }] }, limit: 0 }] });
+  if (events + notices) log(`deleted ${events} pending visitor events and ${notices} visitor notifications`);
+  const overrides = await run({ delete: 'tenant_feature_overrides', deletes: [{ q: { feature: 'website_visitors' }, limit: 0 }] });
+  const plansChanged = await run({ update: 'plans', updates: [{ q: { 'entitlements.features': 'website_visitors' }, u: { $pull: { 'entitlements.features': 'website_visitors' } }, multi: true }] });
+  // A workspace that switched the "High-intent website visitors" notifications off keeps its other choices: the stored
+  // list is read with the current category names, so an unknown one would make it fall back to the defaults.
+  const settings = await run({ update: 'crm_settings', updates: [{ q: { 'notifications.disabled': 'visitors' }, u: { $pull: { 'notifications.disabled': 'visitors' } }, multi: true }] });
+  if (settings) log(`removed the visitors notification category from ${settings} workspaces' settings`);
+  if (overrides + plansChanged) log(`removed website_visitors from ${plansChanged} plans and ${overrides} workspace overrides`);
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
@@ -255,4 +319,5 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await upgradeCommandCenter(prisma, log);
   await eraseRecentPageHistory(prisma, log);
   await upgradeSupportTicketStatuses(prisma, log);
+  await retireWebsiteVisitors(prisma, log);
 }

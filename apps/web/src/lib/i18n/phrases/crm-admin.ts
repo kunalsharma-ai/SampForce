@@ -71,7 +71,7 @@ export const crmAdmin = {
   'Incoming SMS, WhatsApp and inbox': ['SMS, WhatsApp y bandeja de entrada', 'SMS, WhatsApp et boîte de réception', 'Eingehende SMS, WhatsApp und Posteingang', 'الرسائل النصية وواتساب وصندوق الوارد'],
   'Client portal activity': ['Actividad del portal de clientes', 'Activité du portail client', 'Aktivität im Kundenportal', 'نشاط بوابة العملاء'],
   'Sequence updates': ['Novedades de secuencias', 'Mises à jour des séquences', 'Sequenz-Updates', 'تحديثات التسلسلات'],
-  'High-intent website visitors': ['Visitantes web con alta intención', 'Visiteurs du site à forte intention', 'Website-Besucher mit hoher Kaufabsicht', 'زوار الموقع ذوو النية العالية'],
+  'New website enquiries': ['Nuevas consultas del sitio web', 'Nouvelles demandes du site web', 'Neue Website-Anfragen', 'استفسارات جديدة من الموقع'],
   'Badges and competitions': ['Insignias y competiciones', 'Badges et compétitions', 'Abzeichen und Wettbewerbe', 'الشارات والمسابقات'],
   'Workflow notifications': ['Notificaciones de flujos', 'Notifications des workflows', 'Workflow-Benachrichtigungen', 'إشعارات سير العمل'],
 

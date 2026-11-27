@@ -45,8 +45,9 @@ export const PERMISSIONS = [
   'sequences:write',
   'gamification:read',
   'gamification:manage',
-  'visitors:read',
-  'visitors:manage',
+  /** Website Enquiry (ADR 0095): enquiries, downloads, chat leads, sign-ups and reviews from the company website. */
+  'enquiries:read',
+  'enquiries:write',
   'prospects:read',
   'prospects:write',
   /** Provider searches, email reveals and verifications, which use provider credits and the daily allowance. */
@@ -79,9 +80,10 @@ const MEMBER: Permission[] = [
   'sequences:write',
   'prospects:write',
   'prospects:search',
+  'enquiries:write',
 ];
 
-const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage', 'gamification:manage', 'visitors:manage', 'prospects:export', 'prospects:manage'];
+const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage', 'gamification:manage', 'prospects:export', 'prospects:manage'];
 
 const ADMIN: Permission[] = PERMISSIONS.filter((p) => p !== 'billing:manage');
 

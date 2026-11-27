@@ -8,7 +8,7 @@ import { Module } from '@nestjs/common';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { AiModule } from '../ai/ai.module';
 import { GamificationModule } from '../gamification/gamification.module';
-import { VisitorsModule } from '../visitors/visitors.module';
+import { WebsiteEnquiriesModule } from '../website-enquiries/website-enquiries.module';
 import { ProspectsModule } from '../prospects/prospects.module';
 import { AutomationModule } from '../automation/automation.module';
 import { SequencesModule } from '../sequences/sequences.module';
@@ -23,7 +23,7 @@ import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
-  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule],
+  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, WebsiteEnquiriesModule, ProspectsModule, MobileModule],
   providers: [WorkerService, CrmRemindersService, CompanyLogosService, CompanyEnrichmentService, HunterClient, NotificationsService, CompanyClosureService],
   exports: [WorkerService],
 })

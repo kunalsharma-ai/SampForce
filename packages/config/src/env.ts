@@ -99,12 +99,18 @@ export const apiEnvSchema = z.object({
   APOLLO_API_BASE_URL: z.string().url().default('https://api.apollo.io/api/v1'),
   /** Default provider calls (searches, email reveals, verifications) one person may make per 24 hours. */
   PROSPECT_DAILY_LIMIT: z.coerce.number().int().min(0).max(5000).default(100),
-  /** Website enquiries one workspace accepts in 24 hours, across all visitors, so a flood cannot fill the CRM. */
-  VISITOR_ENQUIRIES_PER_DAY: z.coerce.number().int().min(1).max(100000).default(500),
   /** Optional speech-to-text for meeting recordings (Deepgram). Unset = paste a transcript or notes instead. */
   DEEPGRAM_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   DEEPGRAM_API_BASE_URL: z.string().url().default('https://api.deepgram.com'),
   /** Largest recording accepted for transcription, in megabytes. The audio is never stored. */
+  // Website Enquiry (ADR 0095): enquiries, downloads, chat leads, sign-ups and reviews from the company website's
+  // "Sampforce API". The address, key, webhook secret and receiving workspace are entered in the operator console.
+  WEBSITE_API_BASE_URL: z.string().url().regex(/^https?:\/\//, 'Use an http:// or https:// address').optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_API_KEY: z.string().max(400).optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_WEBHOOK_SECRET: z.string().min(16, 'Use at least 16 characters (for example openssl rand -hex 32)').max(400).optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_ENQUIRY_WORKSPACE: z.string().trim().max(120).optional().or(z.literal('').transform(() => undefined)),
+  /** How often the website API is pulled for new and changed leads, as a safety net for the webhook. */
+  WEBSITE_ENQUIRY_SYNC_MS: z.coerce.number().int().min(1000).default(600_000),
   MEETING_UPLOAD_MAX_MB: z.coerce.number().int().min(1).max(500).default(100),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),

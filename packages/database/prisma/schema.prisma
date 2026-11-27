@@ -556,16 +556,13 @@ model Tenant {
   gamificationBadges     GamificationBadge[]
   gamificationAwards     GamificationAward[]
   gamificationContests   GamificationCompetition[]
-  visitorSettings        VisitorSettings?
-  webVisitors            WebVisitor[]
+  websiteEnquiries       WebsiteEnquiry[]
   prospectLists          ProspectList[]
   prospects              Prospect[]
   prospectOutreach       ProspectOutreach[]
   prospectImports        ProspectImport[]
   providerUsage          ProviderUsage[]
   prospectSettings       ProspectSettings?
-  webSessions            WebSession[]
-  webEvents              WebEvent[]
   companyHealthDays      CompanyHealthDaily[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
@@ -1104,7 +1101,6 @@ model Contact {
   tasks         Task[]
 
   portalUsers      PortalUser[]
-  webVisitors      WebVisitor[]
   prospects        Prospect[]
   whatsappMessages WhatsappMessage[]
   whatsappConsents WhatsappConsent[]
@@ -1593,7 +1589,6 @@ model Lead {
   campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   activities  Activity[]
   tasks       Task[]
-  webVisitors WebVisitor[]
   prospects   Prospect[]
 
   @@index([tenantId, status])
@@ -2784,7 +2779,6 @@ model Campaign {
   leads          Lead[]
   forms          LeadForm[]
   emailTemplates EmailTemplate[]
-  webVisitors    WebVisitor[]
 
   @@unique([tenantId, name])
   @@map("campaigns")
@@ -4088,106 +4082,91 @@ model GamificationCompetition {
   @@map("gamification_competitions")
 }
 
-model VisitorSettings {
-  tenantId           String   @id @map("_id")
-  enabled            Boolean  @default(false)
-  siteKey            String   @unique @map("site_key")
-  consentMode        String   @default("opt_in") @map("consent_mode")
-  allowedDomains     String[] @default([]) @map("allowed_domains")
-  retentionDays      Int      @default(180) @map("retention_days")
-  createLeads        Boolean  @default(true) @map("create_leads")
-  enquiryConsentText String?  @map("enquiry_consent_text")
-  highIntentScore    Int      @default(50) @map("high_intent_score")
-  importantPages     Json     @map("important_pages")
-  updatedById        String?  @map("updated_by_id")
-  updatedAt          DateTime @default(now()) @map("updated_at")
+// ───────────── Website Enquiry (ADR 0095) ─────────────
+
+/// One enquiry, download, live chat lead, newsletter sign-up or review sent on the company website, received from the
+/// website's "Sampforce API" by its signed webhook or the pull sync. Upserted by (tenant, record, external id), so the
+/// same lead arriving both ways is one row. The website's own fields are kept as sent; the SampForce fields (who
+/// opened it, the sales status, the company or employee it became) are this workspace's own.
+model WebsiteEnquiry {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  /// lead, contact (newsletter sign-ups) or review: the website's `object`.
+  record            String
+  /// The website's id: l_... for leads, r_... for reviews, the email address for contacts.
+  externalId        String    @map("external_id")
+  /// enquiry, download, resource-download, case-study-download, chat, careers, newsletter or review.
+  type              String
+  /// service, rfq, partnership, contact, download, chat, careers, other, newsletter or review.
+  category          String
+  /// new, contacted, qualified, won, lost or spam. Reviews and sign-ups start as new too.
+  status            String    @default("new")
+  /// The status on the website (for reviews: published, pending or hidden; for contacts: subscribed or unsubscribed).
+  websiteStatus     String?   @map("website_status")
+  formKey           String?   @map("form_key")
+  formName          String?   @map("form_name")
+  name              String?
+  email             String?
+  phone             String?
+  country           String?
+  company           String?
+  designation       String?
+  service           String?
+  timeline          String?
+  message           String?
+  /// The resource, case study or title asked for on a download form, or the interest of a chat lead.
+  resource          String?
+  rating            Int?
+  page              String?
+  consent           Boolean   @default(false)
+  /// Newsletter: still subscribed (false = unsubscribed from marketing email).
+  subscribed        Boolean?
+  /// Extra and other form fields, label to value.
+  fields            Json?
+  /// Who the lead is assigned to on the website, and the website team's note.
+  websiteOwner      String?   @map("website_owner")
+  websiteNote       String?   @map("website_note")
+  /// The whole record as the website last sent it, so nothing is lost.
+  raw               Json
+  /// Lower-case text of name, email, company, phone, country, service, message and form, for search.
+  searchText        String    @map("search_text")
+  submittedAt       DateTime  @map("submitted_at")
+  websiteUpdatedAt  DateTime  @map("website_updated_at")
+  receivedAt        DateTime  @default(now()) @map("received_at")
+  lastSyncedAt      DateTime  @default(now()) @map("last_synced_at")
+  /// webhook or pull: how it first arrived.
+  source            String
+  backfill          Boolean   @default(false)
+  /// First opened in SampForce; until then it is highlighted as new.
+  seenAt            DateTime? @map("seen_at")
+  seenById          String?   @map("seen_by_id")
+  starred           Boolean   @default(false)
+  assigneeId        String?   @map("assignee_id")
+  stage             String?
+  note              String?
+  /// The company and employee this enquiry became or was linked to.
+  companyId         String?   @map("company_id")
+  contactId         String?   @map("contact_id")
+  convertedAt       DateTime? @map("converted_at")
+  convertedById     String?   @map("converted_by_id")
+  /// Status, stage, owner and note waiting to be sent back to the website (PATCH /leads/:id); null when nothing waits.
+  writeBackAt       DateTime? @map("write_back_at")
+  writeBackTries    Int       @default(0) @map("write_back_tries")
+  writeBackError    String?   @map("write_back_error")
+  writtenBackAt     DateTime? @map("written_back_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@map("visitor_settings")
-}
-
-model WebVisitor {
-  id             String    @id @default(uuid()) @map("_id")
-  tenantId       String    @map("tenant_id")
-  clientId       String    @map("client_id")
-  firstSeenAt    DateTime  @default(now()) @map("first_seen_at")
-  lastSeenAt     DateTime  @default(now()) @map("last_seen_at")
-  visits         Int       @default(0)
-  pageViews      Int       @default(0) @map("page_views")
-  engagedSeconds Int       @default(0) @map("engaged_seconds")
-  enquiries      Int       @default(0)
-  leadId         String?   @map("lead_id")
-  contactId      String?   @map("contact_id")
-  identifiedAt   DateTime? @map("identified_at")
-  identifiedVia  String?   @map("identified_via")
-  firstTouch     Json?     @map("first_touch")
-  campaignId     String?   @map("campaign_id")
-  intentScore    Int       @default(0) @map("intent_score")
-  highIntentAt   DateTime? @map("high_intent_at")
-
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  lead     Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  contact  Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  campaign Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  sessions WebSession[]
-  events   WebEvent[]
-
-  @@unique([tenantId, clientId])
-  @@index([tenantId, lastSeenAt])
-  @@index([tenantId, leadId])
+  @@unique([tenantId, record, externalId])
+  @@index([tenantId, submittedAt])
+  @@index([tenantId, status])
+  @@index([tenantId, seenAt])
+  @@index([tenantId, email])
   @@index([tenantId, contactId])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([leadId])
-  @@index([contactId])
-  @@index([campaignId])
-  @@map("web_visitors")
-}
-
-model WebSession {
-  id             String   @id @default(uuid()) @map("_id")
-  tenantId       String   @map("tenant_id")
-  visitorId      String   @map("visitor_id")
-  clientId       String   @map("client_id")
-  startedAt      DateTime @default(now()) @map("started_at")
-  lastAt         DateTime @default(now()) @map("last_at")
-  landingPath    String?  @map("landing_path")
-  referrerHost   String?  @map("referrer_host")
-  utm            Json?
-  pageViews      Int      @default(0) @map("page_views")
-  engagedSeconds Int      @default(0) @map("engaged_seconds")
-
-  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  visitor WebVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  events  WebEvent[]
-
-  @@unique([tenantId, clientId])
-  @@index([tenantId, startedAt])
-  @@index([visitorId])
-  @@map("web_sessions")
-}
-
-model WebEvent {
-  id         String   @id @default(uuid()) @map("_id")
-  tenantId   String   @map("tenant_id")
-  visitorId  String   @map("visitor_id")
-  sessionId  String?  @map("session_id")
-  type       String
-  path       String?
-  title      String?
-  name       String?
-  data       Json?
-  occurredAt DateTime @default(now()) @map("occurred_at")
-
-  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  visitor WebVisitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  session WebSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([tenantId, occurredAt])
-  @@index([visitorId])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([sessionId])
-  @@map("web_events")
+  @@index([tenantId, companyId])
+  @@index([writeBackAt])
+  @@map("website_enquiries")
 }
 
 // ───────────── Enhancement Part 2: Prospect Lists and prospect discovery ─────────────

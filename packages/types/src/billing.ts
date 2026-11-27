@@ -336,13 +336,13 @@ export interface PlatformAuditRow {
 }
 
 /** A provider in the operator console's provider setup list (ADR 0031, keys editable since ADR 0051). */
-export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'ai_routing', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'workspace_servers', 'company_autofill', 'zapier', 'expo_push', 'checkout', 'stripe', 'razorpay'] as const;
+export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'ai_routing', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'workspace_servers', 'company_autofill', 'zapier', 'expo_push', 'website_enquiries', 'checkout', 'stripe', 'razorpay'] as const;
 export type ProviderKey = (typeof PROVIDER_KEYS)[number];
 /**
  * Every provider has a connection test: a call that proves the keys and costs nothing. "checkout" is a group of
  * settings (online payments on or off, price ids), not a provider, so there is nothing to call.
  */
-export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
+export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'zapier', 'website_enquiries', 'stripe', 'razorpay'] as const;
 export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
 
 /** A URL the operator pastes into the provider's own console (a redirect URL, a webhook endpoint). */

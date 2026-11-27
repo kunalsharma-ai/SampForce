@@ -66,7 +66,7 @@ describe('plan features', () => {
     const refused = await api(free).get('/sequences').expect(403);
     expect(refused.body.error).toMatchObject({ code: 'FEATURE_NOT_IN_PLAN', message: 'Email sequences is not included in your plan. A workspace admin can upgrade on the Billing page.' });
     expect(refused.body.error.details).toEqual([{ path: 'feature', message: 'sequences' }]);
-    for (const url of ['/quotes', '/contracts', '/forecast', '/analytics/targets', '/success/customers', '/visitors/settings', '/gamification/settings', '/webhooks', '/api-keys', '/deal-health', '/portal/settings']) {
+    for (const url of ['/quotes', '/contracts', '/forecast', '/analytics/targets', '/success/customers', '/gamification/settings', '/webhooks', '/api-keys', '/deal-health', '/portal/settings']) {
       expect((await api(free).get(url)).body.error?.code, url).toBe('FEATURE_NOT_IN_PLAN');
     }
     const billing = (await api(free).get('/billing').expect(200)).body;

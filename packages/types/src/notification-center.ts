@@ -27,7 +27,7 @@ export const NOTIFICATION_SECTIONS = [
   { key: 'portal', label: 'Client portal', href: '/app/portal', types: ['portal.'] },
   { key: 'communication', label: 'Inbox and messages', href: '/app/communication', types: ['inbox.', 'sms.', 'whatsapp.'] },
   { key: 'sequences', label: 'Sequences', href: '/app/sequences', types: ['sequence.', 'email.'] },
-  { key: 'website-visitors', label: 'Website visitors', href: '/app/website-visitors', types: ['visitor.'] },
+  { key: 'website-enquiries', label: 'Website enquiries', href: '/app/website-enquiries', types: ['website_enquiry.'] },
   { key: 'targets', label: 'Targets', href: '/app/targets', types: ['target.'] },
   { key: 'gamification', label: 'Competitions', href: '/app/gamification', types: ['gamification.'] },
   { key: 'announcements', label: 'Announcements', href: '/app/announcements', types: ['announcement.'] },

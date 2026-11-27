@@ -123,11 +123,11 @@ export const HELP_CATEGORIES = [
     tone: 2,
     title: ['Prospecting & outreach', 'Prospección y contacto', 'Prospection et démarchage', 'Akquise & Ansprache', 'التنقيب والتواصل'],
     description: [
-      'Email sequences, the email finder, prospect lists, the browser extension, website visitors and marketing.',
-      'Secuencias de correo, buscador de correos, listas de prospectos, extensión, visitantes web y marketing.',
-      'Séquences d’e-mails, recherche d’adresses, listes de prospects, extension, visiteurs du site et marketing.',
-      'E-Mail-Sequenzen, E-Mail-Finder, Interessentenlisten, Browsererweiterung, Website-Besucher und Marketing.',
-      'سلاسل البريد وباحث البريد وقوائم العملاء المحتملين وإضافة المتصفح وزوار الموقع والتسويق.',
+      'Email sequences, the email finder, prospect lists, the browser extension, website enquiries and marketing.',
+      'Secuencias de correo, buscador de correos, listas de prospectos, extensión, consultas de la web y marketing.',
+      'Séquences d’e-mails, recherche d’adresses, listes de prospects, extension, demandes du site et marketing.',
+      'E-Mail-Sequenzen, E-Mail-Finder, Interessentenlisten, Browsererweiterung, Website-Anfragen und Marketing.',
+      'سلاسل البريد وباحث البريد وقوائم العملاء المحتملين وإضافة المتصفح واستفسارات الموقع والتسويق.',
     ],
   },
   {

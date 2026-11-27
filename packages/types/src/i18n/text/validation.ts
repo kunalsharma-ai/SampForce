@@ -250,10 +250,7 @@ export const validation = {
   'Choose who to enrol': ['Elige a quién inscribir', 'Choisissez qui inscrire', 'Wählen Sie, wen Sie aufnehmen möchten', 'اختر من تريد تسجيله'],
   'Enter valid email addresses': ['Introduce direcciones de correo válidas', 'Saisissez des adresses e-mail valides', 'Geben Sie gültige E-Mail-Adressen ein', 'أدخل عناوين بريد إلكتروني صالحة'],
 
-  // Visitors, voice
-  'Use a host name like www.example.com or *.example.com': ['Usa un nombre de host como www.example.com o *.example.com', 'Utilisez un nom d’hôte comme www.example.com ou *.example.com', 'Verwenden Sie einen Hostnamen wie www.example.com oder *.example.com', 'استخدم اسم مضيف مثل www.example.com أو ‎*.example.com'],
-  'Start with /': ['Empieza por /', 'Commencez par /', 'Beginnen Sie mit /', 'ابدأ بـ /'],
-  'Add your website': ['Añade tu sitio web', 'Ajoutez votre site web', 'Fügen Sie Ihre Website hinzu', 'أضف موقعك الإلكتروني'],
+  // Voice
   'Use a date like 2026-11-02': ['Usa una fecha como 2026-11-02', 'Utilisez une date comme 2026-11-02', 'Verwenden Sie ein Datum wie 2026-11-02', 'استخدم تاريخًا مثل 2026-11-02'],
   'Use a time like 14:30': ['Usa una hora como 14:30', 'Utilisez une heure comme 14:30', 'Verwenden Sie eine Uhrzeit wie 14:30', 'استخدم وقتًا مثل 14:30'],
 

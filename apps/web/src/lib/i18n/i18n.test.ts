@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CALL_OUTCOME_LABELS, CALL_WINDOW_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS } from '@dealflow/types';
+import { CALL_OUTCOME_LABELS, CALL_WINDOW_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS, ENQUIRY_CATEGORY_LABELS, ENQUIRY_STATUS_LABELS, ENQUIRY_TYPE_LABELS } from '@dealflow/types';
 import {
   ENRICH_FIELD_LABELS,
   COMPANY_EMAIL_CTA_LABELS,
@@ -53,7 +53,6 @@ import {
   DOMAIN_SOURCE_LABELS,
   FINDER_STATUS_LABELS,
   FORM_FIELD_LABELS,
-  PAGE_KIND_LABELS,
   PORTAL_REQUEST_CATEGORY_LABELS,
   PORTAL_REQUEST_STATUS_LABELS,
   PORTAL_ROLE_LABELS,
@@ -209,6 +208,7 @@ describe('page phrases', () => {
     ],
     ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
     // Calls (ADR 0088): outcomes, the good-time-to-call check and its weekdays, call states, dialer presets and placeholders.
+    ['website enquiry labels', [...Object.values(ENQUIRY_TYPE_LABELS), ...Object.values(ENQUIRY_CATEGORY_LABELS), ...Object.values(ENQUIRY_STATUS_LABELS)]],
     ['call labels', [...Object.values(CALL_OUTCOME_LABELS), ...Object.values(CALL_WINDOW_LABELS), ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]), ...Object.values(DIALER_PLACEHOLDERS), 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', ...[...source('../../app/app/calls/calls-workspace.tsx').match(/const STATUS_LABEL[^\n]*/)![0].matchAll(/: '([^']+)'/g)].map((m) => m[1]!)]],
     // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
     // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
@@ -309,7 +309,6 @@ describe('page phrases', () => {
         ...Object.values(PROSPECT_SOURCE_LABELS),
         ...Object.values(PROSPECT_IMPORT_FIELD_LABELS),
         ...Object.values(EMAIL_STATUS_LABELS),
-        ...Object.values(PAGE_KIND_LABELS),
         ...Object.values(COMPETITION_METRIC_LABELS),
         ...Object.values(BADGE_METRIC_LABELS),
         ...Object.values(SCORING_RULE_LABELS).flatMap((r) => [r.label, r.unit]),
@@ -319,7 +318,6 @@ describe('page phrases', () => {
           ['../../app/app/portal/portal-workspace.tsx', /const TOGGLES[\s\S]*?\];/, /(?:label|hint): '([^']+)'/g],
           ['../../components/prospects/prospects.tsx', /const MODE_LABEL.*/, /: '([^']+)'/g],
           ['../../components/prospects/prospects.tsx', /const FIELDS[\s\S]*?\];/, /\['\w+', '([^']+)'/g],
-          ['../../components/visitors/visitors.tsx', /const SEGMENTS[\s\S]*?\];/, /label: '([^']+)'/g],
           ['../../app/app/settings/pipelines/pipelines-manager.tsx', /const NEW_PIPELINE[\s\S]*?\};/, /name: '([^']+)'/g],
           ['../../../../api/src/finder/finder.service.ts', /[\s\S]*/, /notes\.push\('([^']+)'\)/g],
           ['../../../../api/src/prospects/prospects.service.ts', /[\s\S]*/, /(?:detail: |notice: |\? )'([A-Z][^']{20,})'/g],

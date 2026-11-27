@@ -51,7 +51,7 @@ export const fr: Messages = {
   'module.sequences': 'Séquences d’e-mails',
   'module.finder': 'Recherche d’e-mails',
   'module.prospects': 'Listes de prospection',
-  'module.website-visitors': 'Visiteurs du site',
+  'module.website-enquiries': 'Demandes du site web',
   'module.meetings': 'Réunions',
   'module.agents': 'Agents IA',
   'module.automation': 'Studio d’automatisation',

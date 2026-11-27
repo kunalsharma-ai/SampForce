@@ -476,6 +476,30 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     },
   },
   {
+    key: 'website_enquiries', name: 'Website enquiries (company website)',
+    usedFor: "Website Enquiry (ADR 0095): every enquiry, download form, live chat lead, newsletter sign-up and review from the company website's Sampforce API, in one workspace",
+    fields: [
+      { name: 'WEBSITE_API_BASE_URL', label: 'API address', required: true, help: 'The website super admin > System > Sampforce (sales) > API address, for example https://www.frequentresearch.com/api/v1/sampforce.', normalize: (v) => v.replace(/\/+$/, '') },
+      { name: 'WEBSITE_API_KEY', label: 'API key (sfk_...)', required: true, help: 'Made under System > Sampforce (sales) > Make an API key. Shown there only once. Keep the default rights; leads:write lets SampForce send statuses back.', validate: (v) => (/^sfk_\S{8,}$/.test(v) ? null : 'The key starts with sfk_.') },
+      { name: 'WEBSITE_WEBHOOK_SECRET', label: 'Webhook signing secret', required: false, help: 'The same text as SAMPFORCE_WEBHOOK_SECRET on the website (at least 16 characters). Without it only the pull sync brings enquiries in.' },
+      { name: 'WEBSITE_ENQUIRY_WORKSPACE', label: 'Receiving workspace (web address name)', required: true, help: "The workspace's web address name (slug), shown on the client's page in Clients. Saving it also switches the Website enquiries feature on for that client.", normalize: (v) => v.toLowerCase() },
+    ],
+    tested: ['WEBSITE_API_BASE_URL', 'WEBSITE_API_KEY'],
+    checkNote: "Calls the website's /ping with the key: it answers with the key's name and rights. Nothing is read or changed.",
+    app: { off: 'Website Enquiry shows "not connected"', on: 'Enquiries arrive in the receiving workspace; pulled every few minutes', verified: 'Connected: enquiries arrive in the receiving workspace' },
+    setup: {
+      steps: [
+        'Sign in to the website super admin as a Super Admin or IT Admin and open System > Sampforce (sales).',
+        'Press + Make an API key, name it "SampForce", keep the four default rights and, if you like, add this server\'s IP address. Confirm with your authenticator code and copy the sfk_ key at once.',
+        'Paste the API address and key below, and the web address name of the workspace that should receive the enquiries. Save, then press Test connection.',
+        'For instant delivery: on the website open System > Connections & keys > Sampforce, paste the webhook address below into SAMPFORCE_WEBHOOK_URL, and the same long random text into SAMPFORCE_WEBHOOK_SECRET there and into Webhook signing secret here (openssl rand -hex 32).',
+        'Press Send a test on the website: the webhook status here turns green. To bring in older leads, pick a date there and press Send older leads, or wait for the first pull, which imports everything.',
+      ],
+      urls: [{ label: 'Webhook address (SAMPFORCE_WEBHOOK_URL)', path: '/api/v1/hooks/website-enquiries', where: 'Website super admin > System > Connections & keys > Sampforce' }],
+    },
+    webhook: 'website',
+  },
+  {
     key: 'checkout', name: 'Plans and online checkout', usedFor: 'Whether workspaces can pay online, which Stripe or Razorpay price each plan uses, and what the public pricing page shows',
     fields: [
       { name: 'ONLINE_PAYMENTS_ENABLED', label: 'Online payments', required: false, switch: true, help: 'Off: workspaces pay offline against an invoice you mark paid. On: workspaces can check out with Stripe or Razorpay once their keys and prices are set.' },

@@ -50,7 +50,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/finder': 'page.finder',
   '/app/prospects': 'page.prospects',
   '/app/prospects/[id]': 'page.prospectList',
-  '/app/website-visitors': 'page.websiteVisitors',
+  '/app/website-enquiries': 'page.websiteEnquiries',
   '/app/meetings': 'page.meetings',
   '/app/meetings/records/[id]': 'page.meetingRecord',
   '/app/marketing': 'page.marketing',

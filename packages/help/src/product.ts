@@ -122,7 +122,7 @@ export const PRODUCT_BRIEFS: readonly ProductBrief[] = [
       ['Chat that also works on an office network without internet', 'Chat que funciona también en una red de oficina sin internet', 'Un chat qui marche aussi sur un réseau de bureau sans internet', 'Chat, der auch im Büronetz ohne Internet funktioniert', 'دردشة تعمل أيضًا على شبكة المكتب دون إنترنت'],
       ['Seen, typing and online status', 'Visto, escribiendo y en línea', 'Lu, en train d’écrire et en ligne', 'Gelesen, schreibt gerade und online', 'تمت المشاهدة ويكتب الآن ومتصل'],
     ]),
-  b('outreach', 'feature', 'outreach', { icon: 'send', tone: 6 }, ['sequences', 'email_templates', 'email_finder', 'prospect_lists', 'browser_extension', 'marketing', 'campaigns', 'website_visitors'], ['page.sequences', 'page.finder', 'page.prospects', 'page.marketing', 'page.campaigns', 'page.websiteVisitors'],
+  b('outreach', 'feature', 'outreach', { icon: 'send', tone: 6 }, ['sequences', 'email_templates', 'email_finder', 'prospect_lists', 'browser_extension', 'marketing', 'campaigns', 'website_enquiries'], ['page.sequences', 'page.finder', 'page.prospects', 'page.marketing', 'page.campaigns', 'page.websiteEnquiries'],
     ['Prospecting and outreach', 'Prospección y alcance', 'Prospection et campagnes', 'Akquise und Outreach', 'البحث عن العملاء والتواصل'],
     ['Find the right people and reach them', 'Encuentra a las personas adecuadas y llega a ellas', 'Trouvez les bonnes personnes et contactez-les', 'Die richtigen Personen finden und erreichen', 'اعثر على الأشخاص المناسبين وتواصل معهم'],
     [
@@ -135,7 +135,7 @@ export const PRODUCT_BRIEFS: readonly ProductBrief[] = [
     [
       ['Send windows, tracking and reply detection', 'Ventanas de envío, seguimiento y detección de respuestas', 'Plages d’envoi, suivi et détection des réponses', 'Versandfenster, Tracking und Antworterkennung', 'نوافذ إرسال وتتبع واكتشاف الردود'],
       ['Hosted lead forms with recorded consent', 'Formularios alojados con consentimiento registrado', 'Formulaires hébergés avec consentement enregistré', 'Gehostete Formulare mit erfasster Einwilligung', 'نماذج مستضافة مع تسجيل الموافقة'],
-      ['Consent-aware website visitor tracking', 'Seguimiento de visitas web que respeta el consentimiento', 'Suivi des visiteurs du site respectueux du consentement', 'Website-Besucher-Tracking mit Einwilligung', 'تتبع زوار الموقع مع احترام الموافقة'],
+      ['Every website enquiry, download and chat lead in seconds', 'Cada consulta, descarga y lead del chat de la web en segundos', 'Chaque demande, téléchargement et prospect du chat du site en quelques secondes', 'Jede Website-Anfrage, jeder Download und Chat-Lead in Sekunden', 'كل استفسار وتنزيل وعميل دردشة من الموقع خلال ثوانٍ'],
     ]),
   b('documents', 'feature', 'documents', { icon: 'file-text', tone: 1 }, ['quotes', 'proposals', 'contracts'], ['page.quotes', 'page.quickBid', 'page.contracts'],
     ['Quotes, proposals and contracts', 'Cotizaciones, propuestas y contratos', 'Devis, propositions et contrats', 'Angebote, Vorschläge und Verträge', 'عروض الأسعار والمقترحات والعقود'],

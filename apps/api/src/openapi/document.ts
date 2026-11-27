@@ -17,7 +17,9 @@ import {
   badgeInputSchema,
   competitionInputSchema,
   gamificationSettingsSchema,
-  visitorSettingsSchema,
+  enquiryListQuerySchema,
+  enquiryUpdateSchema,
+  enquiryConvertSchema,
   prospectListInputSchema,
   prospectAddSchema,
   prospectImportCommitSchema,
@@ -28,8 +30,6 @@ import {
   prospectSettingsSchema,
   providerSearchSchema,
   providerAddSchema,
-  collectSchema,
-  enquirySchema,
   teamInputSchema,
   voiceApplySchema,
   voiceInterpretSchema,
@@ -821,6 +821,18 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/success/escalations', tags: ['Customer success'], summary: 'Open an escalation (success:write)', security: secured, request: body(escalationInputSchema), responses: { 201: ok('Escalation'), ...errors } });
   action('post', '/success/escalations/{id}/resolve', 'Customer success', 'Resolve with a note (success:write)', escalationResolveSchema);
 
+  // Website Enquiry (ADR 0095): the company website's enquiries, sign-ups and reviews.
+  action('get', '/website-enquiries/summary', 'Website Enquiry', 'Counts by type, category, status and form, the last 14 days, the newest arrivals and how enquiries arrive (enquiries:read)');
+  action('get', '/website-enquiries', 'Website Enquiry', 'Enquiries, newest first, by view, status, type, category, form, date and search (enquiries:read)', undefined, { query: enquiryListQuerySchema });
+  action('get', '/website-enquiries/record', 'Website Enquiry', 'Enquiries linked to an employee or company (enquiries:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), companyId: z.string().uuid().optional() }) });
+  action('get', '/website-enquiries/{id}', 'Website Enquiry', 'One enquiry with every form field, write-back state and matching CRM records; opening marks it seen (enquiries:read)');
+  action('post', '/website-enquiries/seen', 'Website Enquiry', 'Mark every enquiry seen (enquiries:read)');
+  action('post', '/website-enquiries/{id}/unread', 'Website Enquiry', 'Mark one enquiry unread again (enquiries:read)');
+  action('patch', '/website-enquiries/{id}', 'Website Enquiry', 'Change status, stage, owner, note or star; a lead change is sent back to the website (enquiries:write)', enquiryUpdateSchema);
+  action('post', '/website-enquiries/{id}/convert', 'Website Enquiry', 'Turn an enquiry into a company and employee, reusing ones that match (enquiries:write, companies:write, contacts:write)', enquiryConvertSchema);
+  action('post', '/website-enquiries/sync', 'Website Enquiry', 'Pull from the website now instead of waiting for the next pass (enquiries:write)');
+  r.registerPath({ method: 'post', path: '/hooks/website-enquiries', tags: ['Website Enquiry'], summary: 'The website\'s signed webhook (X-Sampforce-Signature, HMAC-SHA256 of "t.body"); 401 on a bad signature, 503 until a receiving workspace is set', responses: { 200: ok('Received'), ...errors } });
+
   // Enhancement feature 14: sales gamification and sales teams.
   action('get', '/gamification/me', 'Gamification', 'Your points this month, rank, target progress, badges and competitions; enabled:false while gamification is off (gamification:read)');
   action('get', '/gamification/leaderboard', 'Gamification', 'People and teams ranked by points for a month, quarter or year (default this month), from CRM records under the workspace rules. 409 GAMIFICATION_OFF when off; managers-only visibility shows others just themselves (gamification:read)', undefined, { query: z.object({ period: z.string().optional() }) });
@@ -841,19 +853,6 @@ export function buildOpenApiDocument(): object {
   action('put', '/tenants/current/teams/{id}', 'Tenants', 'Rename a team and replace its members (members:manage)', teamInputSchema);
   r.registerPath({ method: 'delete', path: '/tenants/current/teams/{id}', tags: ['Tenants'], summary: 'Delete a sales team (members:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
 
-  // Enhancement feature 15: website visitor intelligence.
-  action('get', '/visitors/settings', 'Visitors', 'Tracking on or off, consent mode, allowed websites, retention, important pages and the public site key (visitors:read)');
-  action('put', '/visitors/settings', 'Visitors', 'Change tracking settings; turning tracking on needs at least one allowed website; audited (visitors:manage)', visitorSettingsSchema);
-  action('post', '/visitors/settings/rotate-key', 'Visitors', 'Issue a new site key; the old snippet stops working (visitors:manage)');
-  action('get', '/visitors/dashboard', 'Visitors', 'Visits, important pages, sources, campaigns and high-intent visitors for the last 7, 30 or 90 days (visitors:read)', undefined, { query: z.object({ days: z.coerce.number().optional() }) });
-  action('get', '/visitors/record', 'Visitors', 'Website activity linked to a lead or contact (visitors:read)', undefined, { query: z.object({ type: z.enum(['lead', 'contact']), id: z.string().uuid() }) });
-  action('get', '/visitors', 'Visitors', 'Visitors, newest first; segment all, identified, anonymous or high_intent (visitors:read)', undefined, { query: z.object({ segment: z.string().optional(), search: z.string().optional() }) });
-  action('get', '/visitors/{id}', 'Visitors', 'One visitor with sessions, pages and the intent signals behind the score (visitors:read)');
-  r.registerPath({ method: 'delete', path: '/visitors/{id}', tags: ['Visitors'], summary: 'Erase a visitor and all their page views; the linked lead or contact is kept; audited (visitors:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Erased'), ...notFound, ...errors } });
-  r.registerPath({ method: 'get', path: '/public/track/script.js', tags: ['Visitors'], summary: 'Public: the first-party tracking script. Honours Global Privacy Control and Do Not Track; no cookies or fingerprinting (no auth)', responses: { 200: { description: 'JavaScript', content: { 'application/javascript': { schema: z.string() } } } } });
-  r.registerPath({ method: 'get', path: '/public/track/{siteKey}/config', tags: ['Visitors'], summary: 'Public: consent mode and enquiry consent text for an allowed website; 404 when tracking is off or the origin is not allowed (no auth)', request: { params: z.object({ siteKey: z.string() }) }, responses: { 200: ok('Config'), 404: json(error, 'Not available') } });
-  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/collect', tags: ['Visitors'], summary: 'Public: record page views, custom events and engaged time; requests with a privacy signal are dropped (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(collectSchema) }, responses: { 200: ok('Stored count'), 404: json(error, 'Not available') } });
-  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/enquiry', tags: ['Visitors'], summary: 'Public: an enquiry from the website; links to a contact or open lead by email or creates a lead; 5 per address per 10 minutes (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(enquirySchema) }, responses: { 200: ok('Thank-you message'), 404: json(error, 'Not available'), 429: json(error, 'Too many enquiries') } });
 
   // Part 2: Prospect Lists and prospect discovery (Apollo.io search, Hunter.io verification; Mock Mode without keys).
   action('get', '/prospect-lists', 'Prospects', 'Prospect lists with counts, owner and assignee (prospects:read)');
