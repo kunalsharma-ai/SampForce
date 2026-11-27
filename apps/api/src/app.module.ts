@@ -55,6 +55,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { TaskPlansModule } from './task-plans/task-plans.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 import { AuditRequiredInterceptor } from './operator/audit-required.interceptor';
@@ -89,6 +90,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     TeamApprovalsModule,
     AvailabilityModule,
     AchievementsModule,
+    TaskPlansModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,

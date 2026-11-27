@@ -43,6 +43,7 @@ export const de: Messages = {
   'module.tasks': 'Aufgaben',
   'module.targets': 'Ziele',
   'module.approvals': 'Freigaben',
+  'module.performance': 'Leistung',
   'module.rfqs': 'RFQs',
   'module.chat': 'Team-Chat',
   'module.achievements': 'Meine Erfolge',

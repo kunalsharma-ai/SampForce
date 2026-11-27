@@ -114,3 +114,9 @@
   from { transform: scale(0.6); box-shadow: 0 0 0 0 hsl(var(--sf-red) / 0.55); }
   to { transform: scale(1.6); box-shadow: 0 0 0 10px hsl(var(--sf-red) / 0); }
 }
+
+/* Performance podium steps rise into place (ADR 0096); reduced motion skips it. */
+@keyframes sf-podium-rise {
+  from { transform: scaleY(0.2); transform-origin: bottom; opacity: 0; }
+  to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+}

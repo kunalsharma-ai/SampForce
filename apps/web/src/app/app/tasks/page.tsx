@@ -1,16 +1,19 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
-import { TasksBoard } from '@/components/workspace-work/tasks';
+import { TasksTabs } from '@/components/task-plans/tasks-tabs';
 
 export const metadata: Metadata = { title: 'Tasks' };
 
 export default function TasksPage() {
   return (
-    <div className="max-w-4xl">
-      <PageHeader title="Tasks" description="Tasks handed down from the workspace above yours, and the ones you assigned to your team. Open a task to comment, mark it done or see its history." />
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Tasks"
+        description="Today’s tasks, the recurring tasks that make them, and one-off tasks handed down from the workspace above yours. Progress counts by itself from the records you add."
+      />
       <Suspense>
-        <TasksBoard />
+        <TasksTabs />
       </Suspense>
     </div>
   );

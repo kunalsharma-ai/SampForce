@@ -88,3 +88,5 @@ export * from './profile';
 export * from './client-time';
 export * from './special-days';
 export * from './team-approvals';
+export * from './task-plans';
+export * from './performance';

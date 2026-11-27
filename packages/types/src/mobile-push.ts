@@ -25,6 +25,7 @@ export const MOBILE_PUSH_TYPE_OF: Readonly<Record<string, MobileNotificationType
   'followup.assigned': 'task_assigned',
   'task.due_soon': 'task_due_soon',
   'task.overdue': 'task_overdue',
+  'task.not_completed': 'task_overdue',
   'followup.reminder': 'follow_up_reminder',
   'followup.overdue': 'follow_up_reminder',
   'lead.assigned': 'lead_assigned',

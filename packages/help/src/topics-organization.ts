@@ -746,6 +746,30 @@ export const organizationHelp = {
       'استخدمه في بداية كل فترة وتابعه في لوحتك.',
     ],
   },
+  'page.performance': {
+    title: 'Performance',
+    what: [
+      'Where managers and executives stand this week, month or quarter, by a score worked out from their records. No AI is involved.',
+      'Dónde están los gerentes y ejecutivos esta semana, mes o trimestre, según una puntuación calculada con sus registros. No interviene la IA.',
+      'Où en sont les managers et les commerciaux cette semaine, ce mois ou ce trimestre, selon un score calculé à partir de leurs fiches. Aucune IA n’intervient.',
+      'Wo Manager und Mitarbeiter diese Woche, diesen Monat oder dieses Quartal stehen, nach einer Punktzahl aus ihren Datensätzen. Keine KI beteiligt.',
+      'أين يقف المديرون والتنفيذيون هذا الأسبوع أو الشهر أو الربع، حسب نقاط تُحسب من سجلاتهم. لا يدخل الذكاء الاصطناعي فيها.',
+    ],
+    how: [
+      'Pick a period or go back to earlier ones. “How it adds up” on a row shows each measure’s figure, weight and points. The Super Workspace sets the weights.',
+      'Elige un periodo o vuelve a los anteriores. «Cómo se suma» en una fila muestra la cifra, el peso y los puntos de cada medida. El Super Workspace fija los pesos.',
+      'Choisissez une période ou revenez aux précédentes. « Le détail » sur une ligne montre le chiffre, le poids et les points de chaque mesure. Le Super Workspace fixe les poids.',
+      'Wählen Sie einen Zeitraum oder frühere. „So setzt es sich zusammen“ zeigt Wert, Gewicht und Punkte jeder Kennzahl. Der Super Workspace legt die Gewichte fest.',
+      'اختر فترة أو ارجع إلى السابقة. «كيف تُجمع» في الصف تعرض رقم كل مقياس ووزنه ونقاطه. يحدد Super Workspace الأوزان.',
+    ],
+    where: [
+      'The Super Workspace sees everyone; a manager sees its team and, when allowed, other managers; an executive sees its own figures and, when allowed, its place in the team.',
+      'El Super Workspace ve a todos; un gerente ve a su equipo y, si se le permite, a otros gerentes; un ejecutivo ve sus cifras y, si se permite, su puesto en el equipo.',
+      'Le Super Workspace voit tout le monde ; un manager voit son équipe et, si c’est permis, les autres managers ; un commercial voit ses chiffres et, si c’est permis, sa place dans l’équipe.',
+      'Der Super Workspace sieht alle; ein Manager sein Team und, falls erlaubt, andere Manager; ein Mitarbeiter seine Zahlen und, falls erlaubt, seinen Platz im Team.',
+      'يرى Super Workspace الجميع؛ ويرى المدير فريقه، والمديرين الآخرين إن سُمح له؛ ويرى التنفيذي أرقامه، ومرتبته في الفريق إن سُمح بذلك.',
+    ],
+  },
   'page.teamStatus': {
     title: 'Team status',
     what: [
