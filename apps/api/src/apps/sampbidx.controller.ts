@@ -65,7 +65,8 @@ export class SampbidxController {
   /** Saves the API address and key after GET /v1/ping accepts them. Sends no RFQ. */
   @Post('keys')
   @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  // Five key checks a minute from one address. Browser tests share one address, so they raise it.
+  @Throttle({ default: { limit: () => Number(process.env.SAMPBIDX_KEYS_PER_MINUTE ?? 5), ttl: 60_000 } })
   @RequirePermissions('integrations:manage')
   keys(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxConnectSchema)) body: SampbidxConnectInput, @Meta() meta: RequestMeta) {
     return plain(() => this.sampbidx.connect(auth, body, meta));
