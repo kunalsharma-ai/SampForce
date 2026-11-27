@@ -16,7 +16,9 @@ import type { MessageKey } from './i18n/translate';
 export type FieldType =
   | 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'textarea' | 'select' | 'company' | 'contact' | 'owner' | 'tags' | 'pipeline'
   // Form library controls (design spec Part 7).
-  | 'country' | 'currency' | 'money' | 'percent' | 'timezone' | 'priority';
+  | 'country' | 'currency' | 'money' | 'percent' | 'timezone' | 'priority'
+  // Deals redesign (ADR 0096): a source with suggestions, a list of names, the company's RFQ, a follow-up date.
+  | 'source' | 'list' | 'rfq' | 'followUp';
 
 /** Labels, hints, placeholders and option labels are catalogue phrases, so every one is translated. */
 export interface FieldSpec {
@@ -103,6 +105,11 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
     { name: 'companyId', label: 'Company', type: 'company' },
     { name: 'contactId', label: 'Primary contact', type: 'contact' },
     owner,
+    { name: 'source', label: 'Deal source', type: 'source', placeholder: 'Referral, website, event…' },
+    { name: 'rfqId', label: 'Associated RFQ', type: 'rfq', hint: 'RFQs of the company chosen above' },
+    { name: 'products', label: 'Products or services', type: 'list', wide: true, placeholder: 'Type a product or service' },
+    { name: 'nextFollowUpAt', label: 'Next follow-up', type: 'followUp', hint: 'Books a follow-up task for the deal owner' },
+    { name: 'notes', label: 'Notes', type: 'textarea', wide: true },
   ],
 };
 
@@ -125,6 +132,9 @@ export function toFormValues(entity: CrmEntity, row: Record<string, unknown>): R
       out[f.name] = ref ? { id: ref.id, name: ref.name } : null;
     } else if (f.type === 'contact') out.contactId = (row.contact as Ref) ?? null;
     else if (f.type === 'tags') out.tags = [...((row.tags as string[]) ?? [])];
+    else if (f.type === 'list') out[f.name] = [...((row[f.name] as string[]) ?? [])];
+    else if (f.type === 'rfq') out.rfqId = (row.rfq as { id: string } | null | undefined)?.id ?? '';
+    else if (f.type === 'followUp') out[f.name] = '';
     else if (f.type === 'pipeline') continue;
     else out[f.name] = row[f.name] ?? '';
   }
@@ -156,6 +166,16 @@ export function toPayload(entity: CrmEntity, values: Record<string, unknown>, mo
         break;
       case 'currency':
         out.currency = v ? v : entity === 'leads' ? empty : undefined;
+        break;
+      case 'list':
+        out[f.name] = Array.isArray(v) ? (v as string[]).map((x) => x.trim()).filter(Boolean) : mode === 'edit' ? [] : undefined;
+        break;
+      case 'source':
+      case 'rfq':
+        out[f.name] = v ? v : empty;
+        break;
+      case 'followUp':
+        out[f.name] = v ? v : undefined;
         break;
       case 'country':
       case 'timezone':

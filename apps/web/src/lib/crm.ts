@@ -27,6 +27,8 @@ export interface ListParams {
   stageId?: string;
   /** Custom field filters as a JSON list (ADR 0062). */
   cf?: string;
+  /** Deals: "true" lists archived deals (ADR 0096). */
+  archived?: string;
 }
 
 export function toQuery(params: Record<string, string | number | undefined | null>): string {

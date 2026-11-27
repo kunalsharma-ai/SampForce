@@ -17,12 +17,15 @@ export function BulkBar({
   noun,
   statuses,
   onClear,
+  extra,
 }: {
   entity: TableEntity;
   ids: string[];
   noun: { one: string; many: string };
   statuses?: { value: string; label: string }[];
   onClear: () => void;
+  /** More actions for this kind of record (deals: priority, close date, archive, SampBidx). */
+  extra?: React.ReactNode;
 }) {
   const members = useMembers();
   const bulk = useBulkAction(entity);
@@ -82,6 +85,7 @@ export function BulkBar({
           </Select>
         </>
       )}
+      {extra}
       {canDelete && (
         <Button variant="outline" size="sm" className="text-critical" disabled={bulk.isPending} onClick={() => setConfirm(true)}>
           <Trash2 aria-hidden /> {t('Delete')}

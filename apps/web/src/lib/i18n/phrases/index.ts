@@ -3,6 +3,7 @@ import { auth } from './auth';
 import { crm } from './crm';
 import { dashboard } from './dashboard';
 import { deals } from './deals';
+import { dealsRedesign } from './deals-redesign';
 import { sequences } from './sequences';
 import { communication } from './communication';
 import { meetings } from './meetings';
@@ -59,8 +60,8 @@ import { companyExport } from './company-export';
 
 /** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
 
-export const PHRASE_TABLES = { activities, auth, crm, dashboard, deals, sequences, communication, meetings, messaging, sampbidxChat, quotes, contracts, reports, revenue, administration, automation, integrations, growth, help, engagement, publicPages, settings, table, territories, plans, companyCrm, companyLeads, companyWork, commandCenter, crmAdmin, sampbidx, chat, edit, companyLogos, profiles, companyAutofill, companyEmail, importPhrases, ownServers, mobile, workspaces, levelDashboards, audit, security, notifications, site, employeeStages, journey, redesign, roleDashboards, welcome, teamChat, tasksTargets, achievements, calls, clientTime, companyExport } as const satisfies Record<string, PhraseTable>;
+export const PHRASE_TABLES = { activities, auth, crm, dashboard, deals, sequences, communication, meetings, messaging, sampbidxChat, quotes, contracts, reports, revenue, administration, automation, integrations, growth, help, engagement, publicPages, settings, table, territories, plans, companyCrm, companyLeads, companyWork, commandCenter, crmAdmin, sampbidx, chat, edit, companyLogos, profiles, companyAutofill, companyEmail, importPhrases, ownServers, mobile, workspaces, levelDashboards, audit, security, notifications, site, employeeStages, journey, redesign, roleDashboards, welcome, teamChat, tasksTargets, achievements, calls, clientTime, companyExport, dealsRedesign } as const satisfies Record<string, PhraseTable>;
 
-export const PHRASES = { ...activities, ...auth, ...crm, ...dashboard, ...deals, ...sequences, ...communication, ...meetings, ...messaging, ...sampbidxChat, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...help, ...engagement, ...publicPages, ...settings, ...table, ...territories, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...crmAdmin, ...sampbidx, ...chat, ...edit, ...companyLogos, ...profiles, ...companyAutofill, ...companyEmail, ...importPhrases, ...ownServers, ...mobile, ...workspaces, ...levelDashboards, ...audit, ...security, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...welcome, ...teamChat, ...tasksTargets, ...achievements, ...calls, ...clientTime, ...companyExport } as const;
+export const PHRASES = { ...activities, ...auth, ...crm, ...dashboard, ...deals, ...sequences, ...communication, ...meetings, ...messaging, ...sampbidxChat, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...help, ...engagement, ...publicPages, ...settings, ...table, ...territories, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...crmAdmin, ...sampbidx, ...chat, ...edit, ...companyLogos, ...profiles, ...companyAutofill, ...companyEmail, ...importPhrases, ...ownServers, ...mobile, ...workspaces, ...levelDashboards, ...audit, ...security, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...welcome, ...teamChat, ...tasksTargets, ...achievements, ...calls, ...clientTime, ...companyExport, ...dealsRedesign } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

@@ -3,7 +3,7 @@
 import { Badge, Button, cn, Dialog, DialogContent, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { DEAL_PRIORITIES, type DealHistoryItem, type DealInput, type DealPriority, type DealRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react';
+import { Archive, ArchiveRestore, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useId, useRef, useState } from 'react';
 import { DealIntelligenceCard } from '@/components/ai/record-ai';
@@ -18,6 +18,9 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { PRIORITY_LABEL, PriorityBadge, RiskIndicator } from './deal-badges';
 import { StageStepper } from './stage-stepper';
+import { RecordFormDialog } from '@/components/crm/record-form';
+import { toFormValues } from '@/lib/crm-fields';
+import { useArchiveDeal } from '@/lib/deal-views';
 import { type MessageKey, useT } from '@/lib/i18n';
 
 const TABS = [
@@ -102,6 +105,7 @@ export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headi
           {d.owner && <span className="text-xs text-muted-foreground">{t('Owner: {name}', { name: d.owner.name })}</span>}
         </div>
         <StageStepper deal={d} />
+        <DealPanelActions deal={d} />
       </header>
 
       <div role="tablist" aria-label={t('Deal sections')} className="flex gap-1 overflow-x-auto border-b border-border px-3">
@@ -310,6 +314,13 @@ function OverviewTab({ deal }: { deal: DealRow }) {
             ['Created', formatDate(deal.createdAt)],
             ['Closed', deal.closedAt ? formatDate(deal.closedAt) : null],
             ['Loss reason', deal.lossReason],
+            ['Deal source', deal.source],
+            ['Products or services', deal.products.length ? deal.products.join(', ') : null],
+            ['Associated RFQ', deal.rfq ? `${deal.rfq.number} · ${deal.rfq.projectName}` : null],
+            ['SampBidx', deal.sampbidx ? t.maybe(SAMPBIDX_LABEL[deal.sampbidx.delivery] ?? deal.sampbidx.delivery) + (deal.sampbidx.remoteStatus ? ` · ${deal.sampbidx.remoteStatus}` : '') : t('Not sent')],
+            ['Last activity', deal.lastActivityAt ? relativeTime(deal.lastActivityAt) : null],
+            ['Next follow-up', deal.nextFollowUp ? `${deal.nextFollowUp.title}${deal.nextFollowUp.dueAt ? ` · ${formatDate(deal.nextFollowUp.dueAt)}` : ''}` : null],
+            ['Archived', deal.archivedAt ? formatDate(deal.archivedAt) : null],
           ] as const satisfies readonly (readonly [MessageKey, unknown])[]
         )
           .filter(([, v]) => v)
@@ -320,7 +331,61 @@ function OverviewTab({ deal }: { deal: DealRow }) {
             </div>
           ))}
       </dl>
+      {deal.notes && (
+        <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+          <p className="text-xs text-muted-foreground">{t('Notes')}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words">{deal.notes}</p>
+        </div>
+      )}
     </form>
+  );
+}
+
+export const SAMPBIDX_LABEL: Record<string, string> = { SENT: 'Sent to SampBidx', SENDING: 'Sending to SampBidx', FAILED: 'SampBidx send failed' };
+
+/** Archive or restore one deal: archived deals leave the board, list and reports but keep their history. */
+export function DealArchiveButton({ deal }: { deal: DealRow }) {
+  const t = useT();
+  const canWrite = useCan('deals:write');
+  const archive = useArchiveDeal();
+  if (!canWrite) return null;
+  return (
+    <>
+      <Button type="button" size="sm" variant="outline" disabled={archive.isPending} onClick={() => archive.mutate({ id: deal.id, archived: !deal.archivedAt })}>
+        {deal.archivedAt ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />} {deal.archivedAt ? t('Restore deal') : t('Archive deal')}
+      </Button>
+      {archive.error && <span role="alert" className="text-xs text-critical">{archive.error.message}</span>}
+    </>
+  );
+}
+
+/** Edit every field (source, products, RFQ, follow-up, notes...) and archive or restore, from the panel header. */
+function DealPanelActions({ deal }: { deal: DealRow }) {
+  const t = useT();
+  const canWrite = useCan('deals:write');
+  const [editing, setEditing] = useState(false);
+  const qc = useQueryClient();
+  if (!canWrite) return deal.archivedAt ? <p className="text-sm text-muted-foreground">{t('This deal is archived.')}</p> : null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {deal.archivedAt && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/50 bg-warning/10 px-2.5 py-1 text-xs font-medium" data-archived-banner>
+          <Archive aria-hidden className="size-3.5" /> {t('Archived {date}', { date: formatDate(deal.archivedAt) })}
+        </span>
+      )}
+      <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
+        <Pencil aria-hidden /> {t('Edit all details')}
+      </Button>
+      <DealArchiveButton deal={deal} />
+      <RecordFormDialog
+        entity="deals"
+        open={editing}
+        onOpenChange={setEditing}
+        recordId={deal.id}
+        initial={toFormValues('deals', deal as unknown as Record<string, unknown>)}
+        onSaved={() => void qc.invalidateQueries({ queryKey: ['deals'] })}
+      />
+    </div>
   );
 }
 
@@ -331,6 +396,9 @@ const ACTION_LABEL: Record<string, MessageKey> = {
   'deal.cloned': 'Cloned from another deal',
   'deal.assigned': 'Changed the owner',
   'deal.deleted': 'Deleted the deal',
+  'deal.archived': 'Archived the deal',
+  'deal.restored': 'Restored the deal',
+  'deal.bulk_updated': 'Changed with other deals at once',
 };
 /** People who helped win the deal; they can share its revenue under the workspace's attribution rule. */
 function SupportingPeople({ dealId, value, options, onChange }: { dealId: string; value: string[]; options: { id: string; name: string }[]; onChange: (ids: string[]) => void }) {

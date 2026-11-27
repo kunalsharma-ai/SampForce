@@ -35,7 +35,7 @@ interface Props<T extends { id: string }> {
   filters?: React.ReactNode;
   empty: React.ReactNode;
   /** Bulk actions: rows can be selected when set. */
-  bulk?: { statuses?: { value: string; label: string }[] };
+  bulk?: { statuses?: { value: string; label: string }[]; extra?: (ids: string[], clear: () => void) => React.ReactNode };
 }
 
 /**
@@ -169,6 +169,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
           noun={p.noun}
           statuses={p.bulk.statuses}
           onClear={() => setSelection({})}
+          extra={p.bulk.extra?.(selectedIds, () => setSelection({}))}
         />
       )}
 

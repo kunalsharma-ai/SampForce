@@ -2,7 +2,9 @@
 
 import type { JourneyCard, JourneyStep, JourneyStageRow } from '@dealflow/types';
 import { Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
-import { AlarmClock, CalendarClock, Check, CircleDot, CirclePause, CircleX, Inbox, Repeat, Search, Trophy, UsersRound } from 'lucide-react';
+import { AlarmClock, Ban, Building2, CalendarClock, Check, CircleDot, CirclePause, CircleSlash, CircleX, Handshake, Inbox, type LucideIcon, MailCheck, MailQuestion, MessagesSquare, Repeat, Search, ThumbsDown, Trophy, UserPlus, UsersRound } from 'lucide-react';
+import type { JourneyKey } from '@dealflow/types';
+import { Icon3D } from '@/components/deals/deal-look';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
@@ -11,6 +13,22 @@ import { useT } from '@/lib/i18n';
 import { useCompanyJourney, useJourneyBoard } from '@/lib/journey';
 import { StatusChip } from './status-chip';
 import { STAGE_CHIP, STAGE_DOT, stageStyle } from './stage-chip';
+
+/** An icon per journey stage, drawn as a raised tile on the column head (Deals and Pipeline redesign, ADR 0096). */
+const JOURNEY_ICON: Record<JourneyKey, LucideIcon> = {
+  NEW: UserPlus,
+  FRESH_EMAIL: MailQuestion,
+  INITIAL_EMAIL: MailCheck,
+  FOLLOW_UP: Repeat,
+  DISCUSSION: MessagesSquare,
+  RFQ: Inbox,
+  NEGOTIATION: Handshake,
+  WON: Trophy,
+  LOST: CircleSlash,
+  REJECTED: Ban,
+  NOT_INTERESTED: ThumbsDown,
+  ON_HOLD: CirclePause,
+};
 
 /**
  * The Pipeline journey board (redesign R5, ADR 0085): every company the person can see, as a card in the column of
@@ -43,22 +61,26 @@ export function JourneyBoardView() {
         </label>
         {board.data && <p className="ms-auto text-sm text-muted-foreground" role="status">{t.plural('count.companies', board.data.total)}</p>}
       </div>
+      {board.data && board.data.total > 0 && <JourneySummary columns={board.data.columns} total={board.data.total} />}
       {board.error && <p role="alert" className="text-sm text-critical">{board.error.message}</p>}
       {board.isPending ? (
         <div className="flex gap-3 overflow-hidden">
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-96 w-72 shrink-0" />)}
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-96 w-72 shrink-0 rounded-2xl" />)}
         </div>
       ) : (
         board.data && (
           <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" role="list" aria-label={t('Journey stages')} tabIndex={0}>
             {board.data.columns.map((col) => (
-              <section key={col.stage.key} role="listitem" aria-label={`${col.stage.name}: ${col.total}`} data-journey-column={col.stage.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-border bg-muted/30">
-                <header style={stageStyle(col.stage.color)} className="flex items-center gap-2 border-b border-border px-3 py-2.5">
-                  <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full', STAGE_DOT)} />
-                  <h2 className="min-w-0 flex-1 truncate text-sm font-semibold" title={t.maybe(col.stage.name)}>{t.maybe(col.stage.name)}</h2>
+              <section key={col.stage.key} role="listitem" aria-label={`${col.stage.name}: ${col.total}`} data-journey-column={col.stage.key} style={stageStyle(col.stage.color)} className="sf-col flex w-72 shrink-0 snap-start flex-col">
+                <header className="flex items-center gap-2.5 px-3 pb-2 pt-3">
+                  <Icon3D icon={JOURNEY_ICON[col.stage.key] ?? CircleDot} colour={col.stage.color} />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-sm font-semibold" title={t.maybe(col.stage.name)}>{t.maybe(col.stage.name)}</h2>
+                    <p className="text-xs text-muted-foreground">{t.plural('count.companies', col.total)}</p>
+                  </div>
                   <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums', STAGE_CHIP)}>{col.total}</span>
                 </header>
-                <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2">
+                <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-2 pt-1">
                   {col.cards.length === 0 && <li className="rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted-foreground">{t('No companies here')}</li>}
                   {col.cards.map((c) => (
                     <li key={c.companyId}>
@@ -90,6 +112,42 @@ export function JourneyBoardView() {
   );
 }
 
+/** Totals across the journey: companies on the way, won, ended, and where most of them are. */
+function JourneySummary({ columns, total }: { columns: { stage: JourneyStageRow; total: number }[]; total: number }) {
+  const t = useT();
+  const sum = (keys: JourneyKey[]) => columns.filter((c) => keys.includes(c.stage.key)).reduce((n, c) => n + c.total, 0);
+  const won = sum(['WON']);
+  const ended = sum(['LOST', 'REJECTED', 'NOT_INTERESTED']);
+  const active = total - won - ended - sum(['ON_HOLD']);
+  const tiles: { label: string; value: number; icon: LucideIcon; colour: string }[] = [
+    { label: t('All companies'), value: total, icon: Building2, colour: '#257de0' },
+    { label: t('On the way'), value: active, icon: Repeat, colour: '#6a4ce2' },
+    { label: t('Won'), value: won, icon: Trophy, colour: '#008a17' },
+    { label: t('Ended'), value: ended, icon: CircleX, colour: '#ec4647' },
+  ];
+  return (
+    <div className="space-y-3" data-journey-summary>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {tiles.map((x) => (
+          <div key={x.label} className="sf-kpi sf-lift" style={stageStyle(x.colour)}>
+            <Icon3D icon={x.icon} colour={x.colour} />
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-muted-foreground">{x.label}</p>
+              <p className="text-xl font-bold tabular-nums leading-tight">{x.value.toLocaleString(t.formatLocale)}</p>
+              <p className="text-xs text-muted-foreground">{total ? `${Math.round((x.value / total) * 100)}%` : '—'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={t('Companies in each journey stage')}>
+        {columns.filter((c) => c.total > 0).map((c) => (
+          <span key={c.stage.key} title={`${t.maybe(c.stage.name)}: ${c.total}`} className={cn('h-full', STAGE_DOT)} style={{ ...stageStyle(c.stage.color), width: `${(c.total / total) * 100}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function JourneyCardView({ card: c, stage, onOpen }: { card: JourneyCard; stage: JourneyStageRow; onOpen: () => void }) {
   const t = useT();
   const due = c.nextAction?.dueAt;
@@ -99,14 +157,15 @@ function JourneyCardView({ card: c, stage, onOpen }: { card: JourneyCard; stage:
       onClick={onOpen}
       data-journey-card={c.companyId}
       aria-label={t('{company}: {stage}. Open the journey', { company: c.name, stage: t.maybe(stage.name) })}
-      className="w-full space-y-2 rounded-lg border border-border bg-surface p-3 text-start shadow-sm transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      style={stageStyle(stage.color)}
+      className="sf-deal-card w-full space-y-2 p-3 ps-4 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex min-w-0 items-start gap-2">
         {c.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={c.logoUrl} alt="" className="size-8 shrink-0 rounded-md border border-border bg-white object-contain" />
         ) : (
-          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+          <span aria-hidden className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold', STAGE_CHIP)}>
             {c.name.slice(0, 2).toUpperCase()}
           </span>
         )}

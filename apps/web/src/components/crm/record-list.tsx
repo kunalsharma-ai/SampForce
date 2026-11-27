@@ -109,9 +109,15 @@ interface Props {
   headerExtra?: React.ReactNode;
   /** Keeps the header (create, export) but hides the table, for alternative views such as the deals board. */
   hideTable?: boolean;
+  /** Extra list filters sent to the API (deals: archived=true). */
+  extraParams?: { archived?: string };
+  /** More bulk actions for the selected rows. */
+  bulkExtra?: (ids: string[], clear: () => void) => React.ReactNode;
+  /** More controls beside the table's filters. */
+  filtersExtra?: React.ReactNode;
 }
 
-export function RecordList({ entity, title, description, fixedStatus, headerExtra, hideTable }: Props) {
+export function RecordList({ entity, title, description, fixedStatus, headerExtra, hideTable, extraParams, bulkExtra, filtersExtra }: Props) {
   const router = useRouter();
   const t = useT();
   const view = useTableView<{ id: string }>(entity, COLUMNS[entity] as unknown as TableColumn<{ id: string }>[], DEFAULT_SORT);
@@ -124,7 +130,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
   const canWrite = useCan(`${entity}:write` as 'leads:write');
   const canExport = useCan('data:export');
   const excel = useHasFeature('excel_export');
-  const listParams = { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined };
+  const listParams = { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined, ...extraParams };
   const list = useRecordList<{ id: string }>(entity, listParams, !hideTable);
   const exportAs = (format: 'csv' | 'xlsx') => {
     setExporting(format);
@@ -195,7 +201,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
           loading={list.isPending}
           error={list.error}
           href={(r) => `/app/${entity}/${r.id}`}
-          bulk={canWrite ? { statuses: entity === 'leads' ? BULK_LEAD_STATUSES : undefined } : undefined}
+          bulk={canWrite ? { statuses: entity === 'leads' ? BULK_LEAD_STATUSES : undefined, extra: bulkExtra } : undefined}
           filters={
             <>
               {filters && (
@@ -228,6 +234,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                   ))}
               </Select>
               <CustomFieldFilters entity={CUSTOM_FIELD_ENTITY[entity]} value={cf} onChange={setCf} />
+              {filtersExtra}
             </>
           }
           empty={
