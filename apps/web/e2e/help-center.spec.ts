@@ -76,6 +76,7 @@ test('help at every level, a raised query and its answer from the Console', asyn
 
   // ── The Help menu in the top bar, from any page ──
   await page.goto('/app/deals');
+  await page.getByRole('button', { name: 'Account menu' }).click();
   await page.locator('[data-help-menu]').click();
   const menu = page.locator('[data-help-panel="workspace"]');
   await expect(menu.getByRole('link', { name: 'Frequently asked questions' })).toBeVisible();
@@ -140,7 +141,9 @@ test('help at every level, a raised query and its answer from the Console', asyn
     await expect(c.locator('[data-faq="deals.rfq"]')).toHaveCount(0);
     // Only managers and the Super Workspace run a Permission Center.
     await expect(c.locator('[data-faq="workspaces.permissionCenter"]')).toHaveCount(ws === created ? 1 : 0);
+    await p.getByRole('button', { name: 'Account menu' }).click();
     await expect(p.locator('[data-help-menu]')).toBeVisible();
+    await p.keyboard.press('Escape');
     await shot(p, file);
     await ctx.close();
   }
@@ -228,7 +231,9 @@ test('the Help Center on a phone', async ({ page }) => {
   await signUp(page, 'Help Phone');
   await page.goto('/app/help');
   await expect(page.getByRole('heading', { level: 1, name: 'How can we help?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Account menu' }).click();
   await expect(page.locator('[data-help-menu]')).toBeVisible();
+  await page.keyboard.press('Escape');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await shot(page, '15-help-center-phone');
 });

@@ -67,27 +67,47 @@ export function HelpSupportButton({
         <LifeBuoy aria-hidden />
         <span className="hidden lg:inline">{t('Help & support')}</span>
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent side="right" className="flex max-w-md flex-col p-0" data-help-panel={audience}>
-          {open && reader && (
-            <Panel
-              reader={reader}
-              audience={audience}
-              onClose={() => setOpen(false)}
-              onShortcuts={
-                onShortcuts
-                  ? () => {
-                      setOpen(false);
-                      onShortcuts();
-                    }
-                  : undefined
-              }
-              canManage={canManage}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <HelpSupportDialog reader={reader} open={open} onOpenChange={setOpen} onShortcuts={onShortcuts} canManage={canManage} />
     </>
+  );
+}
+
+/** The quick help panel on its own, for a trigger elsewhere (the workspace header's account menu, redesign R1). */
+export function HelpSupportDialog({
+  reader,
+  open,
+  onOpenChange,
+  onShortcuts,
+  canManage = false,
+}: {
+  reader: HelpReader | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onShortcuts?: () => void;
+  canManage?: boolean;
+}) {
+  const audience: Audience = reader?.audience ?? 'workspace';
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent side="right" className="flex max-w-md flex-col p-0" data-help-panel={audience}>
+        {open && reader && (
+          <Panel
+            reader={reader}
+            audience={audience}
+            onClose={() => onOpenChange(false)}
+            onShortcuts={
+              onShortcuts
+                ? () => {
+                    onOpenChange(false);
+                    onShortcuts();
+                  }
+                : undefined
+            }
+            canManage={canManage}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

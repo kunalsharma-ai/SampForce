@@ -51,8 +51,12 @@ describe('feature catalogue (ADR 0071)', () => {
     expect(old.features).toContain('rfqs');
     // A list saved at version 2 gets what version 3 added (company auto-fill, ADR 0076), but not the version 2 modules.
     const v2 = parsePlanEntitlements('free', { features: ['rfqs'], catalogVersion: 2 });
-    expect(v2.features).toEqual(['rfqs', 'company_enrichment']);
-    const fresh = parsePlanEntitlements('free', { features: ['rfqs'], catalogVersion: 3 });
+    expect(v2.features).toEqual(expect.arrayContaining(['rfqs', 'company_enrichment', 'rfq_contributors']));
+    expect(v2.features).toHaveLength(3);
+    // Version 5 added RFQ contributors (ADR 0080).
+    const v4 = parsePlanEntitlements('free', { features: ['rfqs'], catalogVersion: 4 });
+    expect(v4.features).toEqual(['rfqs', 'rfq_contributors']);
+    const fresh = parsePlanEntitlements('free', { features: ['rfqs'], catalogVersion: 5 });
     expect(fresh.features).toEqual(['rfqs']);
   });
 });

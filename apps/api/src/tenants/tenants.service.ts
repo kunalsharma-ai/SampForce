@@ -1,12 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import { type MemberOrgInput, type MemberRow, type SalesProfile, type SalesProfileInput, salesProfileSchema, type TenantDetails, type UpdateTenantInput } from '@dealflow/types';
+import { type MenuSections, type MemberOrgInput, type MemberRow, type SalesProfile, type SalesProfileInput, salesProfileSchema, type TenantDetails, type UpdateTenantInput } from '@dealflow/types';
 import { reportingTree } from '../crm/visibility';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertCanGrant } from './roles.service';
 import { workspaceLevelOf } from '../workspaces/access';
+import { readMenuSections } from './menu-sections';
 
 @Injectable()
 export class TenantsService {
@@ -14,6 +15,11 @@ export class TenantsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  /** Whether the Leads and Accounts pages are shown in this organisation (redesign, menu). Set in the Console (R8). */
+  async menuSections(auth: AuthContext): Promise<MenuSections> {
+    return this.prisma.run(auth, (tx) => readMenuSections(tx, auth.tenantId));
+  }
 
   async current(auth: AuthContext): Promise<TenantDetails> {
     const t = await this.prisma.run(auth, (tx) => tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId } }));

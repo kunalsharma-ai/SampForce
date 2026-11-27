@@ -95,11 +95,13 @@ model User {
   preferences        UserPreference?
   notificationPrefs  NotificationPreference?
   regional           UserRegionalSetting?
+  contactTimes       UserContactTimes?
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
   savedViews         SavedView[]
   managedTerritories Territory[]
   photo              UserPhoto?
+  profile            UserProfile?
 
   @@map("users")
 }
@@ -152,6 +154,30 @@ model UserPhoto {
   @@map("user_photos")
 }
 
+/// A person's own profile (ADR 0086): headline, quote, bio, LinkedIn, "ask me about" tags, a cover and their current
+/// mood. One per person, like the photo, and shown to the people in each organisation they belong to. The name and
+/// phone stay on the user.
+model UserProfile {
+  userId        String    @id @map("_id")
+  headline      String?
+  quote         String?
+  bio           String?
+  linkedinUrl   String?   @map("linkedin_url")
+  cover         String?
+  tags          String[]  @default([])
+  moodEmoji     String?   @map("mood_emoji")
+  moodText      String?   @map("mood_text")
+  moodSetAt     DateTime? @map("mood_set_at")
+  /// The mood clears itself after this time; null keeps it until it is changed.
+  moodExpiresAt DateTime? @map("mood_expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("user_profiles")
+}
+
 /// A person's own interface settings (theme, density, motion...). Follows the person across devices and workspaces.
 model UserPreference {
   userId     String   @id @map("_id")
@@ -190,6 +216,20 @@ model UserRegionalSetting {
   @@map("user_regional_settings")
 }
 
+/// The person's own time zone and calling hours for "best time to connect" (ADR 0089). Follows them across workspaces.
+model UserContactTimes {
+  userId               String   @id @map("_id")
+  timeZone             String   @map("time_zone")
+  start                String
+  end                  String
+  confirmBeforeContact Boolean  @default(true) @map("confirm_before_contact")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("user_contact_times")
+}
+
 /// Named custom themes a person saved in the Theme Studio.
 model UserSavedTheme {
   id        String   @id @default(uuid()) @map("_id")
@@ -221,6 +261,8 @@ model WorkspaceNavigation {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenantId, userId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("workspace_navigation")
 }
 
@@ -242,6 +284,8 @@ model SavedView {
 
   @@unique([tenantId, userId, entity, name])
   @@index([tenantId, entity])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("saved_views")
 }
 
@@ -260,6 +304,8 @@ model Territory {
   countries TerritoryCountry[]
 
   @@unique([tenantId, name])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([managerId])
   @@map("territories")
 }
 
@@ -565,6 +611,8 @@ model Tenant {
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
   sampbidxAttachments    SampbidxAttachment[]
+  contactStageChanges    ContactStageChange[]
+  sampbidxClients        SampbidxClient[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
@@ -647,6 +695,8 @@ model Subscription {
 
   @@index([provider, providerCustomerId])
   @@index([pastDueSince])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([planCode])
   @@map("subscriptions")
 }
 
@@ -707,6 +757,8 @@ model Membership {
   @@unique([tenantId, externalId])
   @@index([userId])
   @@index([tenantId, workspaceNodeId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([roleId])
   @@map("memberships")
 }
 
@@ -827,6 +879,8 @@ model TeamMember {
 
   @@unique([teamId, membershipId])
   @@index([tenantId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([membershipId])
   @@map("team_members")
 }
 
@@ -879,6 +933,9 @@ model Company {
   statusId          String?   @map("status_id")
   statusChangedAt   DateTime? @map("status_changed_at")
   statusChangedById String?   @map("status_changed_by_id")
+  /// The deal made (or closed as won) when the company became a client; one per win, so a second win reuses it (ADR 0084).
+  wonDealId         String?   @map("won_deal_id")
+  wonAt             DateTime? @map("won_at")
   /// Who generated the lead; kept when ownership moves. ownerId is the current lead owner.
   createdById       String?   @map("created_by_id")
   updatedById       String?   @map("updated_by_id")
@@ -904,6 +961,8 @@ model Company {
   address           String?
   postalCode        String?   @map("postal_code")
   timezone          String?
+  /// Office hours on the company's own clock { days, start, end, source } (ADR 0089); null = the country's usual day.
+  workingHours      Json?     @map("working_hours")
   notes             String?
   /// Further addresses and links: [{ value, label?, primary }]. Primary entries are mirrored in the fields above.
   emails            Json      @default("[]")
@@ -976,6 +1035,8 @@ model Company {
   @@index([tenantId, ownerId])
   @@index([tenantId, createdById])
   @@index([tenantId, leadSeq])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([parentCompanyId])
   @@map("companies")
 }
 
@@ -994,6 +1055,8 @@ model Contact {
   jobTitle          String?          @map("job_title")
   country           String?
   timezone          String?
+  /// This person's own office hours (ADR 0089); null = their company's hours.
+  workingHours      Json?            @map("working_hours")
   ownerId           String?          @map("owner_id")
   marketingConsent  MarketingConsent @default(UNKNOWN) @map("marketing_consent")
   /// valid, risky, catch_all, invalid, unknown, bounced, needs_verification; null = never checked.
@@ -1013,6 +1076,17 @@ model Contact {
   city              String?
   remarks           String?
   nextFollowUpAt    DateTime?        @map("next_follow_up_at")
+  /// The employee's communication stage (a CrmStatus of kind STAGE, ADR 0080), apart from the employee status.
+  stageId           String?          @map("stage_id")
+  stageChangedAt    DateTime?        @map("stage_changed_at")
+  stageChangedById  String?          @map("stage_changed_by_id")
+  /// Marked as an RFQ contributor by hand, for RFQs from before SampForce. Real RFQs make one without a mark.
+  rfqContributorAt   DateTime?       @map("rfq_contributor_at")
+  rfqContributorById String?         @map("rfq_contributor_by_id")
+  /// The follow-up cadence (ADR 0083): when the first email reached the employee, and when and why it stopped.
+  initialEmailAt     DateTime?       @map("initial_email_at")
+  cadenceStoppedAt   DateTime?       @map("cadence_stopped_at")
+  cadenceStopReason  String?         @map("cadence_stop_reason")
   createdById       String?          @map("created_by_id")
   updatedById       String?          @map("updated_by_id")
   /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
@@ -1044,6 +1118,9 @@ model Contact {
   @@index([tenantId, companyId])
   @@index([tenantId, matchKeys])
   @@index([tenantId, statusId])
+  @@index([tenantId, stageId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("contacts")
 }
 
@@ -1069,6 +1146,8 @@ model CompanyBranch {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, companyId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_branches")
 }
 
@@ -1090,6 +1169,8 @@ model LeadOwnerChange {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
   @@index([tenantId, toUserId, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("lead_owner_changes")
 }
 
@@ -1112,6 +1193,8 @@ model CompanyFile {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_files")
 }
 
@@ -1146,6 +1229,8 @@ model CompanyEnrichment {
 
   @@index([tenantId, companyId, createdAt])
   @@index([status, nextRunAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_enrichments")
 }
 
@@ -1187,7 +1272,7 @@ model CompanyLogo {
 model SampbidxTransfer {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
-  /// RFQ, MAILBOX_EMAIL, EMAIL_FILE or PASTED_EMAIL.
+  /// RFQ, MAILBOX_EMAIL, EMAIL_FILE, PASTED_EMAIL or CLIENT (a company sent as a SampBidx client, ADR 0080).
   kind            String
   title           String
   rfqId           String?   @map("rfq_id")
@@ -1216,6 +1301,9 @@ model SampbidxTransfer {
   fileIds         String[]  @map("file_ids")
   /// Names and sizes of everything sent, for the history list.
   files           Json      @default("[]")
+  /// The employee chosen as the one who shared the RFQ (company sends, ADR 0080), and the details that went with
+  /// the send, as checked on the preview, so the history shows exactly what SampBidx got.
+  sentPayload     Json?     @map("sent_payload")
   note            String?
   /// SENDING, SENT or FAILED.
   delivery        String    @default("SENDING")
@@ -1240,6 +1328,49 @@ model SampbidxTransfer {
   @@index([tenantId, remoteId])
   @@index([tenantId, emailTextHash])
   @@map("sampbidx_transfers")
+}
+
+/// One change of an employee's communication stage (ADR 0080). Never edited or deleted: it is the stage history.
+model ContactStageChange {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  contactId   String   @map("contact_id")
+  companyId   String?  @map("company_id")
+  fromStageId String?  @map("from_stage_id")
+  toStageId   String   @map("to_stage_id")
+  /// MANUAL, RFQ, FOLLOW_UP, INTERACTION, SAMPBIDX, RFQ_OUTCOME or CALL_SCHEDULED (STAGE_CHANGE_SOURCES).
+  source      String
+  note        String?
+  rfqId       String?  @map("rfq_id")
+  /// The person who changed it, or whose action (an RFQ, a follow-up, a send) moved it.
+  changedById String?  @map("changed_by_id")
+  at          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, contactId, at(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("contact_stage_changes")
+}
+
+/// A SampForce company as a client in SampBidx (ADR 0080): one per company, kept so the same client is updated,
+/// never created twice. Each employee sent along is listed with SampBidx's id for them.
+model SampbidxClient {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  companyId    String    @map("company_id")
+  remoteId     String?   @map("remote_id")
+  remoteUrl    String?   @map("remote_url")
+  /// [{ contactId, remoteId }]
+  contacts     Json      @default("[]")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, companyId])
+  @@map("sampbidx_clients")
 }
 
 /// A file added next to pasted RFQ email text, kept so the send (and any retry) carries it to SampBidx (ADR 0061).
@@ -1277,6 +1408,12 @@ model Rfq {
   market          String?
   industry        String?
   targetAudience  String?   @map("target_audience")
+  /// QUANTITATIVE or QUALITATIVE, and the service (CAWI, CATI, CAPI...), as SampBidx files a bid (ADR 0080).
+  serviceCategory String?   @map("service_category")
+  service         String?
+  /// One row per country and target group, exactly as the client asked:
+  /// [{ country, targetGroup, quota, loi, ir, cpi, description }]. Empty = the single market/sample/LOI/IR/CPI above.
+  lines           Json      @default("[]")
   sampleSize      Int?      @map("sample_size")
   /// Length of interview in minutes, incidence rate in percent, cost per interview in `currency`.
   loi             Float?
@@ -1315,6 +1452,8 @@ model Rfq {
   @@index([tenantId, companyId, receivedAt(sort: Desc)])
   @@index([tenantId, status, deadlineAt])
   @@index([tenantId, ownerId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("rfqs")
 }
 
@@ -1385,6 +1524,10 @@ model CrmStatus {
   isDefault   Boolean   @default(false) @map("is_default")
   /// What the status means to reports: NEW, ACTIVE, CLIENT, CONCERN, ON_HOLD, LOST (null = ACTIVE).
   meaning     String?
+  /// Communication stages (kind STAGE) only: the built-in stage it is (NEW_CONTACT, RFQ_RECEIVED, FOLLOW_UP_1...),
+  /// which SampForce uses to move employees on by itself, and its phase (STAGE_PHASES) for filters and dashboards.
+  key         String?
+  phase       String?
   /// Deactivated statuses stay on the records that have them but cannot be picked.
   archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -1459,6 +1602,8 @@ model Lead {
   @@index([tenantId, email])
   @@index([tenantId, ownerId])
   @@index([tenantId, phoneDigits])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("leads")
 }
 
@@ -1576,6 +1721,11 @@ model Opportunity {
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
   @@index([tenantId, ownerId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([companyId])
+  @@index([contactId])
   @@map("opportunities")
 }
 
@@ -1630,6 +1780,11 @@ model Activity {
   @@index([tenantId, contactId])
   @@index([tenantId, companyId])
   @@index([tenantId, opportunityId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([opportunityId])
   @@map("activities")
 }
 
@@ -1669,6 +1824,8 @@ model Task {
   nextAction        String?      @map("next_action")
   remarks           String?
   rescheduleCount   Int          @default(0) @map("reschedule_count")
+  /// Redesign R3 (ADR 0083): the n-th follow-up of an employee's outreach cadence, planned by SampForce.
+  cadenceStep       Int?         @map("cadence_step")
   rescheduledAt     DateTime?    @map("rescheduled_at")
   outcome           String?
   rfqId             String?      @map("rfq_id")
@@ -1684,6 +1841,10 @@ model Task {
   /// Workspace hierarchy (ADR 0071): the workspace a task was handed down to, and the workspace it came from.
   workspaceNodeId   String?      @map("workspace_node_id")
   assignedByNodeId  String?      @map("assigned_by_node_id")
+  /// Redesign R7 (ADR 0087): ACKNOWLEDGED, IN_PROGRESS or BLOCKED once the assignee moves it; null = not acknowledged.
+  progress          String?
+  acknowledgedAt    DateTime?    @map("acknowledged_at")
+  blockedReason     String?      @map("blocked_reason")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
   deletedAt         DateTime?    @map("deleted_at")
@@ -1699,6 +1860,11 @@ model Task {
   @@index([tenantId, companyId, status])
   @@index([tenantId, followUpType, status, dueAt])
   @@index([tenantId, workspaceNodeId, status])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([opportunityId])
+  @@index([companyId])
   @@map("tasks")
 }
 
@@ -1709,6 +1875,8 @@ model TaskComment {
   taskId    String   @map("task_id")
   authorId  String?  @map("author_id")
   body      String
+  /// Redesign R7: quick reactions, { "👍": [userId, ...] }.
+  reactions Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, taskId, createdAt])
@@ -1821,6 +1989,8 @@ model Invitation {
   role   Role   @relation(fields: [roleId], references: [id], onUpdate: NoAction)
 
   @@index([tenantId, email])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([roleId])
   @@map("invitations")
 }
 
@@ -1934,6 +2104,8 @@ model WorkflowExecution {
   @@unique([versionId, eventId])
   @@index([status, resumeAt])
   @@index([tenantId, workflowId, startedAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([workflowId])
   @@map("workflow_executions")
 }
 
@@ -1987,6 +2159,8 @@ model ApprovalRequest {
   execution WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, status, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([executionId])
   @@map("approval_requests")
 }
 
@@ -2044,6 +2218,8 @@ model Webhook {
   deliveries WebhookDelivery[]
 
   @@index([tenantId, active])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([apiKeyId])
   @@map("webhooks")
 }
 
@@ -2410,6 +2586,8 @@ model PriceBookEntry {
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([priceBookId, productId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([productId])
   @@map("price_book_entries")
 }
 
@@ -2489,6 +2667,9 @@ model Quote {
   @@unique([tenantId, number, version])
   @@index([tenantId, opportunityId])
   @@index([tenantId, status, isLatest])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([opportunityId])
+  @@index([priceBookId])
   @@map("quotes")
 }
 
@@ -2514,6 +2695,8 @@ model QuoteLine {
   product Product @relation(fields: [productId], references: [id], onUpdate: NoAction)
 
   @@index([quoteId, position])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([productId])
   @@map("quote_lines")
 }
 
@@ -2565,6 +2748,10 @@ model Contract {
   @@unique([tenantId, number])
   @@index([tenantId, status, endDate])
   @@index([tenantId, companyId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([opportunityId])
+  @@index([quoteId])
   @@map("contracts")
 }
 
@@ -2643,6 +2830,8 @@ model LeadForm {
   campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   submissions FormSubmission[]
 
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("lead_forms")
 }
 
@@ -2748,6 +2937,9 @@ model Escalation {
   @@index([tenantId, status, severity])
   @@index([tenantId, companyId])
   @@index([tenantId, escalatedToId, status])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([contractId])
   @@map("escalations")
 }
 
@@ -3294,6 +3486,8 @@ model EmailTemplate {
 
   @@index([tenantId, ownerId])
   @@index([tenantId, category])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("email_templates")
 }
 
@@ -3367,6 +3561,8 @@ model SequenceEnrollment {
   @@index([tenantId, email])
   @@index([tenantId, leadId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sequenceId])
   @@map("sequence_enrollments")
 }
 
@@ -3413,6 +3609,8 @@ model EmailEvent {
   message SequenceMessage @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, messageId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([messageId])
   @@map("email_events")
 }
 
@@ -3551,6 +3749,8 @@ model EmailThread {
   @@index([tenantId, lastMessageAt(sort: Desc)])
   @@index([tenantId, assignedToId])
   @@index([tenantId, dealId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([dealId])
   @@map("email_threads")
 }
 
@@ -3629,6 +3829,8 @@ model MeetingRecord {
   @@index([tenantId, occurredAt(sort: Desc)])
   @@index([tenantId, dealId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([dealId])
   @@map("meeting_records")
 }
 
@@ -3686,6 +3888,9 @@ model PortalUser {
 
   @@unique([tenantId, email])
   @@index([tenantId, companyId], map: "portal_users_company_idx")
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([contactId])
   @@map("portal_users")
 }
 
@@ -3725,6 +3930,8 @@ model PortalRequest {
   @@unique([tenantId, number])
   @@index([tenantId, status, updatedAt(sort: Desc)], map: "portal_requests_status_idx")
   @@index([tenantId, companyId], map: "portal_requests_company_idx")
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("portal_requests")
 }
 
@@ -3853,6 +4060,8 @@ model GamificationAward {
 
   @@unique([badgeId, userId, period])
   @@index([tenantId, userId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("gamification_awards")
 }
 
@@ -3928,6 +4137,10 @@ model WebVisitor {
   @@index([tenantId, lastSeenAt])
   @@index([tenantId, leadId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([campaignId])
   @@map("web_visitors")
 }
 
@@ -3972,6 +4185,8 @@ model WebEvent {
 
   @@index([tenantId, occurredAt])
   @@index([visitorId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sessionId])
   @@map("web_events")
 }
 
@@ -4037,6 +4252,9 @@ model Prospect {
   @@index([tenantId, listId, createdAt])
   @@index([listId, email])
   @@index([tenantId, email])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
   @@map("prospects")
 }
 
@@ -4054,6 +4272,8 @@ model ProspectOutreach {
   sequence Sequence     @relation(fields: [sequenceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([listId, sequenceId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sequenceId])
   @@map("prospect_outreach")
 }
 
@@ -4073,6 +4293,8 @@ model ProspectImport {
   list   ProspectList @relation(fields: [listId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([listId])
   @@map("prospect_imports")
 }
 
@@ -4183,6 +4405,8 @@ model AppEvent {
   connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([tenantId, provider, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
   @@map("app_events")
 }
 
@@ -4221,6 +4445,8 @@ model ZoomMeeting {
   @@unique([tenantId, zoomMeetingId])
   @@index([tenantId, startsAt])
   @@index([transcriptStatus])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
   @@map("zoom_meetings")
 }
 
@@ -4251,6 +4477,9 @@ model SignatureEnvelope {
 
   @@unique([tenantId, envelopeId])
   @@index([tenantId, contractId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contractId])
   @@map("signature_envelopes")
 }
 
@@ -4279,6 +4508,9 @@ model QuotePayment {
   quote      Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, quoteId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([quoteId])
   @@map("quote_payments")
 }
 
@@ -4316,6 +4548,9 @@ model WhatsappMessage {
   @@unique([tenantId, waMessageId])
   @@index([tenantId, contactId, createdAt])
   @@index([tenantId, phone, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contactId])
   @@map("whatsapp_messages")
 }
 
@@ -4336,6 +4571,8 @@ model WhatsappConsent {
   contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, contactId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([contactId])
   @@map("whatsapp_consents")
 }
 
@@ -4370,6 +4607,9 @@ model SmsMessage {
   @@unique([tenantId, twilioSid])
   @@index([tenantId, phone, createdAt])
   @@index([tenantId, contactId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contactId])
   @@map("sms_messages")
 }
 
@@ -4390,6 +4630,8 @@ model SmsConsent {
 
   @@index([tenantId, contactId, createdAt])
   @@index([tenantId, phone])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([contactId])
   @@map("sms_consents")
 }
 
@@ -4618,6 +4860,12 @@ model CrmSettings {
   exportPolicy      Json?    @map("export_policy")
   dashboardPolicies Json?    @map("dashboard_policies")
   enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  /// Redesign R3 (ADR 0083): the workspace's local date of the last morning follow-up summary, so it goes out once a day.
+  digestDate        String?  @map("digest_date")
+  /// { followUps, intervalDays, updatedAt, updatedById } (ADR 0083); null = 5 follow-ups 7 days apart.
+  followUpCadence   Json?    @map("follow_up_cadence")
+  /// Journey stage names, colours and hidden flags set by the Super Workspace (ADR 0085).
+  journeyStages     Json?    @map("journey_stages")
   updatedById       String?  @map("updated_by_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -4733,6 +4981,8 @@ model ChatMessage {
   remoteId         String?       @map("remote_id")
   /// When the worker may try again.
   remoteRetryAt    DateTime?     @map("remote_retry_at")
+  /// Emoji reactions (redesign R9): { "👍": ["<user or operator id>", ...] }, at most CHAT_REACTIONS_MAX emoji.
+  reactions        Json?
   createdAt        DateTime      @default(now()) @map("created_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -5031,6 +5281,8 @@ model SupportTicketMessage {
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, ticketId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([ticketId])
   @@map("support_ticket_messages")
 }
 
@@ -5243,4 +5495,184 @@ model HelpSettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("help_settings")
+}
+
+/// A person's working day (redesign R1, ADR 0081): from check-in to check-out, with its breaks. At most one open
+/// session per person; one left open for a whole day is closed at the person's last sign of life.
+model WorkSession {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  userId          String    @map("user_id")
+  /// The workspace the person was in when they checked in (for the team boards).
+  workspaceNodeId String?   @map("workspace_node_id")
+  checkedInAt     DateTime  @map("checked_in_at")
+  checkedOutAt    DateTime? @map("checked_out_at")
+  /// [{ start, end }] as ISO strings; the last one has end null while the break runs.
+  breaks          Json      @default("[]")
+  /// The status the person chose while checked in: AVAILABLE, WORKING or AWAY.
+  chosenStatus    String    @default("WORKING") @map("chosen_status")
+  /// When the shown status last changed (check-in, break, resume, choice).
+  statusSince     DateTime  @map("status_since")
+  /// Refreshed while the person has a SampForce page open; Away shows when it gets old.
+  lastSeenAt      DateTime  @map("last_seen_at")
+  /// Set when SampForce closed a forgotten session by itself.
+  autoClosed      Boolean   @default(false) @map("auto_closed")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, userId, checkedInAt(sort: Desc)])
+  @@index([tenantId, checkedOutAt])
+  @@map("work_sessions")
+}
+
+/// Append-only log of check-ins, breaks, status changes and check-outs (ADR 0081).
+model AvailabilityEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  sessionId String   @map("session_id")
+  /// CHECK_IN, BREAK_START, BREAK_END, STATUS, CHECK_OUT or AUTO_CHECK_OUT.
+  kind      String
+  /// The status shown after the event.
+  status    String
+  at        DateTime @default(now())
+
+  @@index([tenantId, userId, at(sort: Desc)])
+  @@index([tenantId, sessionId])
+  @@map("availability_events")
+}
+
+/// A real achievement of one person (ADR 0090): recorded once, in the same transaction as the business change that
+/// earned it, so a refresh, an edit or a sync can never record or celebrate it twice.
+model Achievement {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  userId      String    @map("user_id")
+  /// DEAL_CONVERTED, PROSPECT_CONVERTED, RFQ_SUBMITTED, TASK_IMPORTANT, ALL_TASKS_DONE, LEAD_MILESTONE, LEAD_TARGET,
+  /// SALES_TARGET, DEALS_WON_MILESTONE, MAJOR_DEAL or CONSISTENCY.
+  kind        String
+  /// deals, rfqs, tasks, leads, sales or consistency (what the person can switch off).
+  category    String
+  /// ROUTINE, DAILY, MAJOR or EXCEPTIONAL: how big the celebration is.
+  level       String
+  /// What makes it unique for the person, e.g. "company-won:<companyId>" or "leads:DAY:2026-11-26:50".
+  dedupeKey   String    @map("dedupe_key")
+  /// The figures shown: company, deal value, RFQ number, target and actual. Read from the records, never typed.
+  details     Json      @default("{}")
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  link        String?
+  achievedAt  DateTime  @default(now()) @map("achieved_at")
+  /// Whether the person's settings asked for a pop-up when it was earned.
+  celebrate   Boolean   @default(true)
+  /// When a browser tab took it to show (once, so a second tab or a refresh never replays it).
+  shownAt     DateTime? @map("shown_at")
+
+  @@unique([tenantId, userId, dedupeKey])
+  @@index([tenantId, userId, achievedAt(sort: Desc)])
+  @@index([tenantId, userId, shownAt])
+  @@map("achievements")
+}
+
+/// A person's celebration settings and personal targets (ADR 0090).
+model AchievementSettings {
+  id                   String   @id @default(uuid()) @map("_id")
+  tenantId             String   @map("tenant_id")
+  userId               String   @map("user_id")
+  enabled              Boolean  @default(true)
+  /// SUBTLE or EXPRESSIVE.
+  style                String   @default("EXPRESSIVE")
+  sound                Boolean  @default(false)
+  reduceMotion         Boolean  @default(false) @map("reduce_motion")
+  /// Categories switched off (deals, rfqs, tasks, leads, sales, consistency).
+  mutedCategories      String[] @map("muted_categories")
+  /// Personal targets, used when no manager or Super Workspace target covers the period.
+  dailyLeadTarget      Int?     @map("daily_lead_target")
+  weeklyLeadTarget     Int?     @map("weekly_lead_target")
+  monthlyLeadTarget    Int?     @map("monthly_lead_target")
+  monthlyRevenueTarget Float?   @map("monthly_revenue_target")
+  /// A won deal at least this big (workspace currency) counts as a major deal.
+  majorDealAmount      Float?   @map("major_deal_amount")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId])
+  @@map("achievement_settings")
+}
+
+/// A person's own dialer for the Calls section (ADR 0088): a link it opens (tel:, callto:, sip:, an app scheme or a
+/// web dialer, with {placeholders} for the call details) or the workspace's Twilio number ringing their phone first.
+/// Optionally every call's details are also posted, signed, to the dialer's webhook.
+model Dialer {
+  id                     String    @id @default(uuid()) @map("_id")
+  tenantId               String    @map("tenant_id")
+  userId                 String    @map("user_id")
+  name                   String
+  /// LINK or TWILIO
+  kind                   String
+  urlTemplate            String?   @map("url_template")
+  webhookUrl             String?   @map("webhook_url")
+  /// HMAC-SHA256 key for the webhook's X-SampForce-Signature, sealed with ENCRYPTION_KEY.
+  webhookSecretEncrypted String?   @map("webhook_secret_encrypted")
+  /// TWILIO: the person's own phone, rung first.
+  agentPhone             String?   @map("agent_phone")
+  isDefault              Boolean   @default(false) @map("is_default")
+  lastUsedAt             DateTime? @map("last_used_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  deletedAt              DateTime? @map("deleted_at")
+
+  @@index([tenantId, userId])
+  @@map("dialers")
+}
+
+/// One call placed from the Calls section (ADR 0088), with the details handed to the dialer, what happened, the
+/// remarks and talk time. Logging it writes a call interaction on the company (activityId) and, when a next call is
+/// chosen, a call follow-up (followUpId).
+model PhoneCall {
+  id            String    @id @default(uuid()) @map("_id")
+  tenantId      String    @map("tenant_id")
+  userId        String    @map("user_id")
+  companyId     String?   @map("company_id")
+  contactId     String?   @map("contact_id")
+  /// The number as dialled, and EMPLOYEE, COMPANY or OTHER (typed on the keypad).
+  number        String
+  numberSource  String    @map("number_source")
+  dialerId      String?   @map("dialer_id")
+  dialerName    String    @map("dialer_name")
+  dialerKind    String    @map("dialer_kind")
+  /// OPEN, RINGING, IN_PROGRESS, ENDED, FAILED or LOGGED
+  status        String
+  /// CALL_OUTCOMES in packages/types/src/calls.ts; null until logged.
+  outcome       String?
+  /// The details handed to the dialer: { companyName, companyPhone, employeeName, designation, email, employeePhone }.
+  details       Json
+  /// Lower-case company name, employee name and number, for the history search.
+  searchText    String    @map("search_text")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  answeredAt    DateTime? @map("answered_at")
+  endedAt       DateTime? @map("ended_at")
+  durationSec   Int?      @map("duration_sec")
+  remarks       String?
+  sentiment     String?
+  activityId    String?   @map("activity_id")
+  followUpId    String?   @map("follow_up_id")
+  /// The webhook delivery: SENT or FAILED, when, and why it failed.
+  webhookStatus String?   @map("webhook_status")
+  webhookAt     DateTime? @map("webhook_at")
+  webhookError  String?   @map("webhook_error")
+  /// Twilio's call SID and its last status (queued, ringing, in-progress, completed, busy, no-answer, failed, canceled).
+  twilioSid     String?   @map("twilio_sid")
+  twilioStatus  String?   @map("twilio_status")
+  error         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  @@index([tenantId, userId, startedAt(sort: Desc)])
+  @@index([tenantId, startedAt(sort: Desc)])
+  @@index([tenantId, contactId, startedAt(sort: Desc)])
+  @@index([tenantId, companyId, startedAt(sort: Desc)])
+  @@index([tenantId, twilioSid])
+  @@map("phone_calls")
 }

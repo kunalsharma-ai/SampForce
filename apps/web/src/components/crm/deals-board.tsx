@@ -24,7 +24,8 @@ import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
-import { initials, PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
+import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { DealLink } from '@/components/deals/views';
 import { LossReasonDialog, useMoveDeal } from './deal-move';
 
@@ -271,11 +272,8 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
           <RiskIndicator health={deal.health} compact />
           <PriorityBadge priority={deal.priority} />
         </div>
-        <span
-          className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
-          title={deal.owner ? t('Owner: {name}', { name: deal.owner.name }) : t('Unassigned')}
-        >
-          <span aria-hidden>{initials(deal.owner?.name)}</span>
+        <span className="relative shrink-0" title={deal.owner ? t('Owner: {name}', { name: deal.owner.name }) : t('Unassigned')}>
+          <UserAvatar userId={deal.owner?.id} name={deal.owner?.name ?? '?'} className="size-6 text-[10px] ring-0" />
           <span className="sr-only">{deal.owner ? t('Owner: {name}', { name: deal.owner.name }) : t('Unassigned')}</span>
         </span>
       </div>

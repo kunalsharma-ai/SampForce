@@ -130,7 +130,7 @@ export function FlowBoard() {
                         )}
                       </p>
                       {s === 2 && (
-                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-2 rounded-lg bg-primary/10 p-2 text-[11px] leading-snug text-foreground">
+                        <motion.div initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-2 rounded-lg bg-primary/10 p-2 text-[11px] leading-snug text-foreground">
                           <span className="mb-1 flex items-center gap-1 font-semibold text-primary">
                             <Bot className="size-3" /> Copilot <span className="sfx-typing ms-1 text-primary"><span /><span /><span /></span>
                           </span>

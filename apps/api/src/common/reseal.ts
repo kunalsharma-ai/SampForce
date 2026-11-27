@@ -28,6 +28,8 @@ const TENANT_COLUMNS = [
     column: 'credentials_encrypted',
     field: 'credentialsEncrypted',
   },
+  // Personal dialers' webhook signing secrets (ADR 0088).
+  { table: 'dialers', model: 'dialer', column: 'webhook_secret_encrypted', field: 'webhookSecretEncrypted' },
 ] as const;
 
 /** The few delegate methods used here, for any of the models above. */

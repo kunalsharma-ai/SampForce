@@ -92,7 +92,7 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
   const rules = ops.locator('[data-client-workspace-rules]');
   await expect(rules).toContainText('Uses its plan’s rules');
   await rules.getByRole('checkbox', { name: 'Manager Workspaces may be given Delete' }).check();
-  await rules.getByLabel('Reason').fill('Agreed in the contract');
+  await rules.getByLabel('Reason', { exact: true }).fill('Agreed in the contract');
   await rules.getByRole('button', { name: 'Save for this client' }).click();
   await expect(rules.getByRole('status')).toHaveText('Saved. It applies to the client on its next request.');
   await expect(rules).toContainText('Differs from its plan: Managers may delete');

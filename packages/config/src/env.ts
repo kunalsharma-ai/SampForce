@@ -84,6 +84,13 @@ export const apiEnvSchema = z.object({
    * should only reach the companies' own websites (an office network without general internet).
    */
   COMPANY_AUTOFILL_WIKIDATA: bool.optional().or(z.literal('').transform(() => undefined)),
+  /**
+   * Company auto-fill opens pages built by JavaScript in a hidden Chromium (ADR 0079). Unset or true: on whenever a
+   * Chromium is found. False: plain page reads only.
+   */
+  COMPANY_AUTOFILL_BROWSER: bool.optional().or(z.literal('').transform(() => undefined)),
+  /** Where that Chromium is. Unset: /usr/bin/chromium (the Docker image), then other usual places. */
+  COMPANY_AUTOFILL_BROWSER_PATH: z.string().optional().or(z.literal('').transform(() => undefined)),
   /** Optional data provider for the email finder (Hunter.io). Unset = SampForce's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),

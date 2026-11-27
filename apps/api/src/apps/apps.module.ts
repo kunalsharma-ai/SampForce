@@ -32,6 +32,6 @@ import { ChatModule } from '../chat/chat.module';
   imports: [CrmModule, ChatModule],
   controllers: [ZoomController, DocusignController, CardPaymentsController, WhatsappController, TwilioController, SampbidxChatController, SampbidxChatCallbackController, SampbidxController, AppsController],
   providers: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsClient, CardPaymentsService, WhatsappClient, WhatsappService, TwilioClient, TwilioService, SampbidxClient, SampbidxService, SampbidxChatService, NotificationsService],
-  exports: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsService, WhatsappService, TwilioService, SampbidxService, SampbidxChatService],
+  exports: [AppsService, TwilioClient, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsService, WhatsappService, TwilioService, SampbidxService, SampbidxChatService],
 })
 export class AppsModule {}

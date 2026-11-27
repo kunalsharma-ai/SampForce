@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RFQ_OPEN_STATUSES } from '@dealflow/types';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { errorMessage, scan } from '../worker/queue';
+import { errorMessage, scan, scanTenants } from '../worker/queue';
 import { notificationSettingsOf } from './crm-admin.service';
 
 const MINUTE = 60_000;
@@ -28,7 +28,67 @@ export class CrmRemindersService {
   ) {}
 
   async sweep(now = new Date()): Promise<number> {
-    return (await this.followUps(now)) + (await this.rfqs(now));
+    return (await this.followUps(now)) + (await this.rfqs(now)) + (await this.dailyDigest(now));
+  }
+
+  /** Tenants whose morning summary already went out today (by their date), so the minute sweep skips them. */
+  private readonly digested = new Map<string, string>();
+
+  /**
+   * The morning summary (redesign R3, ADR 0083): from 8:00 in the workspace's time zone, everyone with follow-ups due
+   * today or overdue gets one notification saying how many. Once a day per person and workspace (the event id carries the workspace and the date: one person can be in several
+   * workspaces, and notification event ids are unique per person across all of them).
+   */
+  async dailyDigest(now = new Date()): Promise<number> {
+    const candidates = await scanTenants(this.prisma.task, { status: 'OPEN', deletedAt: null, followUpType: { not: null }, assigneeId: { not: null }, dueAt: { not: null, lte: new Date(now.getTime() + DAY) } });
+    if (!candidates.length) return 0;
+    // Cheap filters first, in bulk, so a sweep never opens a transaction per organisation for nothing: those where it
+    // is not yet 8:00, and those already summarised today (stored, so every worker and restart knows).
+    const [zones, settings] = (await Promise.all([
+      scan(() => this.prisma.tenant.findMany({ where: { id: { in: candidates } }, select: { id: true, defaultTimezone: true } })),
+      scan(() => this.prisma.crmSettings.findMany({ where: { tenantId: { in: candidates } }, select: { tenantId: true, digestDate: true } })),
+    ])) as [Array<{ id: string; defaultTimezone: string | null }>, Array<{ tenantId: string; digestDate: string | null }>];
+    const last = new Map(settings.map((s) => [s.tenantId, s.digestDate]));
+    const due = zones
+      .filter((z) => {
+        const { date, hour } = localDay(now, z.defaultTimezone ?? 'UTC');
+        return hour >= 8 && this.digested.get(z.id) !== date && last.get(z.id) !== date;
+      })
+      .map((z) => z.id);
+    let sent = 0;
+    for (const tenantId of due) {
+      try {
+        sent += await this.prisma.run({ tenantId }, async (tx) => {
+          const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { defaultTimezone: true } });
+          const { date, hour, endOfDay } = localDay(now, tenant?.defaultTimezone ?? 'UTC');
+          if (hour < 8 || this.digested.get(tenantId) === date) return 0;
+          const tasks = await tx.task.findMany({
+            where: { tenantId, status: 'OPEN', deletedAt: null, followUpType: { not: null }, assigneeId: { not: null }, dueAt: { not: null, lte: endOfDay } },
+            select: { assigneeId: true, dueAt: true },
+          });
+          const per = new Map<string, { today: number; overdue: number }>();
+          for (const t of tasks) {
+            const p = per.get(t.assigneeId!) ?? { today: 0, overdue: 0 };
+            if (t.dueAt! < now) p.overdue++;
+            else p.today++;
+            per.set(t.assigneeId!, p);
+          }
+          let n = 0;
+          for (const [userId, c] of per) {
+            await this.notifications.send(tx, tenantId, [userId], {
+              type: 'followup.daily', title: `Follow-ups for today: ${c.today} due, ${c.overdue} overdue`, body: null, link: c.overdue ? '/app/follow-ups?bucket=overdue' : '/app/follow-ups?bucket=today', eventId: `digest:${tenantId}:${userId}:${date}`,
+            });
+            n++;
+          }
+          this.digested.set(tenantId, date);
+          await tx.crmSettings.upsert({ where: { tenantId }, create: { tenantId, digestDate: date }, update: { digestDate: date } });
+          return n;
+        });
+      } catch (err) {
+        this.log.error({ err: errorMessage(err), tenantId }, 'daily follow-up summary failed');
+      }
+    }
+    return sent;
   }
 
   private async followUps(now: Date): Promise<number> {
@@ -130,4 +190,19 @@ export class CrmRemindersService {
     }
     return sent;
   }
+}
+
+/** The date (YYYY-MM-DD) and hour in a time zone, and the end of that day as an instant. */
+export function localDay(now: Date, timeZone: string): { date: string; hour: number; endOfDay: Date } {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  } catch {
+    return localDay(now, 'UTC');
+  }
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const date = `${String(get('year')).padStart(4, '0')}-${String(get('month')).padStart(2, '0')}-${String(get('day')).padStart(2, '0')}`;
+  const hour = get('hour');
+  const elapsed = ((hour * 60 + get('minute')) * 60 + get('second')) * 1000 + now.getMilliseconds();
+  return { date, hour, endOfDay: new Date(now.getTime() - elapsed + DAY - 1) };
 }

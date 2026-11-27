@@ -30,7 +30,7 @@ export const sampbidxConnectSchema = z.object({
 export type SampbidxConnectInput = z.infer<typeof sampbidxConnectSchema>;
 
 /** How a transfer started: a filled-in RFQ, an email from the synced mailbox, an uploaded email file, or email text pasted on a company. */
-export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE', 'PASTED_EMAIL'] as const;
+export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE', 'PASTED_EMAIL', 'CLIENT'] as const;
 export type SampbidxTransferKind = (typeof SAMPBIDX_TRANSFER_KINDS)[number];
 
 /** SampForce's side: is it with SampBidx yet. SENT means SampBidx accepted it and returned its id. */
@@ -317,3 +317,150 @@ export const sampbidxCallbackSchema = z.object({
   url: z.string().url().max(1000).optional().nullable(),
 });
 export type SampbidxCallback = z.infer<typeof sampbidxCallbackSchema>;
+
+// ───────────── Send a company to SampBidx (ADR 0080) ─────────────
+
+/*
+ * A SampForce company goes to SampBidx as a client (PUT /v1/clients/{externalId}), with only the employees the person
+ * ticks, and optionally one RFQ from the employee who shared it (POST /v1/rfqs, now carrying the client and that
+ * employee). Fields follow SampBidx's Clients screen: company name; offices; contacts with name, email, job title,
+ * phone, country, time zone and the two consent ticks.
+ */
+
+/** Mandatory on SampBidx's Clients screen (marked * there). */
+export const SAMPBIDX_CLIENT_REQUIRED = ['name'] as const;
+export const SAMPBIDX_CONTACT_REQUIRED = ['name', 'email', 'country', 'timeZone'] as const;
+export type SampbidxContactField = (typeof SAMPBIDX_CONTACT_REQUIRED)[number] | 'jobTitle' | 'phone';
+
+const countryCode = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Pick a country');
+const timeZone = z.string().trim().min(3).max(64).regex(/^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/, 'Pick a time zone');
+const blankToNull = (max: number) => z.string().trim().max(max).nullable().optional().or(z.literal('').transform(() => null));
+
+/** Details typed on the preview to fill gaps. They are saved to the SampForce records too, so they are typed once. */
+export const sampbidxCompanyCompletionSchema = z.object({
+  company: z.object({ website: blankToNull(500), industry: blankToNull(120), country: countryCode.nullable().optional(), city: blankToNull(120) }).partial().optional(),
+  contacts: z
+    .record(
+      z.string().uuid(),
+      z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email').optional(), jobTitle: blankToNull(200), phone: blankToNull(50), country: countryCode.optional(), timeZone: timeZone.optional() }).partial(),
+    )
+    .optional(),
+});
+export type SampbidxCompanyCompletion = z.infer<typeof sampbidxCompanyCompletionSchema>;
+
+export const sampbidxCompanyPreviewQuerySchema = z.object({
+  /** The employee who shared the RFQ. */
+  contactId: z.string().uuid().optional(),
+  rfqId: z.string().uuid().optional(),
+  /** Further employees to send as client contacts, comma-separated. */
+  contactIds: z.string().optional(),
+});
+
+export const sampbidxSendCompanySchema = z.object({
+  companyId: z.string().uuid(),
+  /** The employee who shared the RFQ, always sent as a client contact. */
+  contactId: z.string().uuid(),
+  /** Other employees to send as client contacts (only those the person ticked). */
+  extraContactIds: z.array(z.string().uuid()).max(20).default([]),
+  /** The RFQ to send with the client; none sends the client only. */
+  rfqId: z.string().uuid().nullable().optional(),
+  fileIds: z.array(z.string().uuid()).max(SAMPBIDX_MAX_FILES).optional(),
+  mayReceiveQuotes: z.boolean().default(true),
+  completion: sampbidxCompanyCompletionSchema.optional(),
+  note: z.string().trim().max(2000).nullable().optional(),
+  /** Send the RFQ again although SampBidx already has it. */
+  resend: z.boolean().optional(),
+});
+export type SampbidxSendCompanyInput = z.input<typeof sampbidxSendCompanySchema>;
+
+export interface SampbidxPreviewValue {
+  /** What will be sent; null when SampForce has nothing. */
+  value: string | number | boolean | null;
+  required: boolean;
+  /** Required and empty: must be filled on the preview before sending. */
+  missing: boolean;
+  /** Where the value comes from when it is not the record's own field (e.g. the company's country for a contact). */
+  from: 'record' | 'company' | 'rfq' | null;
+}
+
+export interface SampbidxPreviewContact {
+  id: string;
+  name: SampbidxPreviewValue;
+  email: SampbidxPreviewValue;
+  jobTitle: SampbidxPreviewValue;
+  phone: SampbidxPreviewValue;
+  country: SampbidxPreviewValue;
+  timeZone: SampbidxPreviewValue;
+  marketingConsent: boolean;
+  /** SampBidx's id for this person after an earlier send. */
+  remoteId: string | null;
+}
+
+export interface SampbidxPreviewEmployee {
+  id: string;
+  name: string;
+  jobTitle: string | null;
+  email: string | null;
+  contributor: 'ACTIVE' | 'CONTRIBUTOR' | 'NONE';
+  rfqCount: number;
+  stage: { name: string; color: string; key: string | null; phase: string } | null;
+}
+
+export interface SampbidxPreviewRfq {
+  id: string;
+  number: string;
+  projectName: string;
+  status: string;
+  receivedAt: string;
+  contact: { id: string; name: string } | null;
+  /** SampBidx already has it (a confirmed send). */
+  alreadySent: boolean;
+}
+
+export interface SampbidxCompanyPreview {
+  connected: boolean;
+  company: {
+    id: string;
+    name: SampbidxPreviewValue;
+    website: SampbidxPreviewValue;
+    industry: SampbidxPreviewValue;
+    leadNumber: string | null;
+    logoUrl: string | null;
+    office: { label: string; country: SampbidxPreviewValue; city: SampbidxPreviewValue; address: SampbidxPreviewValue };
+  };
+  /** The client in SampBidx after an earlier send. */
+  client: { remoteId: string | null; remoteUrl: string | null; lastSyncedAt: string | null } | null;
+  /** Every employee to pick from, RFQ contributors first. */
+  employees: SampbidxPreviewEmployee[];
+  /** The chosen employee and the ticked extra ones, as they will be sent. */
+  contacts: SampbidxPreviewContact[];
+  /** The company's RFQs, the chosen employee's first. */
+  rfqs: SampbidxPreviewRfq[];
+  rfq: {
+    id: string;
+    number: string;
+    projectName: string;
+    description: string | null;
+    serviceCategory: string | null;
+    service: string | null;
+    methodology: string | null;
+    currency: string;
+    receivedAt: string;
+    deadlineAt: string | null;
+    /** One row per country and target group, as sent. */
+    lines: { country: string; targetGroup: string | null; quota: number | null; loi: number | null; ir: number | null; cpi: number | null; description: string | null }[];
+    totalQuotation: number | null;
+    /** Required RFQ details still empty (they are edited on the RFQ itself). */
+    missing: SampbidxRequiredField[];
+    files: { id: string; name: string; sizeBytes: number }[];
+    contactMismatch: { id: string; name: string } | null;
+  } | null;
+  /** Everything that blocks sending, as readable sentences. */
+  blockers: string[];
+  transfers: SampbidxTransferRow[];
+}
+
+export interface SampbidxCompanySendResult {
+  client: SampbidxTransferRow;
+  rfq: SampbidxTransferRow | null;
+}

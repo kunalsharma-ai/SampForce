@@ -1,6 +1,6 @@
 'use client';
 
-import { useCanDelete } from '@/lib/features';
+import { useCanDelete, useHasFeature } from '@/lib/features';
 import {
   type CrmStatusKind,
   type CrmStatusRow,
@@ -12,6 +12,9 @@ import {
   designationInputSchema,
   type DepartmentRow,
   leadNumberingSchema,
+  STAGE_PHASES,
+  type StageKey,
+  type StagePhase,
   STATUS_MEANINGS,
   type StatusMeaning,
 } from '@dealflow/types';
@@ -19,6 +22,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, 
 import { ArrowDown, ArrowUp, Pencil, Star, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Select } from '@/components/crm/select';
+import { PHASE_LABEL, StageChip } from '@/components/crm/stage-chip';
 import { StatusChip } from '@/components/crm/status-chip';
 import { Segmented } from '@/components/forms/segmented';
 import { InfoTip } from '@/components/info-tip';
@@ -27,24 +31,29 @@ import { useCrmStatuses, useDepartments, useDesignations, useLeadNumbering, useO
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { AttributionSection, CurrencySection, DashboardsSection, ExportSection, NotificationsSection, OptionsSection } from './admin-sections';
+import { FollowUpCadenceSection } from './cadence-section';
 import { CustomFieldsSection } from './custom-fields-section';
+import { JourneySection } from './journey-section';
 
 type Tab =
   | 'numbering'
   | 'company'
   | 'employee'
+  | 'stages'
   | 'departments'
   | 'designations'
   | 'fields'
   | 'rfq-statuses'
   | 'deal-statuses'
   | 'follow-up-types'
+  | 'follow-up-cadence'
+  | 'journey'
   | 'notifications'
   | 'currency'
   | 'exports'
   | 'dashboards'
   | 'attribution';
-const TABS: Tab[] = ['numbering', 'company', 'employee', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
+const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'journey', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
 /** Sections only administrators can open (their settings are not readable by everyone). */
 const ADMIN_ONLY: Tab[] = ['notifications', 'exports', 'dashboards', 'attribution'];
 
@@ -63,6 +72,8 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 export function CrmConfiguration() {
   const t = useT();
   const canManage = useCan('crm:configure');
+  const stagesOn = useHasFeature('rfq_contributors');
+  const cadenceOn = useHasFeature('follow_up_management');
   const [tab, setTabState] = useState<Tab>('numbering');
   // A link can open a section directly: /app/settings/crm?section=fields (read after mount, so the server render matches).
   useEffect(() => {
@@ -87,12 +98,15 @@ export function CrmConfiguration() {
           { value: 'numbering', label: t('Lead numbers') },
           { value: 'company', label: t('Company statuses') },
           { value: 'employee', label: t('Employee statuses') },
+          ...(stagesOn ? ([{ value: 'stages', label: t('Communication stages') }] as const) : []),
           { value: 'departments', label: t('Departments') },
           { value: 'designations', label: t('Designations') },
           { value: 'fields', label: t('Custom fields') },
           { value: 'rfq-statuses', label: t('RFQ statuses') },
           { value: 'deal-statuses', label: t('Deal statuses') },
           { value: 'follow-up-types', label: t('Follow-up categories') },
+          ...(cadenceOn ? ([{ value: 'follow-up-cadence', label: t('Follow-up cadence') }] as const) : []),
+          { value: 'journey', label: t('Journey stages') },
           { value: 'currency', label: t('Currency') },
           ...(canManage
             ? ([
@@ -107,12 +121,15 @@ export function CrmConfiguration() {
       {tab === 'numbering' && <LeadNumbering canManage={canManage} />}
       {tab === 'company' && <Statuses kind="COMPANY" canManage={canManage} />}
       {tab === 'employee' && <Statuses kind="EMPLOYEE" canManage={canManage} />}
+      {stagesOn && tab === 'stages' && <Statuses kind="STAGE" canManage={canManage} />}
       {tab === 'departments' && <OrgList kind="departments" canManage={canManage} />}
       {tab === 'designations' && <OrgList kind="designations" canManage={canManage} />}
       {tab === 'fields' && <CustomFieldsSection canManage={canManage} />}
       {tab === 'rfq-statuses' && <OptionsSection kind="RFQ_STATUS" canManage={canManage} />}
       {tab === 'deal-statuses' && <OptionsSection kind="DEAL_STATUS" canManage={canManage} />}
       {tab === 'follow-up-types' && <OptionsSection kind="FOLLOW_UP_TYPE" canManage={canManage} />}
+      {cadenceOn && tab === 'follow-up-cadence' && <FollowUpCadenceSection />}
+      {tab === 'journey' && <JourneySection />}
       {tab === 'currency' && <CurrencySection canManage={canManage} />}
       {canManage && tab === 'notifications' && <NotificationsSection />}
       {canManage && tab === 'exports' && <ExportSection />}
@@ -226,8 +243,9 @@ function LeadNumbering({ canManage }: { canManage: boolean }) {
 
 // ───────────── Statuses ─────────────
 
-type StatusDraft = { name: string; color: string; meaning: StatusMeaning; description: string };
+type StatusDraft = { name: string; color: string; meaning: StatusMeaning; description: string; phase?: StagePhase };
 const EMPTY_STATUS: StatusDraft = { name: '', color: '#3b82f6', meaning: 'ACTIVE', description: '' };
+const EMPTY_STAGE: StatusDraft = { ...EMPTY_STATUS, color: '#0891b2', phase: 'DISCUSSION' };
 
 function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean }) {
   const mayDelete = useCanDelete('crm_configuration');
@@ -235,7 +253,8 @@ function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean
   const list = useCrmStatuses(kind);
   const m = useStatusMutations(kind);
   const [editing, setEditing] = useState<CrmStatusRow | null>(null);
-  const title = kind === 'COMPANY' ? t('Company statuses') : t('Employee statuses');
+  const stage = kind === 'STAGE';
+  const title = kind === 'COMPANY' ? t('Company statuses') : stage ? t('Communication stages') : t('Employee statuses');
   const rows = list.data ?? [];
   const move = (i: number, by: -1 | 1) => {
     const ids = rows.map((r) => r.id);
@@ -266,9 +285,9 @@ function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean
               {rows.map((row, i) => (
                 <li key={row.id} className={`flex flex-wrap items-center gap-3 py-2.5 text-sm ${row.archived ? 'opacity-60' : ''}`}>
                   <span className="w-6 text-end text-xs tabular-nums text-muted-foreground">{i + 1}</span>
-                  <StatusChip status={row} />
+                  {stage ? <StageChip stage={{ key: (row.key ?? null) as StageKey | null, name: row.name, color: row.color, phase: (row.phase ?? 'DISCUSSION') as StagePhase }} /> : <StatusChip status={row} />}
                   <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">{t(MEANING_LABELS[row.meaning])}</span>
+                    <span className="text-xs text-muted-foreground">{stage && row.phase ? t(PHASE_LABEL[row.phase as StagePhase]) : t(MEANING_LABELS[row.meaning])}</span>
                     {row.isDefault && <Badge>{t('Default for new records')}</Badge>}
                     {row.archived && <Badge>{t('Deactivated')}</Badge>}
                     <span className="text-xs text-muted-foreground">· {t.plural('count.records', row.inUse)}</span>
@@ -329,7 +348,11 @@ function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean
 function StatusForm({ kind, editing, onDone }: { kind: CrmStatusKind; editing: CrmStatusRow | null; onDone: () => void }) {
   const t = useT();
   const m = useStatusMutations(kind);
-  const [v, setV] = useState<StatusDraft>(editing ? { name: editing.name, color: editing.color, meaning: editing.meaning, description: editing.description ?? '' } : EMPTY_STATUS);
+  const stage = kind === 'STAGE';
+  const empty = stage ? EMPTY_STAGE : EMPTY_STATUS;
+  const [v, setV] = useState<StatusDraft>(
+    editing ? { name: editing.name, color: editing.color, meaning: editing.meaning, description: editing.description ?? '', ...(stage ? { phase: (editing.phase ?? 'DISCUSSION') as StagePhase } : {}) } : empty,
+  );
   const [archived, setArchived] = useState(editing?.archived ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -339,7 +362,7 @@ function StatusForm({ kind, editing, onDone }: { kind: CrmStatusKind; editing: C
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{editing ? t('Edit {name}', { name: t.maybe(editing.name) }) : t('Add a status')}</CardTitle>
+        <CardTitle className="text-base">{editing ? t('Edit {name}', { name: t.maybe(editing.name) }) : stage ? t('Add a communication stage') : t('Add a status')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -358,7 +381,7 @@ function StatusForm({ kind, editing, onDone }: { kind: CrmStatusKind; editing: C
             const done = (row: CrmStatusRow) => {
               setNotice(editing ? t('Saved {name}.', { name: t.maybe(row.name) }) : t('Added {name}.', { name: t.maybe(row.name) }));
               if (editing) onDone();
-              else setV(EMPTY_STATUS);
+              else setV(empty);
             };
             if (editing) m.update.mutate({ id: editing.id, input }, { onSuccess: done });
             else m.create.mutate(parsed.data, { onSuccess: done });
@@ -380,17 +403,33 @@ function StatusForm({ kind, editing, onDone }: { kind: CrmStatusKind; editing: C
                 <Input value={v.color} maxLength={7} className="font-mono" onChange={(e) => setV({ ...v, color: e.target.value })} />
               </Field>
             </div>
-            <StatusChip className="mb-2.5" status={{ name: v.name || t('Preview'), color: /^#[0-9a-f]{6}$/i.test(v.color) ? v.color : '#9ca3af' }} />
+            {stage ? (
+              <StageChip className="mb-2.5" stage={{ key: (editing?.key ?? null) as StageKey | null, name: v.name || t('Preview'), color: /^#[0-9a-f]{6}$/i.test(v.color) ? v.color : '#9ca3af', phase: v.phase ?? 'DISCUSSION' }} />
+            ) : (
+              <StatusChip className="mb-2.5" status={{ name: v.name || t('Preview'), color: /^#[0-9a-f]{6}$/i.test(v.color) ? v.color : '#9ca3af' }} />
+            )}
           </div>
-          <Field id="status-meaning" label={t('Counts as')} hint={t('Dashboards and reports group statuses by this.')}>
-            <Select value={v.meaning} onChange={(e) => setV({ ...v, meaning: e.target.value as StatusMeaning })}>
-              {STATUS_MEANINGS.map((s) => (
-                <option key={s} value={s}>
-                  {t(MEANING_LABELS[s])}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {stage ? (
+            <Field id="status-phase" label={t('Part of')} hint={t('The employee activity filters and automatic moves go by this.')}>
+              <Select value={v.phase ?? 'DISCUSSION'} disabled={!!editing?.key} onChange={(e) => setV({ ...v, phase: e.target.value as StagePhase })}>
+                {STAGE_PHASES.map((p) => (
+                  <option key={p} value={p}>
+                    {t(PHASE_LABEL[p])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field id="status-meaning" label={t('Counts as')} hint={t('Dashboards and reports group statuses by this.')}>
+              <Select value={v.meaning} onChange={(e) => setV({ ...v, meaning: e.target.value as StatusMeaning })}>
+                {STATUS_MEANINGS.map((s) => (
+                  <option key={s} value={s}>
+                    {t(MEANING_LABELS[s])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           <Field id="status-description" label={t('Description')} hint={t('Optional')}>
             <Input value={v.description} maxLength={500} onChange={(e) => setV({ ...v, description: e.target.value })} />
           </Field>

@@ -39,10 +39,14 @@ function takeWelcome(): boolean {
   }
 }
 
+/** How long the welcome shows, and how long its closing iris takes (sign-in-scene.css .sfs-welcome-leave). */
+export const WELCOME_SHOWN_MS = 1100;
+export const WELCOME_LEAVE_MS = 400;
+
 const VARIANT: Record<WorkspaceLevel, Exclude<SceneVariant, 'console'>> = { SUPER: 'super', MANAGER: 'manager', EXECUTIVE: 'executive' };
 
 /**
- * The welcome after signing in (ADR 0075): three seconds of the level's own scene and animation, sparkles, the
+ * The welcome after signing in (ADR 0075): about one and a half seconds of the level's own scene and animation, sparkles, the
  * greeting and a bar filling while the dashboard loads behind it, then it opens like a closing iris. Any key or click skips it. `name` is null until the signed-in person is known.
  */
 export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant; name: string | null; onShown?: () => void }) {
@@ -83,7 +87,8 @@ export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant
     if (state !== 'on') return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const leave = () => setState('leaving');
-    const timer = setTimeout(leave, reduced ? 900 : 3000);
+    // About 1.5 s in all (Kunal, 2026-11-26: the dashboard should open promptly): 1.1 s shown, 0.4 s closing.
+    const timer = setTimeout(leave, reduced ? 600 : WELCOME_SHOWN_MS);
     window.addEventListener('keydown', leave, { once: true });
     return () => {
       clearTimeout(timer);
@@ -93,7 +98,7 @@ export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant
 
   useEffect(() => {
     if (state !== 'leaving') return;
-    const timer = setTimeout(() => setState('off'), 700);
+    const timer = setTimeout(() => setState('off'), WELCOME_LEAVE_MS);
     return () => clearTimeout(timer);
   }, [state]);
 

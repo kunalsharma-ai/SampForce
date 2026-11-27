@@ -746,6 +746,54 @@ export const organizationHelp = {
       'استخدمه في بداية كل فترة وتابعه في لوحتك.',
     ],
   },
+  'page.teamStatus': {
+    title: 'Team status',
+    what: [
+      'Who is working, available, on a break, away or checked out right now, with today’s check-in, working time and breaks.',
+      'Quién está trabajando, disponible, en pausa, ausente o ha fichado la salida ahora mismo, con la entrada, el tiempo trabajado y las pausas de hoy.',
+      'Qui travaille, est disponible, en pause, absent ou parti en ce moment, avec l’arrivée, le temps de travail et les pauses du jour.',
+      'Wer gerade arbeitet, verfügbar ist, Pause macht, abwesend oder ausgecheckt ist, mit dem heutigen Check-in, der Arbeitszeit und den Pausen.',
+      'من يعمل الآن أو متاح أو في استراحة أو غير موجود أو انصرف، مع وقت الحضور ووقت العمل والاستراحات اليوم.',
+    ],
+    how: [
+      'Everyone checks in, takes breaks and checks out from the status button in the header. Tap a status above the cards to see only those people.',
+      'Cada persona ficha la entrada, hace pausas y ficha la salida con el botón de estado del encabezado. Toca un estado sobre las tarjetas para ver solo a esas personas.',
+      'Chacun pointe son arrivée, prend ses pauses et pointe son départ avec le bouton de statut de l’en-tête. Touchez un statut au-dessus des cartes pour ne voir que ces personnes.',
+      'Alle checken über die Status-Schaltfläche in der Kopfzeile ein, machen Pausen und checken aus. Tippen Sie über den Karten auf einen Status, um nur diese Personen zu sehen.',
+      'يسجّل الجميع الحضور والاستراحات والانصراف من زر الحالة في الترويسة. اضغط على حالة فوق البطاقات لترى هؤلاء الأشخاص فقط.',
+    ],
+    where: [
+      'The Super Workspace sees everyone, a manager sees its team, and an executive sees themself.',
+      'El espacio principal ve a todos, un gerente ve a su equipo y un ejecutivo se ve a sí mismo.',
+      'L’espace principal voit tout le monde, un manager voit son équipe et un commercial se voit lui-même.',
+      'Der Super-Arbeitsbereich sieht alle, ein Manager sein Team und ein Executive sich selbst.',
+      'ترى المساحة الرئيسية الجميع، ويرى المدير فريقه، ويرى التنفيذي نفسه.',
+    ],
+  },
+  'page.achievements': {
+    title: 'My achievements',
+    what: [
+      'Your real achievements: companies converted into deals, RFQs SampBidx confirmed, lead and sales targets reached, cleared days and milestones, with your progress today.',
+      'Tus logros reales: empresas convertidas en oportunidades, RFQ confirmadas por SampBidx, objetivos de leads y de ventas alcanzados, días completados e hitos, con tu progreso de hoy.',
+      'Vos vraies réussites : entreprises converties en opportunités, RFQ confirmées par SampBidx, objectifs de prospects et de ventes atteints, journées bouclées et jalons, avec votre progression du jour.',
+      'Ihre echten Erfolge: in Deals umgewandelte Unternehmen, von SampBidx bestätigte RFQs, erreichte Lead- und Umsatzziele, erledigte Tage und Meilensteine, mit Ihrem heutigen Fortschritt.',
+      'إنجازاتك الحقيقية: شركات تحوّلت إلى صفقات، وطلبات عروض أكّدتها SampBidx، وأهداف عملاء محتملين ومبيعات تحققت، وأيام أنجزتها ومحطات مهمة، مع تقدّمك اليوم.',
+    ],
+    how: [
+      'SampForce records each achievement once, after the work is confirmed, and celebrates it once. Open an item to see it again without the animation. Celebration settings are at the bottom.',
+      'SampForce registra cada logro una vez, cuando el trabajo está confirmado, y lo celebra una vez. Abre un elemento para verlo de nuevo sin la animación. Los ajustes de celebración están abajo.',
+      'SampForce enregistre chaque réussite une fois, quand le travail est confirmé, et la célèbre une fois. Ouvrez un élément pour le revoir sans l’animation. Les réglages des célébrations sont en bas.',
+      'SampForce erfasst jeden Erfolg einmal, sobald die Arbeit bestätigt ist, und feiert ihn einmal. Öffnen Sie einen Eintrag, um ihn ohne Animation erneut zu sehen. Die Feier-Einstellungen stehen unten.',
+      'يسجّل SampForce كل إنجاز مرة واحدة بعد تأكيد العمل، ويحتفل به مرة واحدة. افتح أي عنصر لتراه مجددًا دون الحركة. إعدادات الاحتفال في الأسفل.',
+    ],
+    where: [
+      'Only you see your achievements. A target set by your manager replaces your personal target while it runs.',
+      'Solo tú ves tus logros. Un objetivo fijado por tu gerente sustituye a tu objetivo personal mientras dura.',
+      'Vous seul voyez vos réussites. Un objectif fixé par votre manager remplace votre objectif personnel pendant sa durée.',
+      'Nur Sie sehen Ihre Erfolge. Ein Ziel Ihres Managers ersetzt Ihr persönliches Ziel, solange es läuft.',
+      'أنت وحدك ترى إنجازاتك. الهدف الذي يحدده مديرك يحلّ محل هدفك الشخصي طوال مدته.',
+    ],
+  },
   'page.workspaces': {
     title: 'Workspaces',
     what: [
@@ -936,6 +984,30 @@ export const organizationHelp = {
       'Utilisez-le dans les grandes entreprises pour que les partants perdent l’accès le jour même.',
       'Nutzen Sie es in größeren Firmen, damit Ausscheidende am selben Tag den Zugang verlieren.',
       'استخدمه في الشركات الكبيرة ليفقد المغادرون الوصول في اليوم نفسه.',
+    ],
+  },
+  'page.myProfile': {
+    title: 'My profile',
+    what: [
+      'Your profile for the people in your organisation: photo, cover, mood, headline, favourite quote, bio, phone, LinkedIn and topics to ask you about.',
+      'Tu perfil para las personas de tu organización: foto, portada, estado de ánimo, titular, cita favorita, biografía, teléfono, LinkedIn y temas sobre los que preguntarte.',
+      'Votre profil pour les membres de votre organisation : photo, couverture, humeur, titre, citation, biographie, téléphone, LinkedIn et sujets sur lesquels vous interroger.',
+      'Ihr Profil für die Personen in Ihrer Organisation: Foto, Titelbild, Stimmung, Überschrift, Lieblingszitat, Über mich, Telefon, LinkedIn und Themen, zu denen man Sie fragen kann.',
+      'ملفك الشخصي لأعضاء مؤسستك: الصورة والغلاف والمزاج والعنوان التعريفي والاقتباس المفضّل والسيرة والهاتف وLinkedIn والمواضيع التي يمكن سؤالك عنها.',
+    ],
+    how: [
+      'Press the camera to add and crop a photo, pick a cover, set your mood with an emoji, fill in the rest and press Save profile.',
+      'Pulsa la cámara para añadir y recortar una foto, elige una portada, indica tu estado de ánimo con un emoji, completa el resto y pulsa Guardar perfil.',
+      'Appuyez sur l’appareil photo pour ajouter et recadrer une photo, choisissez une couverture, indiquez votre humeur par un emoji, complétez le reste et enregistrez.',
+      'Tippen Sie auf die Kamera, um ein Foto hinzuzufügen und zuzuschneiden, wählen Sie ein Titelbild und eine Stimmung, füllen Sie den Rest aus und speichern Sie.',
+      'اضغط الكاميرا لإضافة صورة وقصّها، واختر غلافًا، وحدّد مزاجك برمز تعبيري، وأكمل الباقي ثم اضغط حفظ الملف الشخصي.',
+    ],
+    where: [
+      'Your photo and mood show on your avatar across SampForce; teammates open your card from Team Management and team chat.',
+      'Tu foto y tu estado de ánimo aparecen en tu avatar en todo SampForce; tu equipo abre tu tarjeta desde Gestión del equipo y el chat.',
+      'Votre photo et votre humeur s’affichent sur votre avatar partout ; vos collègues ouvrent votre carte depuis la gestion d’équipe et le chat.',
+      'Foto und Stimmung erscheinen überall auf Ihrem Avatar; Kollegen öffnen Ihre Karte aus der Teamverwaltung und dem Team-Chat.',
+      'تظهر صورتك ومزاجك على صورتك الرمزية في كل SampForce، ويفتح زملاؤك بطاقتك من إدارة الفريق ودردشة الفريق.',
     ],
   },
   'page.accountSecurity': {
@@ -1780,6 +1852,30 @@ export const organizationHelp = {
       'يعني «فريقي» أنت وكل من يتبع لك. تظهر المواعيد بمنطقتك الزمنية.',
     ],
   },
+  'page.calls': {
+    title: 'Calls',
+    what: [
+      'Call any company or employee through your own dialer. The call card shows the company, employee, designation, email and both numbers; every call is kept with its outcome and remarks.',
+      'Llama a cualquier empresa o empleado con tu propio marcador. La ficha muestra la empresa, el empleado, su cargo, su correo y los dos teléfonos; cada llamada se guarda con su resultado y comentarios.',
+      'Appelez toute entreprise ou tout employé avec votre composeur. La fiche affiche l’entreprise, l’employé, sa fonction, son e-mail et les deux numéros ; chaque appel garde son résultat et ses remarques.',
+      'Rufen Sie jedes Unternehmen und jeden Mitarbeiter über Ihren Dialer an. Die Anrufkarte zeigt Unternehmen, Mitarbeiter, Position, E-Mail und beide Nummern; jeder Anruf bleibt mit Ergebnis und Bemerkungen.',
+      'اتصل بأي شركة أو موظف عبر برنامج الاتصال الخاص بك. تعرض البطاقة الشركة والموظف ومسماه وبريده والرقمين، وتُحفظ كل مكالمة مع نتيجتها وملاحظاتها.',
+    ],
+    how: [
+      'Search for a company or employee, or press Call on their page, then call. When it ends, choose what happened, add remarks and the date of the next call.',
+      'Busca una empresa o un empleado, o pulsa Llamar en su página, y llama. Al terminar, elige qué pasó, añade comentarios y la fecha de la próxima llamada.',
+      'Cherchez une entreprise ou un employé, ou appuyez sur Appeler sur sa page, puis appelez. À la fin, choisissez ce qui s’est passé, ajoutez des remarques et la date du prochain appel.',
+      'Suchen Sie ein Unternehmen oder einen Mitarbeiter oder tippen Sie auf dessen Seite auf Anrufen. Wählen Sie danach das Ergebnis, ergänzen Sie Bemerkungen und den nächsten Anruf.',
+      'ابحث عن شركة أو موظف، أو اضغط «اتصال» في صفحته، ثم اتصل. عند الانتهاء اختر ما حدث وأضف ملاحظاتك وموعد المكالمة التالية.',
+    ],
+    where: [
+      'Add my dialer: the phone app, a softphone, any dialer opened from a link with the call details, a webhook, or Twilio. Logged calls show in the company’s interactions.',
+      'Añadir mi marcador: la app de teléfono, un softphone, cualquier marcador que se abra con un enlace con los datos, un webhook o Twilio. Las llamadas aparecen en las interacciones.',
+      'Ajouter mon composeur : l’application téléphone, un softphone, tout composeur ouvert par un lien avec les détails, un webhook ou Twilio. Les appels figurent dans les interactions.',
+      'Meinen Dialer hinzufügen: Telefon-App, Softphone, jeder Dialer per Link mit den Anrufdaten, ein Webhook oder Twilio. Erfasste Anrufe stehen in den Interaktionen.',
+      'إضافة برنامج الاتصال: تطبيق الهاتف أو هاتف برمجي أو أي برنامج يُفتح برابط ببيانات المكالمة أو Webhook أو Twilio. تظهر المكالمات المسجلة في تفاعلات الشركة.',
+    ],
+  },
   'page.rfqs': {
     title: 'RFQs',
     what: [
@@ -2138,6 +2234,54 @@ export const organizationHelp = {
       'Chaque rappel est envoyé une fois, dans la langue de la personne, dans l’application et par les canaux choisis.',
       'Jede Erinnerung kommt einmal, in der Sprache der Person, in der App und über die gewählten Kanäle.',
       'يُرسل كل تذكير مرة واحدة بلغة الشخص، داخل التطبيق وعبر القنوات التي اختارها.',
+    ],
+  },
+  'crm.followUpCadence': {
+    title: 'Follow-up cadence',
+    what: [
+      'How many follow-ups each new contact gets after the first email, and how many days apart. New contacts start in Fresh Email Pending.',
+      'Cuántos seguimientos recibe cada contacto nuevo después del primer correo y con cuántos días de separación. Los contactos nuevos empiezan en Correo inicial pendiente.',
+      'Combien de relances chaque nouveau contact reçoit après le premier e-mail, et à combien de jours d’intervalle. Les nouveaux contacts commencent en E-mail initial en attente.',
+      'Wie viele Nachverfolgungen jeder neue Kontakt nach der ersten E-Mail bekommt und im Abstand von wie vielen Tagen. Neue Kontakte beginnen mit Erste E-Mail ausstehend.',
+      'عدد المتابعات التي يحصل عليها كل جهة اتصال جديدة بعد البريد الأول، وعدد الأيام بينها. تبدأ جهات الاتصال الجديدة في مرحلة البريد الأول قيد الانتظار.',
+    ],
+    how: [
+      'The first email sent, synced or logged moves the contact to Initial Email Sent and plans follow-up 1. Completing one plans the next. A reply, a call or an RFQ stops it.',
+      'El primer correo enviado, sincronizado o registrado pasa el contacto a Correo inicial enviado y planifica el seguimiento 1. Completar uno planifica el siguiente. Una respuesta, una llamada o una RFQ lo detienen.',
+      'Le premier e-mail envoyé, synchronisé ou consigné passe le contact en E-mail initial envoyé et planifie la relance 1. En terminer une planifie la suivante. Une réponse, un appel ou une RFQ l’arrête.',
+      'Die erste gesendete, synchronisierte oder erfasste E-Mail setzt den Kontakt auf Erste E-Mail gesendet und plant Nachverfolgung 1. Wer eine erledigt, plant die nächste. Eine Antwort, ein Anruf oder eine RFQ stoppt sie.',
+      'أول بريد يُرسل أو يُزامن أو يُسجّل ينقل جهة الاتصال إلى البريد الأول مُرسل ويخطط للمتابعة 1. إكمال متابعة يخطط للتالية. الرد أو المكالمة أو طلب عرض السعر يوقفها.',
+    ],
+    where: [
+      'Only the Super Workspace changes it. Everyone gets a morning summary of follow-ups due today and overdue.',
+      'Solo el espacio Super lo cambia. Cada persona recibe por la mañana un resumen de los seguimientos de hoy y atrasados.',
+      'Seul l’espace Super le modifie. Chacun reçoit le matin un résumé des relances du jour et en retard.',
+      'Nur der Super-Arbeitsbereich ändert sie. Jede Person erhält morgens eine Übersicht der heute fälligen und überfälligen Nachverfolgungen.',
+      'مساحة المدير الأعلى وحدها تغيّره. يحصل الجميع صباحًا على ملخص للمتابعات المستحقة اليوم والمتأخرة.',
+    ],
+  },
+  'crm.journey': {
+    title: 'Journey stages',
+    what: [
+      'The stages every company moves through on the Pipeline, from New Company to Won, or Lost, Rejected, Not Interested or On Hold.',
+      'Las etapas que recorre cada empresa en el Pipeline, de Empresa nueva a Ganada, o Perdida, Rechazada, Sin interés o En pausa.',
+      'Les étapes que traverse chaque entreprise dans le Pipeline, de Nouvelle entreprise à Gagnée, ou Perdue, Rejetée, Pas intéressée ou En pause.',
+      'Die Phasen jedes Unternehmens in der Pipeline, von Neues Unternehmen bis Gewonnen, oder Verloren, Abgelehnt, Kein Interesse oder Pausiert.',
+      'المراحل التي تمر بها كل شركة في مسار المبيعات، من شركة جديدة إلى الفوز، أو الخسارة أو الرفض أو عدم الاهتمام أو الإيقاف المؤقت.',
+    ],
+    how: [
+      'SampForce works the stage out from the company’s employees, RFQs, deals and status, so nobody types it. Open a card on the Pipeline to see the steps done, the current one and what comes next.',
+      'SampForce calcula la etapa a partir de los empleados, las RFQ, las oportunidades y el estado de la empresa, así que nadie la escribe. Abre una tarjeta del Pipeline para ver los pasos hechos, el actual y lo que sigue.',
+      'SampForce déduit l’étape des employés, des RFQ, des opportunités et du statut de l’entreprise : personne ne la saisit. Ouvrez une carte du Pipeline pour voir les étapes faites, l’étape actuelle et la suivante.',
+      'SampForce ermittelt die Phase aus den Mitarbeitern, RFQs, Verkaufschancen und dem Status des Unternehmens, niemand tippt sie ein. Öffnen Sie eine Karte in der Pipeline, um erledigte, aktuelle und nächste Schritte zu sehen.',
+      'يحدد SampForce المرحلة من موظفي الشركة وطلبات عروض الأسعار والصفقات والحالة، فلا يكتبها أحد. افتح بطاقة في مسار المبيعات لترى الخطوات المنجزة والحالية والتالية.',
+    ],
+    where: [
+      'Only the Super Workspace renames, recolours or hides stages. New Company, RFQ Received, Won and Lost always show.',
+      'Solo el espacio Super cambia el nombre, el color o oculta etapas. Empresa nueva, RFQ recibida, Ganada y Perdida siempre se muestran.',
+      'Seul l’espace Super renomme, recolore ou masque les étapes. Nouvelle entreprise, RFQ reçue, Gagnée et Perdue restent toujours visibles.',
+      'Nur der Super-Arbeitsbereich benennt Phasen um, färbt sie ein oder blendet sie aus. Neues Unternehmen, RFQ erhalten, Gewonnen und Verloren werden immer angezeigt.',
+      'مساحة المدير الأعلى وحدها تعيد تسمية المراحل أو تلوينها أو إخفاءها. تظهر دائمًا مراحل شركة جديدة وتم استلام طلب عرض السعر والفوز والخسارة.',
     ],
   },
   'crm.currency': {

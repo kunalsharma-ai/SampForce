@@ -65,7 +65,8 @@ export function merge(company: CompanyNow, candidates: Candidate[], runId: strin
   // Lists first: they may receive the item a primary field (email, phone) then points at.
   for (const field of LIST_ENRICH_FIELDS) {
     const cands = byField.get(field);
-    if (!cands) continue;
+    // A list the person said no to when creating the company (autofillSkip) is never added to.
+    if (!cands || locked(field)) continue;
     const have = (Array.isArray(company[field]) ? (company[field] as unknown[]) : []).slice();
     const keys = new Set(have.map((i) => itemKey(field, i)));
     const rejected = new Set(sources[field]?.rejected ?? []);

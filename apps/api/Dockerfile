@@ -29,8 +29,12 @@ USER node
 CMD ["node", "node_modules/@dealflow/database/dist/setup-cli.js"]
 
 FROM base AS runtime
+# Chromium for company auto-fill (ADR 0079): sites built with JavaScript are opened in it, headless, every request it
+# makes fetched by the API itself through the public-address guard. Its profile and caches go to /tmp (the root file
+# system is read-only).
+RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-liberation && rm -rf /var/lib/apt/lists/*
 # METRICS_PORT turns on the internal metrics/health listener (never published); the worker's health check needs it.
-ENV NODE_ENV=production METRICS_PORT=9464
+ENV NODE_ENV=production METRICS_PORT=9464 COMPANY_AUTOFILL_BROWSER_PATH=/usr/bin/chromium XDG_CONFIG_HOME=/tmp/.config XDG_CACHE_HOME=/tmp/.cache
 WORKDIR /app
 COPY --from=build /out .
 COPY --from=build /repo/packages/database/prisma ./prisma

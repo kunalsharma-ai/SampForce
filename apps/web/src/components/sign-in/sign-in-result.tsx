@@ -20,7 +20,8 @@ export function useSignInResult() {
   const success = useCallback(async () => {
     setState('success');
     setRound((n) => n + 1);
-    await new Promise((r) => setTimeout(r, reducedMotion() ? 0 : 950));
+    // A short beat for the green tick before the welcome (was 0.95 s).
+    await new Promise((r) => setTimeout(r, reducedMotion() ? 0 : 400));
   }, []);
   const error = useCallback(() => {
     setState('error');

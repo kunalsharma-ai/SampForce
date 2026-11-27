@@ -50,7 +50,7 @@ test('charts show real numbers, switch to a table, and filter by period and owne
 
   // Executive preset brings in conversion, win/loss and team charts.
   await page.getByRole('button', { name: 'Executive' }).click();
-  await expect(page.getByLabel('Period')).toHaveValue('90d');
+  await expect(page.getByRole('combobox', { name: /^Period/ })).toHaveValue('90d');
   await expect(page.getByLabel('Owner')).toHaveValue('');
   const winLoss = widget(page, 'winLoss');
   await expect(winLoss).toContainText('top loss reason: Budget');
@@ -64,10 +64,10 @@ test('charts show real numbers, switch to a table, and filter by period and owne
   await expect(widget(page, 'goal')).toContainText('Set one in Forecasting');
 
   // The choice is saved for next time.
-  await page.getByLabel('Period').selectOption('7d');
+  await page.getByRole('combobox', { name: /^Period/ }).selectOption('7d');
   await expect(page.getByText(/last 7 days/)).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel('Period')).toHaveValue('7d');
+  await expect(page.getByRole('combobox', { name: /^Period/ })).toHaveValue('7d');
   await expect(page.getByRole('button', { name: 'Executive' })).toHaveAttribute('aria-pressed', 'true');
 
   // Let the metric cards finish fading in before checking contrast.

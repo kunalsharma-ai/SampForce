@@ -28,6 +28,32 @@ export function useLockedFeature(pathname: string): FeatureKey | null {
   return ready && feature && !has(feature) ? feature : null;
 }
 
+/**
+ * Pages of a section the Console Admin switches on deliberately (opt-in features such as the Leads and Accounts pages,
+ * ADR 0082). While off they are left out of the sidebar, search and shortcuts, not shown with a lock, so the menu holds
+ * only what the organisation uses. Opening one by its address still says it is switched off.
+ */
+export function useSwitchedOff(): (href: string) => boolean {
+  const { has, ready } = useFeatures();
+  const { data } = useSession();
+  // Sections the Console withholds from this workspace's level (R8, ADR 0092) are left out the same way.
+  const consoleHidden = new Set(data?.workspace?.hiddenSections ?? []);
+  const withheld = (f: FeatureKey): boolean => {
+    for (let k: FeatureKey | undefined = f; k; k = FEATURE_BY_KEY[k]?.parent) if (consoleHidden.has(k)) return true;
+    return false;
+  };
+  return (href) => {
+    const f = featureForPath(href.split('?')[0]!);
+    // Left out until the session loads too, so a switched-off section never flashes into the menu.
+    return !!f && ((FEATURE_BY_KEY[f].optIn === true && (!ready || !has(f))) || withheld(f));
+  };
+}
+
+/** Whether new inbound leads can be created from menus: only while the Leads page is switched on. */
+export function useLeadsSectionOn(): boolean {
+  return useFeatures().has('leads_section');
+}
+
 export const featureLabel = (f: FeatureKey) => FEATURE_BY_KEY[f].label;
 
 /** True for an API error that says the plan does not include something, so a widget can show the upgrade hint. */

@@ -32,6 +32,7 @@ import { sampbidx } from './sampbidx';
 import { chat } from './chat';
 import { edit } from './edit';
 import { companyLogos } from './company-logos';
+import { profiles } from './profiles';
 import { companyAutofill } from './company-autofill';
 import { companyEmail } from './company-email';
 import { importPhrases } from './import';
@@ -44,11 +45,22 @@ import { security } from './security';
 import type { PhraseTable } from './types';
 import { notifications } from './notifications';
 import { site } from './site';
+import { employeeStages } from './employee-stages';
+import { journey } from './journey';
+import { redesign } from './redesign';
+import { roleDashboards } from './role-dashboards';
+import { welcome } from './welcome';
+import { teamChat } from './team-chat';
+import { tasksTargets } from './tasks-targets';
+import { achievements } from './achievements';
+import { calls } from './calls';
+import { clientTime } from './client-time';
+import { companyExport } from './company-export';
 
 /** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
 
-export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, sampbidxChat, crmAdmin, chat, importPhrases, ownServers, edit, companyLogos, companyAutofill, companyEmail, workspaces, levelDashboards, audit, security, mobile, notifications, site } as const satisfies Record<string, PhraseTable>;
+export const PHRASE_TABLES = { activities, auth, crm, dashboard, deals, sequences, communication, meetings, messaging, sampbidxChat, quotes, contracts, reports, revenue, administration, automation, integrations, growth, help, engagement, publicPages, settings, table, territories, plans, companyCrm, companyLeads, companyWork, commandCenter, crmAdmin, sampbidx, chat, edit, companyLogos, profiles, companyAutofill, companyEmail, importPhrases, ownServers, mobile, workspaces, levelDashboards, audit, security, notifications, site, employeeStages, journey, redesign, roleDashboards, welcome, teamChat, tasksTargets, achievements, calls, clientTime, companyExport } as const satisfies Record<string, PhraseTable>;
 
-export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...sampbidx, ...sampbidxChat, ...crmAdmin, ...chat, ...importPhrases, ...ownServers, ...edit, ...companyLogos, ...companyAutofill, ...companyEmail, ...workspaces, ...levelDashboards, ...audit, ...security, ...mobile, ...notifications, ...site } as const;
+export const PHRASES = { ...activities, ...auth, ...crm, ...dashboard, ...deals, ...sequences, ...communication, ...meetings, ...messaging, ...sampbidxChat, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...help, ...engagement, ...publicPages, ...settings, ...table, ...territories, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...crmAdmin, ...sampbidx, ...chat, ...edit, ...companyLogos, ...profiles, ...companyAutofill, ...companyEmail, ...importPhrases, ...ownServers, ...mobile, ...workspaces, ...levelDashboards, ...audit, ...security, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...welcome, ...teamChat, ...tasksTargets, ...achievements, ...calls, ...clientTime, ...companyExport } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

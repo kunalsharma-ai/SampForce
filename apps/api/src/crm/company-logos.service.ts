@@ -9,7 +9,7 @@ import { PrismaService } from '../common/prisma.service';
 import { claimDue, errorMessage } from '../worker/queue';
 import { findLogo, LOGO_MAX_BYTES, LOGO_MIN_WIDTH, type LogoFetcher, logoDomain, sniffImage } from './company-logo-finder';
 import { notFound } from './crm-helpers';
-import { siteFetcher } from './site-fetch';
+import { BROWSER_USER_AGENT, siteFetcher } from './site-fetch';
 import { canSeeDetails, companyScope, visibility } from './visibility';
 
 const TIMEOUT_MS = 6000;
@@ -20,7 +20,6 @@ const BATCH = 6;
 const RETRY_AFTER_MS = [5 * 60_000, 60 * 60_000, 24 * 60 * 60_000];
 /** A claimed look-up that never finished (the worker stopped) becomes due again after this. */
 const LEASE_MS = 5 * 60_000;
-export const LOGO_USER_AGENT = 'SampForceBot/1.0 (company logo; reads the site icon only)';
 
 type Status = CompanyLogoRef['status'];
 type LogoMeta = { companyId: string; source: string; status: string; width: number | null; updatedAt: Date; contentType: string | null };
@@ -231,7 +230,7 @@ export class CompanyLogosService {
 
   /** The look-up's only way out: public https addresses, every redirect checked, sizes and times capped (site-fetch.ts). */
   private fetcher(): LogoFetcher {
-    const site = siteFetcher({ userAgent: LOGO_USER_AGENT, timeoutMs: TIMEOUT_MS, pageMaxBytes: PAGE_MAX_BYTES, fixtureUrl: this.env.LOGO_FIXTURE_URL });
+    const site = siteFetcher({ userAgent: BROWSER_USER_AGENT, timeoutMs: TIMEOUT_MS, pageMaxBytes: PAGE_MAX_BYTES, fixtureUrl: this.env.LOGO_FIXTURE_URL });
     return { page: (url) => site.page(url), file: (url) => site.file(url, 'image/*', LOGO_MAX_BYTES) };
   }
 }

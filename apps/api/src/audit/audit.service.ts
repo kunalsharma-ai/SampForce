@@ -18,8 +18,18 @@ export interface AuditEntry {
   meta?: RequestMeta;
 }
 
+/** Something that wants to know about business actions as they are recorded (achievements, ADR 0090). */
+export type AuditObserver = (tx: TenantTx, entry: AuditEntry) => Promise<void> | void;
+
 @Injectable()
 export class AuditService {
+  private readonly observers: AuditObserver[] = [];
+
+  /** Calls `fn` for every entry recorded from now on, inside the recording transaction. Refused attempts are left out. */
+  observe(fn: AuditObserver): void {
+    this.observers.push(fn);
+  }
+
   /**
    * Records an audit event inside the caller's transaction so the event and the change it
    * describes commit (or roll back) together. Business actions also publish domain events to the
@@ -57,6 +67,7 @@ export class AuditService {
         })),
       });
     }
+    if (entry.outcome !== 'REFUSED') for (const fn of this.observers) await fn(tx, entry);
   }
 
   /**

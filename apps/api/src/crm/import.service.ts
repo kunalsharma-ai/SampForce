@@ -28,6 +28,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localize, tr } from '../common/request-language';
 import { parseCsv } from './csv';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { defaultStatusId, reportingManagerOf } from './companies.service';
@@ -83,6 +84,7 @@ export class ImportService {
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
     private readonly enrichment: CompanyEnrichmentService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   async import(auth: AuthContext, req: ImportRequest, meta: RequestMeta): Promise<ImportResult> {
@@ -311,9 +313,10 @@ export class ImportService {
     } else {
       const companyIds = await this.resolveCompanies(tx, auth, toCreate.map((p) => p.companyName).filter((n): n is string => !!n));
       const statusId = await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE');
+      const fresh = await this.cadence.freshStageId(tx, auth.tenantId);
       await chunks(toCreate, (batch) =>
         tx.contact.createMany({
-          data: batch.map((p) => contactRow(auth, statusId, p.data, p.companyName ? (companyIds.get(nameKey(p.companyName)) ?? null) : null, auth.userId)),
+          data: batch.map((p) => contactRow(auth, statusId, p.data, p.companyName ? (companyIds.get(nameKey(p.companyName)) ?? null) : null, auth.userId, fresh)),
         }),
       );
     }
@@ -452,8 +455,9 @@ export class ImportService {
     }
     await this.createCompanies(tx, auth, fresh);
     const statusId = await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE');
+    const freshStage = await this.cadence.freshStageId(tx, auth.tenantId);
     await chunks(contactRows, (batch) =>
-      tx.contact.createMany({ data: batch.map((c) => contactRow(auth, statusId, c.data, ids.get(c.companyKey)!.id, ids.get(c.companyKey)!.ownerId ?? auth.userId)) }),
+      tx.contact.createMany({ data: batch.map((c) => contactRow(auth, statusId, c.data, ids.get(c.companyKey)!.id, ids.get(c.companyKey)!.ownerId ?? auth.userId, freshStage)) }),
     );
   }
 
@@ -679,10 +683,12 @@ function companyKeys(row: Record<string, unknown>): string[] {
   });
 }
 
-function contactRow(auth: AuthContext, statusId: string | null, data: Record<string, unknown>, companyId: string | null, ownerId: string): Prisma.ContactCreateManyInput {
+function contactRow(auth: AuthContext, statusId: string | null, data: Record<string, unknown>, companyId: string | null, ownerId: string, freshStageId: string | null = null): Prisma.ContactCreateManyInput {
   const now = new Date();
   return {
     ...(data as object),
+    // A company's employees start in Fresh Email Pending (ADR 0083).
+    ...(companyId && freshStageId ? { stageId: freshStageId, stageChangedAt: now, stageChangedById: auth.userId } : {}),
     email: typeof data.email === 'string' ? data.email.toLowerCase() : (data.email as string | null | undefined),
     nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt as string) : null,
     tenantId: auth.tenantId, ownerId, companyId, statusId, statusChangedAt: now, statusChangedById: auth.userId, createdById: auth.userId, updatedById: auth.userId,

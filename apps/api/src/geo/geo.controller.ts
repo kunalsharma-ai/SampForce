@@ -9,6 +9,12 @@ export const citiesQuery = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+export const holidaysQuery = z.object({
+  state: z.string().trim().max(120).optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  days: z.coerce.number().int().min(1).max(60).default(14),
+});
+
 /** Country, region and city lists for every signed-in person (reference data, the same for every workspace). */
 @Controller('geo')
 export class GeoController {
@@ -30,5 +36,12 @@ export class GeoController {
   @Header('Cache-Control', 'private, max-age=3600')
   cities(@Param('code') code: string, @Query(new ZodPipe(citiesQuery)) q: z.infer<typeof citiesQuery>) {
     return this.geo.cities(code, q);
+  }
+
+  /** Public holidays ahead, for "best time to connect" (ADR 0089). */
+  @Get('countries/:code/holidays')
+  @Header('Cache-Control', 'private, max-age=3600')
+  holidays(@Param('code') code: string, @Query(new ZodPipe(holidaysQuery)) q: z.infer<typeof holidaysQuery>) {
+    return this.geo.holidays(code, q.state ?? null, q.from, q.days);
   }
 }

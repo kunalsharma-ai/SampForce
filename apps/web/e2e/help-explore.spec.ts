@@ -32,6 +32,8 @@ test('Help & support from the top bar, Explore SampForce and a feature brief fro
 
   // ── The button in the top bar, from any page ──
   await page.goto('/app/deals');
+  // Since the header redesign (R1) it is in the account menu.
+  await page.getByRole('button', { name: 'Account menu' }).click();
   const button = page.locator('[data-help-support-button="workspace"]');
   await expect(button).toBeVisible();
   await expect(button).toContainText('Help & support');
@@ -154,9 +156,9 @@ test('the Help & support button and Explore SampForce on a phone', async ({ page
   await page.setViewportSize({ width: 390, height: 844 });
   await signUp(page, `Help Explore Phone ${Date.now()}`);
   await page.goto('/app/help');
-  await expect(page.locator('[data-help-support-button="workspace"]')).toBeVisible();
   await expect(page.locator('[data-help-explore]')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await page.getByRole('button', { name: 'Account menu' }).click();
   await page.locator('[data-help-support-button="workspace"]').click();
   await expect(page.locator('[data-help-panel="workspace"]')).toBeVisible();
   await shot(page, '36-help-support-panel-phone');

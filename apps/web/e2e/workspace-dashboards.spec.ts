@@ -56,7 +56,7 @@ test('each workspace level opens on its own dashboard, and the numbers move when
   await post(manager.request, '/targets', { workspaceId: p.id, metric: 'LEADS', period: 'DAILY', startsOn: today, amount: 5 });
 
   // ── The executive's day, before and after a new lead ──
-  await priya.goto('/app');
+  await priya.goto('/app?view=overview');
   const day = priya.locator('[data-level-dashboard="EXECUTIVE"]');
   await expect(day).toContainText('My day');
   await expect(priya.locator('[data-remaining]')).toHaveText('5');
@@ -68,12 +68,12 @@ test('each workspace level opens on its own dashboard, and the numbers move when
   await expect(priya.locator('[data-remaining]')).toHaveText('3');
   await expect(priya.locator('[data-calls-today]')).toContainText('1');
   // An executive only has its own dashboards: My day and Executive.
-  await expect(priya.getByRole('tab')).toHaveText(['My day', 'Executive']);
+  await expect(priya.getByRole('tab')).toHaveText(['My day', 'Overview', 'Executive']);
   await axe(priya);
   await shot(priya, '19-executive-my-day');
 
   // ── The manager's team ──
-  await manager.goto('/app');
+  await manager.goto('/app?view=overview');
   await expect(manager.locator('[data-level-dashboard="MANAGER"]')).toContainText('Team overview: North India Sales');
   await expect(manager.locator('[data-stat="executives"]')).toContainText('2');
   await expect(manager.locator('[data-performance="Priya Sharma"]')).toContainText('2');
@@ -81,12 +81,12 @@ test('each workspace level opens on its own dashboard, and the numbers move when
   await expect(manager.locator('[data-leader="Needs support"]')).toContainText('Arjun Mehta');
   await expect(manager.locator('[data-report="TODAY"]')).toContainText('2');
   await expect(manager.locator('[data-other-managers]')).toHaveCount(0);
-  await expect(manager.getByRole('tab')).toHaveText(['Team', 'Manager']);
+  await expect(manager.getByRole('tab')).toHaveText(['Team', 'Overview', 'Manager']);
   await axe(manager);
   await shot(manager, '20-manager-team-overview');
 
   // ── The Super Workspace's organisation ──
-  await page.goto('/app');
+  await page.goto('/app?view=overview');
   const org = page.locator('[data-level-dashboard="SUPER"]');
   await expect(org).toContainText('Organisation overview');
   await expect(page.locator('[data-stat="managers"]')).toContainText('2');

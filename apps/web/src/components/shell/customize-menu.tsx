@@ -3,7 +3,8 @@
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@dealflow/ui';
 import { ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { ModuleDef } from '@/lib/navigation';
+import { useSwitchedOff } from '@/lib/features';
+import { type ModuleDef, moduleHref } from '@/lib/navigation';
 import { orderedModules, useNavigation, useUpdateNavigation } from '@/lib/workspace-nav';
 import { useShell } from '@/stores/shell';
 
@@ -32,7 +33,9 @@ export function CustomizeMenuDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const all = orderedModules({ moduleOrder: order, hiddenModules: [] }, true);
+  // Sections switched off for the organisation (ADR 0082) are not in the menu, so they are not listed here either.
+  const switchedOff = useSwitchedOff();
+  const all = orderedModules({ moduleOrder: order, hiddenModules: [] }, true).filter((m) => m.inMenu !== false && !switchedOff(moduleHref(m)));
   const move = (m: ModuleDef, dir: -1 | 1) => {
     const peers = all.filter((x) => x.group === m.group).map(key);
     const i = peers.indexOf(key(m));

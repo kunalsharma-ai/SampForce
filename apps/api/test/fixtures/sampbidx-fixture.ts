@@ -7,7 +7,9 @@ import type { AddressInfo } from 'node:net';
  * POST /v1/rfqs and POST /v1/rfq-emails (multipart), under /api (so the base URL is `${url}/api`). It is not
  * SampBidx: it shows SampForce keeps to the document, and SampBidx's own team must build the same endpoints.
  *
- * It also takes chat messages (POST /v1/messages, ADR 0078) and lists them at GET /__messages.
+ * It also takes chat messages (POST /v1/messages, ADR 0078) and lists them at GET /__messages, and clients
+ * (PUT /v1/clients/{externalId}, ADR 0080): one client per external id, contacts matched by external id or email,
+ * name, email, country and time zone required; listed at GET /__clients. A company named "REFUSE" gets 422.
  *
  * SBX.key is accepted; any other key gets 401. An RFQ whose project name contains "REFUSE" gets 422. POST /__fail
  * with {"count": n} makes the next n sends answer 503. GET /__received lists what arrived (for browser tests).
@@ -38,9 +40,19 @@ export interface SbxMessage {
   parts: SbxPart[];
 }
 
+export interface SbxClient {
+  id: string;
+  externalId: string;
+  puts: number;
+  json: Record<string, unknown>;
+  contacts: { id: string; externalId: string; email: string; name: string }[];
+}
+
 export interface SampbidxFixture {
   url: string;
   received: SbxReceived[];
+  /** Clients by SampForce company id; a second PUT updates the same one. */
+  clients: Map<string, SbxClient>;
   /** Chat messages SampBidx accepted, once each. */
   messages: SbxMessage[];
   calls: string[];
@@ -84,6 +96,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   const messageByKey = new Map<string, SbxMessage>();
   const calls: string[] = [];
   const byKey = new Map<string, SbxReceived>();
+  const clients = new Map<string, SbxClient>();
   let failures = 0;
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://fixture');
@@ -95,6 +108,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
       if (u.pathname === '/health') return void res.writeHead(200).end('ok');
       if (u.pathname === '/__received') return void json(200, received);
       if (u.pathname === '/__messages') return void json(200, messages);
+      if (u.pathname === '/__clients') return void json(200, [...clients.values()]);
       if (u.pathname === '/__fail' && req.method === 'POST') {
         failures = Number((JSON.parse(raw.toString() || '{}') as { count?: number }).count ?? 1);
         return void json(200, { failing: failures });
@@ -119,6 +133,36 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
         messages.push(rec);
         if (idem) messageByKey.set(idem, rec);
         return void json(201, { id: rec.id });
+      }
+      const clientPath = /^\/v1\/clients\/([^/]+)$/.exec(path);
+      if (req.method === 'PUT' && clientPath) {
+        if (failures > 0) {
+          failures--;
+          return void json(503, { error: { message: 'Temporarily unavailable' } });
+        }
+        const externalId = decodeURIComponent(clientPath[1]!);
+        let body: { company?: { name?: string }; contacts?: { externalId?: string; name?: string; email?: string; country?: string; timeZone?: string }[] };
+        try {
+          body = JSON.parse(raw.toString('utf8'));
+        } catch {
+          return void json(400, { error: { message: 'Body is not JSON' } });
+        }
+        if (!body.company?.name) return void json(422, { error: { message: 'Company name is required' } });
+        if (body.company.name.includes('REFUSE')) return void json(422, { error: { message: 'Industry must be one of the SampBidx industries' } });
+        for (const c of body.contacts ?? []) {
+          for (const f of ['name', 'email', 'country', 'timeZone'] as const) if (!c[f]) return void json(422, { error: { message: `Contact ${f} is required` } });
+        }
+        const prior = clients.get(externalId);
+        const client: SbxClient = prior ?? { id: `CL-${randomBytes(3).toString('hex').toUpperCase()}`, externalId, puts: 0, json: {}, contacts: [] };
+        client.puts++;
+        client.json = body as Record<string, unknown>;
+        for (const c of body.contacts ?? []) {
+          const same = client.contacts.find((x) => x.externalId === c.externalId || x.email.toLowerCase() === c.email!.toLowerCase());
+          if (same) Object.assign(same, { externalId: c.externalId!, email: c.email!, name: c.name! });
+          else client.contacts.push({ id: `CT-${randomBytes(3).toString('hex').toUpperCase()}`, externalId: c.externalId!, email: c.email!, name: c.name! });
+        }
+        clients.set(externalId, client);
+        return void json(prior ? 200 : 201, { id: client.id, url: `https://sampbidx.example/clients/${client.id}`, contacts: client.contacts.map((c) => ({ externalId: c.externalId, id: c.id })) });
       }
       if (req.method === 'POST' && (path === '/v1/rfqs' || path === '/v1/rfq-emails')) {
         if (failures > 0) {
@@ -148,6 +192,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   return {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     received,
+    clients,
     messages,
     calls,
     failNext: (n) => void (failures = n),

@@ -1,47 +1,41 @@
 'use client';
 
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
-import { MessagesSquare } from 'lucide-react';
-import Link from 'next/link';
 import * as React from 'react';
 import { ChatNotices, useUnreadTitle } from '@/components/chat/chat-notices';
+import { QuickChatPanel, QuickChatTab } from '@/components/chat/quick-chat';
 import { useChatLive, useChatUnread, userRealm } from '@/lib/chat';
 import { useHasFeature } from '@/lib/features';
-import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 
-/**
- * Team chat in the top bar: the unread count, and the live connection that runs on every page (ADR 0069), so new
- * messages pop up and counts update wherever you are.
- */
-export function ChatButton() {
-  const t = useT();
+/** The signed-in person's chat realm, or null without team chat. */
+export function useChatRealm() {
   const { data } = useSession();
   const on = useHasFeature('team_chat');
-  const realm = React.useMemo(() => (data && on ? userRealm(data.tenant.id, data.user.id) : null), [data, on]);
+  return React.useMemo(() => (data && on ? userRealm(data.tenant.id, data.user.id) : null), [data, on]);
+}
+
+/**
+ * Team chat's live connection on every page (ADR 0069), so new messages pop up and counts update wherever you are.
+ * Since the header redesign (R1) the unread count shows on Team chat in the sidebar, not as a header button.
+ */
+export function ChatLive() {
+  const realm = useChatRealm();
   useChatLive(realm);
   const unread = useChatUnread(realm).data?.total ?? 0;
   useUnreadTitle(realm ? unread : 0);
   if (!realm) return null;
-  const label = unread ? t('Team chat, {n} unread', { n: unread }) : t('Team chat');
   return (
     <>
-    <ChatNotices />
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button asChild variant="ghost" size="icon" className="relative">
-          <Link href="/app/chat" aria-label={label} data-chat-unread={unread}>
-            <MessagesSquare aria-hidden />
-            {unread > 0 && (
-              <span aria-hidden className="absolute end-1 top-1 grid min-w-4 place-items-center rounded-full bg-critical px-1 text-[10px] font-semibold leading-4 text-background ring-2 ring-background animate-in zoom-in-50">
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
-          </Link>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
+      <ChatNotices />
+      <QuickChatTab realm={realm} />
+      <QuickChatPanel realm={realm} />
     </>
   );
+}
+
+/** The unread chat count for the sidebar's Team chat item. */
+export function useChatUnreadTotal(): number | null {
+  const realm = useChatRealm();
+  const unread = useChatUnread(realm).data?.total ?? 0;
+  return realm ? unread : null;
 }

@@ -6,6 +6,8 @@ import {
   effectiveWorkspaceRules,
   parseWorkspaceRules,
   type PlanWorkspaceRulesRow,
+  type MenuSections,
+  type PutClientMenuSections,
   type PutClientWorkspaceRules,
   type PutPlanWorkspaceRules,
   type WorkspaceRules,
@@ -15,6 +17,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../common/prisma.service';
 import type { OperatorContext } from './operator-auth';
+import { readMenuSections, writeMenuSections } from '../tenants/menu-sections';
 import { OperatorService } from './operator.service';
 
 /**
@@ -81,5 +84,25 @@ export class WorkspaceRulesService {
     });
     await this.ops.log(op.id, 'tenant.workspace_rules_changed', id, { reason: input.reason, from: before.override, to: empty ? null : input.override }, ip);
     return this.client(id);
+  }
+
+  /** Whether the client's Leads and Accounts pages are shown (redesign, menu; set here since R8). */
+  async menuSections(id: string): Promise<MenuSections> {
+    await this.client(id);
+    return this.prisma.run({ tenantId: id }, (tx) => readMenuSections(tx, id));
+  }
+
+  async setMenuSections(op: OperatorContext, id: string, input: PutClientMenuSections, ip: string | null): Promise<MenuSections> {
+    const before = await this.menuSections(id);
+    const next = { leads: input.leads, accounts: input.accounts };
+    await this.prisma.run({ tenantId: id }, async (tx) => {
+      await writeMenuSections(tx, id, next, op.email, input.reason);
+      await this.audit.record(tx, {
+        tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'tenant.menu_sections', entityType: 'tenant', entityId: id,
+        metadata: { operator: op.email, reason: input.reason, ...next },
+      });
+    });
+    await this.ops.log(op.id, 'tenant.menu_sections_changed', id, { reason: input.reason, from: before, to: next }, ip);
+    return next;
   }
 }

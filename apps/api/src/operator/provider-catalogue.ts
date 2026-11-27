@@ -431,6 +431,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     key: 'company_autofill', name: 'Company auto-fill', usedFor: "Filling in missing company details from the company's own website and from Wikidata",
     fields: [
       { name: 'COMPANY_AUTOFILL_WIKIDATA', label: 'Also read Wikidata', required: false, switch: true, help: 'On (or unset): founded year, head count, industry, head office, founders and CEO of larger companies come from Wikidata too. Off: only the companies\' own websites are read.' },
+      { name: 'COMPANY_AUTOFILL_BROWSER', label: 'Open JavaScript websites in a hidden browser', required: false, switch: true, help: 'On (or unset): when a company website sends an almost empty page and builds it with JavaScript, SampForce opens it in a hidden Chromium on this server to read it, like a visitor would. Every request that page makes still goes through the same public-address checks. Off: pages are read as sent, so such sites give little.' },
     ],
     tested: [],
     checkNote: 'This is a setting, not a key, so there is nothing to test. Auto-fill needs no key: it reads public pages only.',
@@ -438,7 +439,8 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     setup: {
       steps: [
         'Auto-fill runs when a company is created or imported, and when someone presses Enrich on a company. It only fills empty fields and keeps the source of every value; people can undo any of it.',
-        'It reads the company\'s own website (home, About and Contact pages) and, with this switch on, Wikidata. It never reads LinkedIn or other sites that forbid it.',
+        'It reads the company\'s own website (home, About, Contact and Offices pages, found from its links, its sitemap or the usual addresses) and, with the Wikidata switch on, Wikidata. It never reads LinkedIn or other sites that forbid it.',
+        'Sites built with JavaScript are opened in a hidden Chromium when the browser switch is on. The Docker image includes Chromium; on another set-up, set COMPANY_AUTOFILL_BROWSER_PATH to a Chromium or Chrome binary.',
         'The server needs outbound https to the company websites, and to www.wikidata.org while this switch is on.',
       ],
     },

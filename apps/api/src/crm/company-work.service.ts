@@ -38,6 +38,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsService } from './deals.service';
+import { EmployeeStagesService } from './employee-stages.service';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { RevenueRecordsService } from './revenue-records.service';
 import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
@@ -57,6 +59,16 @@ const unset = (field: string) => [{ [field]: null }, { [field]: { isSet: false }
  * records; logged emails and emails synced from a mailbox are counted apart, and receiving an RFQ is never revenue.
  * Access follows the caller's record visibility: a company they cannot see has no dashboard, interactions or RFQs.
  */
+/** Interactions that mean the employee answered, which stops their follow-up cadence (ADR 0083), with the reason shown. */
+const CADENCE_STOPPERS: Partial<Record<InteractionInput['kind'], string>> = {
+  EMAIL_RECEIVED: 'the contact replied',
+  CALL_OUTGOING: 'a call took place',
+  CALL_INCOMING: 'the contact called',
+  MEETING: 'a meeting took place',
+  NEGOTIATION: 'negotiation started',
+  RFQ_RECEIVED: 'an RFQ arrived',
+};
+
 @Injectable()
 export class CompanyWorkService {
   constructor(
@@ -67,6 +79,8 @@ export class CompanyWorkService {
     private readonly fields: CustomFieldsService,
     private readonly admin: CrmAdminService,
     private readonly revenue: RevenueRecordsService,
+    private readonly stages: EmployeeStagesService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   // ─── Company dashboard ───
@@ -300,11 +314,21 @@ export class CompanyWorkService {
     });
   }
 
-  logInteraction(auth: AuthContext, input: InteractionInput, meta: RequestMeta): Promise<InteractionRow> {
+  /**
+   * `attempt`: a call nobody answered (ADR 0088, Calls). It is logged, but it is not a conversation, so it neither
+   * moves the employee's stage nor stops their follow-up cadence.
+   */
+  logInteraction(auth: AuthContext, input: InteractionInput, meta: RequestMeta, opts: { attempt?: boolean } = {}): Promise<InteractionRow> {
     return this.prisma.run(auth, async (tx) => {
       const company = await this.editableCompany(tx, auth, input.companyId);
       await this.assertCompanyChildren(tx, auth.tenantId, input.companyId, { contactId: input.contactId, fileId: input.fileId, rfqId: input.rfqId });
       const id = await this.logIn(tx, auth, input);
+      if (!opts.attempt) await this.stages.interactionLogged(tx, auth, input);
+      // The follow-up cadence (ADR 0083): the first email starts it, any answer from the employee stops it.
+      if (input.contactId && !opts.attempt) {
+        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'INTERACTION');
+        else if (CADENCE_STOPPERS[input.kind]) await this.cadence.stop(tx, auth.tenantId, input.contactId, CADENCE_STOPPERS[input.kind]!);
+      }
       if (input.followUpAt) {
         await this.createFollowUpIn(tx, auth, {
           companyId: input.companyId,
@@ -503,6 +527,8 @@ export class CompanyWorkService {
       const before = await this.editableFollowUp(tx, auth, id);
       if (before.status !== 'OPEN') throw notOpen();
       const row = await tx.task.update({ where: { id }, data: { status: 'DONE', completedAt: new Date(), outcome: outcome ?? null } });
+      await this.stages.followUpDone(tx, auth, row);
+      await this.cadence.followUpCompleted(tx, auth, row);
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.completed', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
       return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
@@ -554,6 +580,7 @@ export class CompanyWorkService {
       },
     });
     await this.notifyAssignee(tx, auth, row);
+    if (row.followUpType === 'CALL') await this.stages.advance(tx, auth, row.contactId, 'CALL_SCHEDULED', { source: 'CALL_SCHEDULED', rfqId: row.rfqId });
     return row;
   }
 
@@ -570,7 +597,7 @@ export class CompanyWorkService {
 
   /** Follow-ups the caller may list: by scope, and only for companies they can see. */
   private async followUpWhere(tx: TenantTx, auth: AuthContext, q: FollowUpQuery): Promise<Prisma.TaskWhereInput> {
-    const base: Prisma.TaskWhereInput = { tenantId: auth.tenantId, deletedAt: null, followUpType: { not: null } };
+    const base: Prisma.TaskWhereInput = { tenantId: auth.tenantId, deletedAt: null, followUpType: q.type ? q.type : { not: null } };
     if (q.companyId) {
       await this.visibleCompany(tx, auth, q.companyId);
       return { ...base, companyId: q.companyId, ...(q.contactId ? { contactId: q.contactId } : {}) };
@@ -583,8 +610,10 @@ export class CompanyWorkService {
     const scope = scopeOf(auth);
     if (q.scope === 'all' && scope === 'ALL') return base;
     if (q.scope === 'mine') return { ...base, assigneeId: auth.userId };
-    // Team: me and everyone reporting to me. Roles limited to their own records see only their own follow-ups.
-    const team = scope === 'OWN' ? [] : await reportingTree(tx, auth.tenantId, auth.userId);
+    // Team: me and everyone reporting to me, or in a Manager Workspace everyone in its branch (ADR 0071), as record
+    // visibility decides. Roles limited to their own records see only their own follow-ups.
+    const v = await visibility(tx, auth);
+    const team = scope === 'OWN' ? [] : v.all ? await reportingTree(tx, auth.tenantId, auth.userId) : v.userIds.filter((id) => id !== auth.userId);
     return { ...base, OR: [{ assigneeId: { in: [auth.userId, ...team] } }, { managerId: auth.userId }] };
   }
 
@@ -698,6 +727,9 @@ export class CompanyWorkService {
           market: input.market ?? null,
           industry: input.industry ?? null,
           targetAudience: input.targetAudience ?? null,
+          serviceCategory: input.serviceCategory ?? null,
+          service: input.service ?? null,
+          lines: (input.lines ?? []) as Prisma.InputJsonValue,
           sampleSize: input.sampleSize ?? null,
           loi: input.loi ?? null,
           ir: input.ir ?? null,
@@ -722,6 +754,10 @@ export class CompanyWorkService {
       await this.fields.claimFiles(tx, auth.tenantId, 'RFQ', row.id, customFields);
       // Receiving the RFQ is an interaction with the company in its own right.
       await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_RECEIVED', subject: `${row.number}: ${row.projectName}`, occurredAt: receivedAt.toISOString(), rfqId: row.id });
+      // The employee who shared it starts a new cycle at "RFQ Received" (ADR 0080).
+      await this.stages.advance(tx, auth, row.contactId, 'RFQ_RECEIVED', { source: 'RFQ', rfqId: row.id, override: true });
+      await this.cadence.stop(tx, auth.tenantId, row.contactId, 'an RFQ arrived');
+      if (row.status !== 'RECEIVED') await this.stages.rfqStatusChanged(tx, auth, row);
       if (row.ownerId && row.ownerId !== auth.userId) {
         await this.notifications.send(tx, auth.tenantId, [row.ownerId], { type: 'rfq.assigned', title: `RFQ assigned to you: ${`${row.number} ${row.projectName}`}`, body: null, link: `/app/rfqs?open=${row.id}` });
       }
@@ -742,7 +778,8 @@ export class CompanyWorkService {
       if (statusChanged) await this.admin.assertOption(tx, auth.tenantId, 'RFQ_STATUS', input.status!, 'status', before.status);
       const customFields = await this.fields.validateFor(tx, auth, 'RFQ', input.customFields, before.customFields as Record<string, unknown>);
       const data: Prisma.RfqUncheckedUpdateInput = { updatedById: auth.userId, ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) };
-      const keys = ['contactId', 'projectName', 'description', 'methodology', 'market', 'industry', 'targetAudience', 'sampleSize', 'loi', 'ir', 'cpi', 'totalQuotation', 'currency', 'ownerId', 'managerId', 'expectedRevenue', 'actualRevenue', 'outcomeReason'] as const;
+      if (input.lines !== undefined) data.lines = input.lines as Prisma.InputJsonValue;
+      const keys = ['contactId', 'projectName', 'description', 'methodology', 'market', 'industry', 'targetAudience', 'serviceCategory', 'service', 'sampleSize', 'loi', 'ir', 'cpi', 'totalQuotation', 'currency', 'ownerId', 'managerId', 'expectedRevenue', 'actualRevenue', 'outcomeReason'] as const;
       for (const k of keys) if (input[k] !== undefined) (data as Record<string, unknown>)[k] = input[k];
       if (input.receivedAt) data.receivedAt = new Date(input.receivedAt);
       for (const k of ['submittedAt', 'deadlineAt'] as const) if (input[k] !== undefined) data[k] = input[k] ? new Date(input[k]!) : null;
@@ -757,6 +794,11 @@ export class CompanyWorkService {
       }
       const row = await tx.rfq.update({ where: { id }, data });
       if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'RFQ', id, customFields);
+      if (input.contactId && input.contactId !== before.contactId) {
+        await this.stages.advance(tx, auth, input.contactId, 'RFQ_RECEIVED', { source: 'RFQ', rfqId: id, override: true });
+        await this.cadence.stop(tx, auth.tenantId, input.contactId, 'an RFQ arrived');
+      }
+      if (statusChanged) await this.stages.rfqStatusChanged(tx, auth, row);
       if (statusChanged && input.status === 'QUOTATION_SUBMITTED') {
         await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_SUBMITTED', subject: `${row.number}: quotation submitted`, rfqId: row.id });
       }
@@ -871,6 +913,7 @@ export class CompanyWorkService {
         company: companies.find((x) => x.id === r.companyId) ?? { id: r.companyId, name: '', leadNumber: null },
         contact: c ? { id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(' ') } : null,
         projectName: r.projectName, description: r.description, methodology: r.methodology, market: r.market, industry: r.industry, targetAudience: r.targetAudience,
+        serviceCategory: (r.serviceCategory ?? null) as RfqRow['serviceCategory'], service: (r.service ?? null) as RfqRow['service'], lines: rfqLines(r.lines),
         sampleSize: r.sampleSize, loi: r.loi, ir: r.ir, cpi: r.cpi, totalQuotation: r.totalQuotation, currency: r.currency,
         receivedAt: r.receivedAt.toISOString(), submittedAt: r.submittedAt?.toISOString() ?? null, deadlineAt: r.deadlineAt?.toISOString() ?? null,
         status: r.status as RfqStatus, statusChangedAt: r.statusChangedAt?.toISOString() ?? null,
@@ -991,3 +1034,18 @@ function dueState(r: TaskModel, now: Date, today: Date): FollowUpDue {
   return 'UPCOMING';
 }
 
+/** Stored country rows, read defensively (older RFQs have none). */
+export function rfqLines(v: unknown): RfqRow['lines'] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((l): l is Record<string, unknown> => !!l && typeof l === 'object' && typeof (l as { country?: unknown }).country === 'string')
+    .map((l) => ({
+      country: String(l.country),
+      targetGroup: typeof l.targetGroup === 'string' ? l.targetGroup : '',
+      quota: typeof l.quota === 'number' ? l.quota : null,
+      loi: typeof l.loi === 'number' ? l.loi : null,
+      ir: typeof l.ir === 'number' ? l.ir : null,
+      cpi: typeof l.cpi === 'number' ? l.cpi : null,
+      description: typeof l.description === 'string' ? l.description : null,
+    }));
+}

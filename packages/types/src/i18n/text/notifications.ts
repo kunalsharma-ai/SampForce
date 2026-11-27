@@ -78,7 +78,9 @@ export const notifications = {
   // Assignments, tasks and workflows
   '{name} was assigned to you': ['Se te asignó {name}', '{name} vous a été attribué', '{name} wurde Ihnen zugewiesen', 'أُسند إليك {name}'],
   'New task for you: {title}': ['Nueva tarea para ti: {title}', 'Nouvelle tâche pour vous : {title}', 'Neue Aufgabe für Sie: {title}', 'مهمة جديدة لك: {title}'],
+  'Deal lost: {deal}': ['Oportunidad perdida: {deal}', 'Opportunité perdue : {deal}', 'Verkaufschance verloren: {deal}', 'صفقة خاسرة: {deal}'],
   'Deal won: {deal}': ['Oportunidad ganada: {deal}', 'Opportunité gagnée : {deal}', 'Verkaufschance gewonnen: {deal}', 'صفقة مربوحة: {deal}'],
+  'Client won: deal {deal} created for {company}': ['Cliente ganado: oportunidad {deal} creada para {company}', 'Client gagné : opportunité {deal} créée pour {company}', 'Kunde gewonnen: Verkaufschance {deal} für {company} angelegt', 'تم كسب العميل: أُنشئت الصفقة {deal} لـ {company}'],
   'Workflow "{name}" failed': ['Falló el flujo de trabajo «{name}»', 'Le workflow « {name} » a échoué', 'Workflow „{name}“ ist fehlgeschlagen', 'فشل سير العمل «{name}»'],
   'Approval needed: {title}': ['Se necesita aprobación: {title}', 'Approbation requise : {title}', 'Freigabe erforderlich: {title}', 'مطلوب اعتماد: {title}'],
   'A conversation was assigned to you': ['Se te asignó una conversación', 'Une conversation vous a été attribuée', 'Ihnen wurde eine Unterhaltung zugewiesen', 'أُسندت إليك محادثة'],
@@ -243,7 +245,19 @@ export const notifications = {
   'New task: {title}': ['Nueva tarea: {title}', 'Nouvelle tâche : {title}', 'Neue Aufgabe: {title}', 'مهمة جديدة: {title}'],
   'Task changed: {title}': ['Tarea modificada: {title}', 'Tâche modifiée : {title}', 'Aufgabe geändert: {title}', 'تم تغيير المهمة: {title}'],
   'Task completed: {title}': ['Tarea completada: {title}', 'Tâche terminée : {title}', 'Aufgabe erledigt: {title}', 'اكتملت المهمة: {title}'],
+  // Task progress (redesign R7, ADR 0091)
+  'Task acknowledged: {title}': ['Tarea confirmada: {title}', 'Tâche prise en compte : {title}', 'Aufgabe bestätigt: {title}', 'تم استلام المهمة: {title}'],
+  'Task in progress: {title}': ['Tarea en curso: {title}', 'Tâche en cours : {title}', 'Aufgabe in Arbeit: {title}', 'المهمة قيد التنفيذ: {title}'],
+  'Task blocked: {title}': ['Tarea bloqueada: {title}', 'Tâche bloquée : {title}', 'Aufgabe blockiert: {title}', 'المهمة متوقفة: {title}'],
   'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
   'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
   '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
+  // Working status (ADR 0081)
+  '{name} checked in': ['{name} ha fichado la entrada', '{name} a pointé son arrivée', '{name} hat eingecheckt', 'سجّل {name} الحضور'],
+  '{name} is on a break': ['{name} está en una pausa', '{name} est en pause', '{name} macht eine Pause', '{name} في استراحة'],
+  '{name} is back at work': ['{name} ha vuelto al trabajo', '{name} a repris le travail', '{name} arbeitet wieder', 'عاد {name} إلى العمل'],
+  '{name} is working': ['{name} está trabajando', '{name} travaille', '{name} arbeitet', '{name} يعمل الآن'],
+  '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
+  '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
+  '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
 } satisfies TextTable;

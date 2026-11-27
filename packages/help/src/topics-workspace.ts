@@ -4,7 +4,7 @@ import type { HelpTable } from './types';
 export const workspaceHelp = {
   // ── Pages ────────────────────────────────────────────────────────────────────────────────────────────────────────
   'page.commandCenter': {
-    title: 'Command Center',
+    title: 'Dashboard',
     what: [
       'Your home screen: live sales numbers, pipeline health, your next actions and recent team activity in one place.',
       'Tu pantalla de inicio: cifras de ventas en vivo, salud del pipeline, tus próximas acciones y la actividad reciente del equipo en un solo lugar.',
@@ -265,6 +265,30 @@ export const workspaceHelp = {
       'Utilisez-la chaque semaine et avant un point prévisionnel, pour sauver des opportunités avant qu’elles soient perdues.',
       'Nutzen Sie sie wöchentlich und vor einem Forecast-Termin, um Chancen zu retten, bevor sie verloren gehen.',
       'استخدمها أسبوعيًا وقبل اجتماع التوقعات، لإنقاذ الصفقات قبل خسارتها.',
+    ],
+  },
+  'page.pipelineJourney': {
+    title: 'Pipeline',
+    what: [
+      'Every company you can see, in the journey stage it has reached: from the first email through follow-ups, discussion, RFQs and negotiation to won or lost.',
+      'Todas las empresas que puedes ver, en la etapa del recorrido a la que han llegado: del primer correo a seguimientos, conversación, RFQ y negociación, hasta ganada o perdida.',
+      'Toutes les entreprises que vous voyez, à l’étape de parcours atteinte : du premier e-mail aux relances, discussion, RFQ et négociation, jusqu’à gagnée ou perdue.',
+      'Jedes Unternehmen, das Sie sehen, in der erreichten Phase: von der ersten E-Mail über Nachverfolgung, Gespräch, RFQs und Verhandlung bis gewonnen oder verloren.',
+      'كل شركة يمكنك رؤيتها في مرحلة الرحلة التي بلغتها: من البريد الأول مرورًا بالمتابعات والنقاش وطلبات الأسعار والتفاوض حتى الفوز أو الخسارة.',
+    ],
+    how: [
+      'Each card shows the follow-up the company is on, its next action and when it is due. Open a card to see the steps done, the current one and what comes next.',
+      'Cada tarjeta muestra el seguimiento en curso, la próxima acción y cuándo vence. Abre una tarjeta para ver los pasos hechos, el actual y lo que sigue.',
+      'Chaque carte montre la relance en cours, la prochaine action et son échéance. Ouvrez une carte pour voir les étapes faites, l’actuelle et la suivante.',
+      'Jede Karte zeigt die laufende Nachverfolgung, die nächste Aktion und ihre Fälligkeit. Öffnen Sie eine Karte, um erledigte, aktuelle und nächste Schritte zu sehen.',
+      'تعرض كل بطاقة المتابعة الجارية والإجراء التالي وموعده. افتح بطاقة لترى الخطوات المنجزة والحالية والتالية.',
+    ],
+    where: [
+      'Stages move on their own as emails, RFQs and deals happen. Deal pipeline stages are set in Settings.',
+      'Las etapas avanzan solas con los correos, las RFQ y las oportunidades. Las etapas de los embudos de oportunidades se fijan en Ajustes.',
+      'Les étapes avancent seules avec les e-mails, RFQ et opportunités. Les étapes des pipelines d’opportunités se règlent dans Réglages.',
+      'Phasen wechseln von selbst mit E-Mails, RFQs und Verkaufschancen. Die Phasen der Verkaufs-Pipelines legen Sie in den Einstellungen fest.',
+      'تتقدم المراحل تلقائيًا مع الرسائل وطلبات الأسعار والصفقات. تُضبط مراحل مسارات الصفقات في الإعدادات.',
     ],
   },
   'page.pipelines': {

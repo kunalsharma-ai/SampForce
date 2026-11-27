@@ -10,6 +10,7 @@ import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billi
 import { entitlementsFor, planDefinitions } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { findBrowser } from '../crm/page-renderer';
 import { HunterClient } from '../finder/hunter';
 import { DeepgramClient } from '../meetings/deepgram';
 import { ApolloClient } from '../prospects/apollo';
@@ -340,7 +341,7 @@ export class OperatorService {
       const appStatus =
         p.key === 'checkout' ? this.checkoutStatus()
           : p.key === 'workspace_servers' ? (this.env.TRUSTED_PRIVATE_HOSTS ? p.app.on : p.app.off)
-          : p.key === 'company_autofill' ? (this.env.COMPANY_AUTOFILL_WIKIDATA === false ? p.app.off : p.app.on)
+          : p.key === 'company_autofill' ? this.autofillStatus(p.app)
           : p.key === 'ai_routing' ? this.aiRoutingStatus(usable)
             : aiKey && configured ? (position < 0 ? 'Switched off in "AI providers and fallback order"' : position === 0 ? 'Answers AI requests first' : `Fallback ${position} of ${usable.length - 1}: answers when the providers before it are busy or failing`)
               : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;
@@ -363,6 +364,15 @@ export class OperatorService {
   }
 
   /** What workspaces see for billing right now, in one line. */
+  /** What company auto-fill reads (ADR 0076, 0079): Wikidata switch, and whether JavaScript sites can be opened. */
+  private autofillStatus(app: { off: string; on: string }): string {
+    const base = this.env.COMPANY_AUTOFILL_WIKIDATA === false ? app.off : app.on;
+    if (this.env.COMPANY_AUTOFILL_BROWSER === false) return `${base}; JavaScript websites are read as sent (browser switched off)`;
+    return findBrowser(this.env.COMPANY_AUTOFILL_BROWSER_PATH)
+      ? `${base}; JavaScript websites are opened in a hidden browser`
+      : `${base}; no Chromium found on this server, so JavaScript websites give little`;
+  }
+
   private checkoutStatus(): string {
     if (!this.env.ONLINE_PAYMENTS_ENABLED) return 'Offline invoices only: workspaces request an invoice and you mark it paid';
     const sellers = [this.sellers.sells('STRIPE') && 'Stripe', this.sellers.sells('RAZORPAY') && 'Razorpay'].filter(Boolean);

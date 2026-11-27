@@ -51,6 +51,7 @@ in Business Information as structured fields, not as custom fields.
 ## Consequences
 
 - Real company sites can differ from the made-up sites in tests (`apps/api/test/fixtures/company-sites.ts`), so the
-  readers need a live check on the server before relying on them. Sites that render only with JavaScript give little.
+  readers need a live check on the server before relying on them. Sites that render only with JavaScript gave little;
+  ADR 0079 opens them in a hidden browser and finds more pages.
 - Business Information editing, the redesigned header and social icons, the review step in Create Company and the
   AI summary build on `fieldSources` in later changes.

@@ -9,6 +9,10 @@ export const validation = {
   Required: ['Obligatorio', 'Obligatoire', 'Pflichtfeld', 'مطلوب'],
   Invalid: ['No válido', 'Non valide', 'Ungültig', 'غير صالح'],
   'Give a phone number to be called on.': ['Indica un número de teléfono para llamarte.', 'Indiquez un numéro où vous rappeler.', 'Geben Sie eine Telefonnummer für den Rückruf an.', 'أدخل رقم هاتف للاتصال بك.'],
+  // Personal profiles (ADR 0087).
+  'Enter a LinkedIn address, such as linkedin.com/in/your-name': ['Introduce una dirección de LinkedIn, como linkedin.com/in/tu-nombre', 'Saisissez une adresse LinkedIn, par exemple linkedin.com/in/votre-nom', 'Geben Sie eine LinkedIn-Adresse ein, z. B. linkedin.com/in/ihr-name', 'أدخل عنوان LinkedIn، مثل linkedin.com/in/your-name'],
+  'Pick one emoji for your mood': ['Elige un emoji para tu estado de ánimo', 'Choisissez un emoji pour votre humeur', 'Wählen Sie ein Emoji für Ihre Stimmung', 'اختر رمزًا تعبيريًا واحدًا لمزاجك'],
+  'must be in the next 30 days': ['debe ser en los próximos 30 días', 'doit être dans les 30 prochains jours', 'muss in den nächsten 30 Tagen liegen', 'يجب أن يكون خلال الأيام الثلاثين القادمة'],
   'Invalid input': ['Dato no válido', 'Saisie non valide', 'Ungültige Eingabe', 'إدخال غير صالح'],
   'Invalid date': ['Fecha no válida', 'Date non valide', 'Ungültiges Datum', 'تاريخ غير صالح'],
   'Invalid email': ['Correo no válido', 'E-mail non valide', 'Ungültige E-Mail-Adresse', 'بريد إلكتروني غير صالح'],
@@ -323,4 +327,26 @@ export const validation = {
   // Edit everywhere (ADR 0065)
   'set by the interaction kind': ['lo determina el tipo de interacción', 'défini par le type d’interaction', 'durch die Art der Interaktion festgelegt', 'يحدده نوع التفاعل'],
   'Enter a file name': ['Introduce un nombre de archivo', 'Saisissez un nom de fichier', 'Geben Sie einen Dateinamen ein', 'أدخل اسم الملف'],
+  'is not a stage': ['no es una etapa', 'n’est pas une étape', 'ist keine Phase', 'ليست مرحلة'],
+  'is not from this company': ['no es de esta empresa', 'ne provient pas de cette entreprise', 'stammt nicht von diesem Unternehmen', 'ليس من هذه الشركة'],
+  'Pick a country': ['Elige un país', 'Choisissez un pays', 'Wählen Sie ein Land', 'اختر دولة'],
+  'Enter the target group': ['Introduce el grupo objetivo', 'Saisissez le groupe cible', 'Geben Sie die Zielgruppe ein', 'أدخل الفئة المستهدفة'],
+  'Pick an emoji': ['Elige un emoji', 'Choisissez un emoji', 'Wählen Sie ein Emoji', 'اختر رمزًا تعبيريًا'],
+  'Team chat takes text and emoji only: files and record links are switched off.': [
+    'El chat del equipo admite solo texto y emojis: los archivos y los enlaces a registros están desactivados.',
+    'Le chat d’équipe accepte uniquement du texte et des emojis : les fichiers et les liens vers des fiches sont désactivés.',
+    'Der Team-Chat nimmt nur Text und Emojis an: Dateien und Verknüpfungen zu Datensätzen sind ausgeschaltet.',
+    'دردشة الفريق تقبل النص والرموز التعبيرية فقط: الملفات وروابط السجلات متوقفة.',
+  ],
+  'Messages in a SampBidx chat cannot take reactions, because SampBidx would not see them.': [
+    'Los mensajes de un chat de SampBidx no admiten reacciones, porque SampBidx no las vería.',
+    'Les messages d’un chat SampBidx ne prennent pas de réactions, car SampBidx ne les verrait pas.',
+    'Nachrichten in einem SampBidx-Chat nehmen keine Reaktionen an, weil SampBidx sie nicht sehen würde.',
+    'لا تقبل الرسائل في دردشة SampBidx التفاعلات، لأن SampBidx لن يراها.',
+  ],
+  'Pick a time zone': ['Elige una zona horaria', 'Choisissez un fuseau horaire', 'Wählen Sie eine Zeitzone', 'اختر منطقة زمنية'],
+  // Client time and the best time to connect (ADR 0089)
+  'Use a 24-hour time such as 09:00': ['Usa una hora de 24 horas, como 09:00', 'Utilisez une heure au format 24 h, par exemple 09:00', 'Verwenden Sie eine 24-Stunden-Zeit wie 09:00', 'استخدم وقتًا بنظام 24 ساعة مثل 09:00'],
+  'The day must end after it starts': ['El día debe terminar después de empezar', 'La journée doit finir après son début', 'Der Tag muss nach seinem Beginn enden', 'يجب أن ينتهي اليوم بعد أن يبدأ'],
+  'Choose a time zone from the list': ['Elige una zona horaria de la lista', 'Choisissez un fuseau horaire dans la liste', 'Wählen Sie eine Zeitzone aus der Liste', 'اختر منطقة زمنية من القائمة'],
 } as const satisfies TextTable;

@@ -78,6 +78,25 @@ export class SampbidxClient {
     return { id: r.id === undefined || r.id === null || r.id === '' ? null : String(r.id) };
   }
 
+  /**
+   * PUT /v1/clients/{externalId} (ADR 0080): creates the client or updates the one SampBidx already has for this
+   * SampForce company, so a client is never made twice. Answers the client's id, page and the ids of the contacts.
+   */
+  async upsertClient(keys: SampbidxKeys, externalId: string, transferId: string, client: unknown): Promise<SampbidxAccepted & { contacts: { externalId: string; id: string }[] }> {
+    const r = await this.call<{ id?: string | number; url?: string; status?: string; contacts?: { externalId?: string; id?: string | number }[] }>(
+      keys,
+      'PUT',
+      `/v1/clients/${encodeURIComponent(externalId)}`,
+      Buffer.from(JSON.stringify(client)),
+      { 'content-type': 'application/json', 'idempotency-key': transferId, 'x-sampforce-transfer-id': transferId },
+    );
+    if (r.id === undefined || r.id === null || r.id === '') throw new SampbidxError('no_id', 'SampBidx did not return an id for the client.');
+    const contacts = Array.isArray(r.contacts)
+      ? r.contacts.filter((c) => c && typeof c.externalId === 'string' && c.id !== undefined && c.id !== null).map((c) => ({ externalId: c.externalId!, id: String(c.id) }))
+      : [];
+    return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null, contacts };
+  }
+
   private async accept(keys: SampbidxKeys, path: string, transferId: string, parts: Part[]): Promise<SampbidxAccepted> {
     const { body, contentType } = multipart(parts);
     const r = await this.call<{ id?: string | number; url?: string; status?: string }>(keys, 'POST', path, body, {
@@ -90,7 +109,7 @@ export class SampbidxClient {
     return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null };
   }
 
-  private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST', path: string, body?: Buffer, headers: Record<string, string> = {}): Promise<T> {
+  private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST' | 'PUT', path: string, body?: Buffer, headers: Record<string, string> = {}): Promise<T> {
     let res: Response;
     try {
       res = await workspaceFetch(this.env, `${keys.baseUrl.replace(/\/+$/, '')}${path}`, {
@@ -110,7 +129,9 @@ export class SampbidxClient {
     if (res.status === 401 || res.status === 403) throw new SampbidxError('auth', 'SampBidx refused the API key. Paste a current key from SampBidx.', true);
     if (res.status === 404) throw new SampbidxError('not_found', 'SampBidx has no API at that address. Check the address ends where the /v1 paths begin.');
     if (res.status === 413) throw new SampbidxError('too_large', 'SampBidx refused the files as too large. Send fewer or smaller attachments.');
-    if (res.status === 400 || res.status === 422) throw new SampbidxError('invalid', detail ? `SampBidx refused the RFQ: ${String(detail).slice(0, 300)}` : 'SampBidx refused the RFQ as incomplete.');
+    const what = path.startsWith('/v1/clients') ? 'the client' : 'the RFQ';
+    if (res.status === 400 || res.status === 422) throw new SampbidxError('invalid', detail ? `SampBidx refused ${what}: ${String(detail).slice(0, 300)}` : `SampBidx refused ${what} as incomplete.`);
+    if (res.status === 409) throw new SampbidxError('conflict', detail ? `SampBidx reported a duplicate: ${String(detail).slice(0, 300)}` : `SampBidx reported ${what} as a duplicate.`);
     if (res.status === 429) throw new SampbidxError('busy', 'SampBidx is busy. Try again in a minute.');
     throw new SampbidxError(`http_${res.status}`, `SampBidx answered with an error (${res.status}). Try again shortly.`);
   }

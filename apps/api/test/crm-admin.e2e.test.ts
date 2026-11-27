@@ -240,7 +240,7 @@ describe('custom fields and CRM administration', () => {
   it('exports visible custom fields as CSV and Excel, under each role’s export permissions', async () => {
     const csv = await http.get('/exports/companies').expect(200);
     const [header, ...lines] = (csv.text as string).trim().split(/\r?\n/);
-    expect(header).toContain('customFields.markets');
+    expect(header).toContain('markets');
     expect(lines.find((l) => l.includes('Globex Research'))).toContain('"India, UK"');
     const xlsx = await http.get('/exports/rfqs?format=xlsx').buffer(true).parse((res, cb) => {
       const chunks: Buffer[] = [];
@@ -268,7 +268,7 @@ describe('custom fields and CRM administration', () => {
     const managerCsv = (await m.get('/exports/companies').expect(200)).text as string;
     expect(managerCsv).not.toContain('sales@acmepanels.example');
     // Fields hidden from the manager's designation are not exported for them either.
-    expect(managerCsv).toContain('customFields.margin_pct');
+    expect(managerCsv).toContain('Margin %');
     expect((await api(rep).get('/exports/companies').expect(403)).body.error.code).toBe('FORBIDDEN');
   });
 

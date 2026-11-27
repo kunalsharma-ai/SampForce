@@ -1,11 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EnrichField, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, normalizeWorkingHours, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, notFound, orderBy, paging } from './crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
+import { isClientStatus } from './company-deal-sync';
+import { CompanyDealsService } from './company-deals.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { CompanyLogosService } from './company-logos.service';
 import { CompanyEnrichmentService, publicSources } from './company-enrichment.service';
@@ -15,9 +17,26 @@ import { canSeeDetails, companyScope, personRefs, reportingTree, scopeOf, visibi
 const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country', 'leadSeq', 'statusChangedAt'] as const;
 const include = {
   parent: { select: { id: true, name: true } },
-  _count: { select: { contacts: { where: { deletedAt: null } }, opportunities: { where: { deletedAt: null, status: 'OPEN' as const } } } },
 } satisfies Prisma.CompanyInclude;
-type CompanyWith = Prisma.CompanyGetPayload<{ include: typeof include }>;
+/**
+ * A company with its contact and open deal counts. The counts are read for the rows being shown only (see
+ * `withCounts`): a relation `_count` in the query made MongoDB count the contacts and deals of every company in the
+ * workspace before it sorted and cut the page.
+ */
+type CompanyWith = Prisma.CompanyGetPayload<{ include: typeof include }> & { _count: { contacts: number; opportunities: number } };
+
+/** Adds the live contact and open deal counts of these companies, in two grouped reads. */
+export async function withCounts<R extends { id: string }>(tx: TenantTx, tenantId: string, rows: R[]): Promise<(R & { _count: CompanyWith['_count'] })[]> {
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const [contacts, deals] = await Promise.all([
+    tx.contact.groupBy({ by: ['companyId'], where: { tenantId, companyId: { in: ids }, deletedAt: null }, _count: { _all: true } }),
+    tx.opportunity.groupBy({ by: ['companyId'], where: { tenantId, companyId: { in: ids }, deletedAt: null, status: 'OPEN' }, _count: { _all: true } }),
+  ]);
+  const c = new Map(contacts.map((g) => [g.companyId, g._count._all]));
+  const d = new Map(deals.map((g) => [g.companyId, g._count._all]));
+  return rows.map((r) => ({ ...r, _count: { contacts: c.get(r.id) ?? 0, opportunities: d.get(r.id) ?? 0 } }));
+}
 
 /** Extra filters of the company list (on top of ListQuery). */
 export interface CompanyFilters {
@@ -51,6 +70,7 @@ export class CompaniesService {
     private readonly notifications: NotificationsService,
     private readonly logos: CompanyLogosService,
     private readonly enrichment: CompanyEnrichmentService,
+    private readonly companyDeals: CompanyDealsService,
   ) {}
 
   /** The row context, with logo references; companies with a website that were never looked up are queued. */
@@ -63,52 +83,74 @@ export class CompaniesService {
   list(auth: AuthContext, q: ListQuery, f: CompanyFilters = {}): Promise<Page<CompanyRow>> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
-      const search = q.q?.trim();
-      const cfFilter = await this.fields.rawFilter(tx, auth, 'COMPANY', f.cf);
-      const cfIds = cfFilter ? await this.fields.matchingIds(tx.company, cfFilter) : null;
-      const where: Prisma.CompanyWhereInput = {
-        tenantId: auth.tenantId,
-        deletedAt: null,
-        AND: [
-          companyScope(v),
-          ...(cfIds ? [{ id: { in: cfIds } }] : []),
-          ...(search
-            ? [
-                {
-                  OR: [
-                    { name: { contains: search, mode: 'insensitive' as const } },
-                    { domain: { contains: search, mode: 'insensitive' as const } },
-                    { leadNumber: { equals: search.toUpperCase() } },
-                    { matchKeys: { hasSome: matchKeys({ emails: [search], phones: [search], websites: [search], linkedin: [search] }) } },
-                  ],
-                },
-              ]
-            : []),
-        ],
-        ...(q.ownerId ? { ownerId: q.ownerId } : {}),
-        ...(f.statusId ? { statusId: f.statusId } : {}),
-        ...(f.createdById ? { createdById: f.createdById } : {}),
-        ...(f.managerId ? { managerId: f.managerId } : {}),
-        ...(f.country ? { country: f.country.toUpperCase() } : {}),
-        ...(f.industry ? { industry: { equals: f.industry, mode: 'insensitive' as const } } : {}),
-        // "customer" powers the Accounts view: companies with at least one won deal.
-        ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
-      };
-      const [rows, total] = await Promise.all([
+      const where = await this.listWhere(tx, auth, v, q, f);
+      const [found, total] = await Promise.all([
         tx.company.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.company.count({ where }),
       ]);
+      const rows = await withCounts(tx, auth.tenantId, found);
       const ctx = await this.context(tx, auth, rows, v);
       return { items: rows.map((r) => toRow(r, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
   }
 
+  /**
+   * The companies the list shows for these filters, in its order, as the caller sees them (hidden details blank),
+   * up to `take` rows: the company export (ADR 0079) reads this so it always matches the list on screen.
+   * With `companyId`, only that company (still subject to visibility).
+   */
+  async rowsForExport(tx: TenantTx, auth: AuthContext, v: Visibility, q: Pick<ListQuery, 'q' | 'sort' | 'order' | 'ownerId' | 'status'>, f: CompanyFilters, take: number, companyId?: string): Promise<CompanyRow[]> {
+    const where = await this.listWhere(tx, auth, v, q, f);
+    const found = await tx.company.findMany({ where: companyId ? { AND: [where, { id: companyId }] } : where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), take });
+    const rows = await withCounts(tx, auth.tenantId, found);
+    // No logo look-ups are queued from an export.
+    const ctx = await rowContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'COMPANY'), new Map());
+    return rows.map((r) => toRow(r, ctx));
+  }
+
+  /** The company list's filter: visibility, search, owner, status, organisation and custom field filters. */
+  private async listWhere(tx: TenantTx, auth: AuthContext, v: Visibility, q: Pick<ListQuery, 'q' | 'ownerId' | 'status'>, f: CompanyFilters): Promise<Prisma.CompanyWhereInput> {
+    const search = q.q?.trim();
+    const cfFilter = await this.fields.rawFilter(tx, auth, 'COMPANY', f.cf);
+    const cfIds = cfFilter ? await this.fields.matchingIds(tx.company, cfFilter) : null;
+    return {
+      tenantId: auth.tenantId,
+      deletedAt: null,
+      AND: [
+        companyScope(v),
+        ...(cfIds ? [{ id: { in: cfIds } }] : []),
+        ...(search
+          ? [
+              {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' as const } },
+                  { domain: { contains: search, mode: 'insensitive' as const } },
+                  { leadNumber: { equals: search.toUpperCase() } },
+                  { matchKeys: { hasSome: matchKeys({ emails: [search], phones: [search], websites: [search], linkedin: [search] }) } },
+                ],
+              },
+            ]
+          : []),
+      ],
+      ...(q.ownerId ? { ownerId: q.ownerId } : {}),
+      ...(f.statusId ? { statusId: f.statusId } : {}),
+      ...(f.createdById ? { createdById: f.createdById } : {}),
+      ...(f.managerId ? { managerId: f.managerId } : {}),
+      ...(f.country ? { country: f.country.toUpperCase() } : {}),
+      ...(f.industry ? { industry: { equals: f.industry, mode: 'insensitive' as const } } : {}),
+      // "customer" powers the Accounts view: companies with at least one won deal. The deals' company_id index keeps
+      // this lookup fast (without it, each company scanned every deal and a large workspace timed out).
+      ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
+    };
+  }
+
   get(auth: AuthContext, id: string): Promise<CompanyRow> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
-      const row = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
-      if (!row) throw notFound('Company');
-      return toRow(row, await this.context(tx, auth, [row], v));
+      const found = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
+      if (!found) throw notFound('Company');
+      const [row] = await withCounts(tx, auth.tenantId, [found]);
+      return toRow(row!, await this.context(tx, auth, [row!], v));
     });
   }
 
@@ -120,7 +162,7 @@ export class CompaniesService {
   }
 
   /** Creates a company lead inside the caller's transaction (also used by the lead form). Returns its id. */
-  async createIn(tx: TenantTx, auth: AuthContext, input: CompanyInput, meta: RequestMeta): Promise<string> {
+  async createIn(tx: TenantTx, auth: AuthContext, input: CompanyInput, meta: RequestMeta, autofillSkip: EnrichField[] = []): Promise<string> {
     const ownerId = input.ownerId ?? auth.userId;
     await assertRefs(tx, auth.tenantId, { ownerId, parentCompanyId: input.parentCompanyId });
     await assertCompanyRefs(tx, auth.tenantId, input);
@@ -141,6 +183,10 @@ export class CompaniesService {
         updatedById: auth.userId,
         tenantId: auth.tenantId,
         customFields: (customFields ?? {}) as Prisma.InputJsonValue,
+        // Found details the person unticked when creating it: marked as their choice, so auto-fill never writes them.
+        ...(autofillSkip.length
+          ? { fieldSources: Object.fromEntries(autofillSkip.map((f) => [f, { source: 'USER', url: null, at: new Date().toISOString(), confidence: 'high', runId: null } satisfies FieldSource])) as Prisma.InputJsonValue }
+          : {}),
       },
     });
     await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', row.id, customFields);
@@ -160,8 +206,8 @@ export class CompaniesService {
 
   /** The company as the caller sees it, inside their transaction. */
   async rowIn(tx: TenantTx, auth: AuthContext, id: string): Promise<CompanyRow> {
-    const row = await tx.company.findUniqueOrThrow({ where: { id }, include });
-    return toRow(row, await this.context(tx, auth, [row], await visibility(tx, auth)));
+    const [row] = await withCounts(tx, auth.tenantId, [await tx.company.findUniqueOrThrow({ where: { id }, include })]);
+    return toRow(row!, await this.context(tx, auth, [row!], await visibility(tx, auth)));
   }
 
   /**
@@ -243,6 +289,8 @@ export class CompaniesService {
           tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.status_changed', entityType: 'company', entityId: id,
           metadata: { from: before.statusId, to: input.statusId }, meta,
         });
+        // Becoming a client moves the company to Deals (ADR 0084).
+        if ((await isClientStatus(tx, auth.tenantId, input.statusId)) && !(await isClientStatus(tx, auth.tenantId, before.statusId))) await this.companyDeals.companyWon(tx, auth, id, meta);
       }
       if (ownerChanged) {
         await this.audit.record(tx, {
@@ -251,7 +299,8 @@ export class CompaniesService {
         });
         await this.recordOwnerChange(tx, auth, row, before.ownerId, input.ownerId ?? null, extra?.reason ?? 'REASSIGNED', extra?.note ?? null);
       }
-      return toRow(row, await this.context(tx, auth, [row], v));
+      const [counted] = await withCounts(tx, auth.tenantId, [row]);
+      return toRow(counted!, await this.context(tx, auth, [counted!], v));
     });
   }
 
@@ -324,6 +373,8 @@ function normalise(input: Partial<CompanyInput>, before?: Prisma.CompanyGetPaylo
   sync('websites', 'website');
   sync('linkedinUrls', 'linkedinUrl');
   if (input.addresses !== undefined) out.addresses = input.addresses as unknown as Prisma.InputJsonValue;
+  // Hours typed through the API or a form are the user's, whatever source the request named (null clears them).
+  if (input.workingHours) out.workingHours = { ...input.workingHours, source: 'user' };
   // The old domain field (used by integrations and enrichment) follows the website.
   if (out.website !== undefined && input.domain === undefined) out.domain = out.website ? new URL(String(out.website)).hostname.replace(/^www\./, '') : (before?.domain ?? null);
   if (input.name !== undefined) out.nameKey = companyNameKey(input.name);
@@ -437,6 +488,8 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     leadNumber: r.leadNumber,
     status: r.statusId ? (ctx.statuses.get(r.statusId) ?? null) : null,
     statusChangedAt: r.statusChangedAt?.toISOString() ?? null,
+    wonDealId: r.wonDealId ?? null,
+    wonAt: r.wonAt?.toISOString() ?? null,
     createdBy: person(r.createdById),
     updatedBy: person(r.updatedById),
     manager: person(r.managerId),
@@ -460,6 +513,7 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     address: hide(r.address, null),
     postalCode: hide(r.postalCode, null),
     timezone: r.timezone,
+    workingHours: normalizeWorkingHours(r.workingHours),
     notes: hide(r.notes, null),
     emails: hide(points(r.emails), []),
     phones: hide(points(r.phones), []),

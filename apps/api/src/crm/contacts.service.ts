@@ -1,17 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { contactMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, normalizeWorkingHours, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, diff, notFound, orderBy, paging, consentFields } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { assertStatus, defaultStatusId, reasons, statusRefs, withOnePrimary } from './companies.service';
 import { canSeeDetails, contactScope, personRefs, visibility, type Visibility } from './visibility';
 
 const SORTABLE = ['firstName', 'lastName', 'email', 'jobTitle', 'createdAt', 'updatedAt', 'nextFollowUpAt', 'statusChangedAt'] as const;
-const include = { company: { select: { id: true, name: true } } } satisfies Prisma.ContactInclude;
-type ContactWith = Prisma.ContactGetPayload<{ include: typeof include }>;
+export const contactInclude = { company: { select: { id: true, name: true } } } satisfies Prisma.ContactInclude;
+const include = contactInclude;
+export type ContactWith = Prisma.ContactGetPayload<{ include: typeof include }>;
 
 @Injectable()
 export class ContactsService {
@@ -19,6 +21,7 @@ export class ContactsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   list(auth: AuthContext, q: ListQuery, f: { statusId?: string; cf?: CustomFieldFilter[] } = {}): Promise<Page<ContactRow>> {
@@ -99,6 +102,7 @@ export class ContactsService {
       include,
     });
     await this.fields.claimFiles(tx, auth.tenantId, 'CONTACT', row.id, customFields);
+    await this.cadence.contactCreated(tx, auth, row);
     await this.audit.record(tx, {
       tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.created', entityType: 'contact', entityId: row.id, meta,
     });
@@ -161,7 +165,7 @@ export class ContactsService {
   }
 }
 
-interface ContactContext {
+export interface ContactContext {
   owners: Map<string, { id: string; name: string }>;
   people: Map<string, PersonRef>;
   statuses: Map<string, CrmStatusRef>;
@@ -170,7 +174,7 @@ interface ContactContext {
   cf?: (values: unknown) => Record<string, unknown>;
 }
 
-async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility, cf: ContactContext['cf']): Promise<ContactContext> {
+export async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility, cf: ContactContext['cf']): Promise<ContactContext> {
   const [people, statuses] = await Promise.all([
     personRefs(tx, tenantId, rows.flatMap((r) => [r.ownerId, r.createdById, r.statusChangedById])),
     statusRefs(tx, tenantId, rows.map((r) => r.statusId)),
@@ -181,6 +185,8 @@ async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.Conta
 /** Primary entries mirror email and phone (which sequences, WhatsApp and SMS matching read); keys follow. */
 function normaliseContact(input: Partial<ContactInput>, before?: Prisma.ContactGetPayload<object>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...input };
+  // Hours typed through the API or a form are the user's, whatever source the request named (null clears them).
+  if (input.workingHours) out.workingHours = { ...input.workingHours, source: 'user' };
   const sync = (list: 'emails' | 'phones', field: 'email' | 'phone') => {
     if (input[list] !== undefined) {
       const items = withOnePrimary(input[list] as ContactPoint[], input[field] ?? undefined);
@@ -253,6 +259,7 @@ export function toContactRow(r: ContactWith, owners: Map<string, { id: string; n
     jobTitle: r.jobTitle,
     country: r.country,
     timezone: r.timezone,
+    workingHours: normalizeWorkingHours(r.workingHours),
     company: r.company,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
     marketingConsent: r.marketingConsent,

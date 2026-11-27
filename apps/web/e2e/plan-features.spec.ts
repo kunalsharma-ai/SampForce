@@ -13,7 +13,7 @@ async function expectNoA11yViolations(page: Page) {
 /** Plan features (ADR 0057): what a plan leaves out is locked in the app, and the platform admin decides what is in. */
 test('a Free workspace sees what its plan leaves out, and gets it when the plan or the operator adds it', async ({ page, browser }) => {
   test.setTimeout(90_000);
-  await signUp(page, 'Plan Locks Ltd', { plan: 'free' });
+  await signUp(page, 'Plan Locks Ltd', { plan: 'free', sections: false });
 
   // The sidebar marks modules outside the plan, and the page itself explains the plan instead of failing.
   const nav = page.getByRole('navigation', { name: 'Main' }).first();

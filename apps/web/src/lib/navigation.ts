@@ -4,6 +4,7 @@ import {
   Bot,
   Briefcase,
   Building2,
+  PhoneCall,
   CalendarCheck,
   CalendarDays,
   ContactRound,
@@ -34,6 +35,7 @@ import {
   Target,
   TrendingUp,
   Trophy,
+  UserCheck,
   UserPlus,
   Users,
   Workflow,
@@ -52,6 +54,11 @@ export interface ModuleDef {
   summary: string;
   /** Planned capabilities, shown on the module page until it ships. */
   capabilities: string[];
+  /**
+   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section). The pages, data
+   * and links from records stay, and the command palette still finds them.
+   */
+  inMenu?: false;
 }
 
 /** The 30 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
@@ -59,29 +66,25 @@ export interface ModuleDef {
 export const LATER = 10;
 
 export const MODULES: ModuleDef[] = [
-  { slug: '', label: 'Command Center', icon: LayoutDashboard, group: 'Workspace', status: 'available', phase: 1,
+  { slug: '', label: 'Dashboard', icon: LayoutDashboard, group: 'Workspace', status: 'available', phase: 1,
     summary: 'Live KPIs, pipeline health and team activity in one view.', capabilities: [] },
-  { slug: 'leads', label: 'Leads', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'Capture, deduplicate, score, route and convert leads.',
-    capabilities: ['Web form, CSV/Excel and API capture', 'Duplicate detection and merge', 'Territory, round-robin and workload routing', 'BANT and MEDDICC qualification frameworks', 'Lead lifecycle and conversion analytics'] },
-  { slug: 'contacts', label: 'Contacts', icon: ContactRound, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'People you sell to, with a unified communication timeline.',
-    capabilities: ['Custom fields', 'Consent preferences', 'Communication timeline', 'Import and export'] },
   { slug: 'companies', label: 'Companies', icon: Building2, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Organisations, parent-child hierarchies and buying committees.',
     capabilities: ['Account hierarchy', 'Buying committee and stakeholder mapping', 'Relationship health scoring', 'AI account briefings (later phase)'] },
+  { slug: 'contacts', label: 'Contacts', icon: ContactRound, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'People you sell to, with a unified communication timeline.',
+    capabilities: ['Custom fields', 'Consent preferences', 'Communication timeline', 'Import and export'] },
   { slug: 'deals', label: 'Deals', icon: Handshake, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Opportunities with line items, approvals and win/loss analysis.',
     capabilities: ['Kanban, list, table, timeline and calendar views', 'Product line items', 'Competitor tracking and loss reasons', 'Bulk updates and cloning', 'AI deal health'] },
   { slug: 'pipelines', label: 'Pipelines', icon: KanbanSquare, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Multiple configurable pipelines with stage probabilities.',
     capabilities: ['Custom stages and probabilities', 'Stage-based automation (Phase 3)', 'Plan-based pipeline limits'] },
-  { slug: 'accounts', label: 'Accounts', icon: Briefcase, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'Customer accounts with ownership, segmentation and account-level forecasting.',
-    capabilities: ['Account ownership and segmentation', 'Account-based selling views', 'Document storage'] },
   { slug: 'follow-ups', label: 'Follow-ups', icon: CalendarCheck, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Follow-ups with company leads: due today, upcoming, overdue, rescheduled, completed and cancelled.',
     capabilities: ['Due-today and overdue indicators', 'Quick complete and reschedule', 'Team view for managers'] },
+  { slug: 'calls', label: 'Calls', icon: PhoneCall, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Call companies and employees through your own dialer, with the call card, remarks, history and next calls.', capabilities: [] },
   { slug: 'tasks', label: 'Tasks', icon: ListTodo, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Tasks handed down from the workspace above, with priority, due date, comments and history.', capabilities: [] },
   { slug: 'targets', label: 'Targets', icon: Target, group: 'Workspace', status: 'available', phase: 2,
@@ -92,6 +95,16 @@ export const MODULES: ModuleDef[] = [
   { slug: 'chat', label: 'Team chat', icon: MessagesSquare, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Direct messages, channels and the support line to super admins, served by your own SampForce server.',
     capabilities: ['Works on an office network without internet', 'Messages wait on your device while offline', 'Read receipts, files, search and record links'] },
+  { slug: 'achievements', label: 'My achievements', icon: Trophy, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Your achievements, lead and sales target progress, badges and celebration settings.', capabilities: [] },
+  { slug: 'team-status', label: 'Team status', icon: UserCheck, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Who is working, on a break, away or checked out, with today’s check-in times (redesign R1).', capabilities: [] },
+  { slug: 'leads', label: 'Leads', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Capture, deduplicate, score, route and convert leads.',
+    capabilities: ['Web form, CSV/Excel and API capture', 'Duplicate detection and merge', 'Territory, round-robin and workload routing', 'BANT and MEDDICC qualification frameworks', 'Lead lifecycle and conversion analytics'] },
+  { slug: 'accounts', label: 'Accounts', icon: Briefcase, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Customer accounts with ownership, segmentation and account-level forecasting.',
+    capabilities: ['Account ownership and segmentation', 'Account-based selling views', 'Document storage'] },
   { slug: 'activities', label: 'Sales Activities', icon: Activity, group: 'Engage', status: 'available', phase: 2,
     summary: 'Calls, emails, meetings, notes and tasks.',
     capabilities: ['Task management with reminders', 'Activity logging from any record', 'Team activity reporting'] },
@@ -127,10 +140,10 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['First-touch attribution', 'Cost per lead and won ÷ budget', 'A/B testing (later phase)'] },
   { slug: 'quotes', label: 'Quotes & Proposals', icon: FileText, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Catalogue, price books and versioned quotes with discount approvals and PDFs.',
-    capabilities: ['Price books per currency', 'Discount approvals (no self-approval)', 'Quote versions and PDF download'] },
+    capabilities: ['Price books per currency', 'Discount approvals (no self-approval)', 'Quote versions and PDF download'], inMenu: false },
   { slug: 'contracts', label: 'Contracts', icon: FileSignature, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Contract register with recorded signatures, renewals and reminders.',
-    capabilities: ['Renewal reminders and expiry', 'Linked renewals', 'E-signature provider adapters (later phase, needs provider credentials)'] },
+    capabilities: ['Renewal reminders and expiry', 'Linked renewals', 'E-signature provider adapters (later phase, needs provider credentials)'], inMenu: false },
   { slug: 'revenue', label: 'Revenue Intelligence', icon: LineChart, group: 'Intelligence', status: 'available', phase: 5,
     summary: 'Quarterly revenue analytics computed from your records, with targets and exchange rates.',
     capabilities: ['Won revenue by owner, source and product', 'Win rate, velocity and loss reasons', 'Forecast against actual'] },
@@ -139,10 +152,10 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Best/base/worst scenarios', 'Reproducible snapshots and comparisons', 'AI explanations of what changed'] },
   { slug: 'portal', label: 'Client Portal', icon: DoorOpen, group: 'Revenue', status: 'available', phase: 9,
     summary: 'A branded, signed-in space where customers follow projects, approve proposals, share documents and ask for help.',
-    capabilities: ['Invitations per company with viewer and approver access', 'Proposal approval with a recorded decision', 'Requests, messages and shared documents', 'Milestones you choose to share'] },
+    capabilities: ['Invitations per company with viewer and approver access', 'Proposal approval with a recorded decision', 'Requests, messages and shared documents', 'Milestones you choose to share'], inMenu: false },
   { slug: 'customer-success', label: 'Customer Success', icon: HeartHandshake, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Explained health scores, escalations, renewals and churn-risk alerts.',
-    capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'] },
+    capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'], inMenu: false },
   { slug: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', status: 'available', phase: 7,
     summary: 'Report builder, dashboards, Relationship Galaxy, Revenue Globe, pipeline flow and replays.',
     capabilities: ['Report builder over eight record types', 'Custom dashboards', 'CSV export (audited)', '3D views with 2D fallbacks', 'Scheduled exports (later phase)'] },

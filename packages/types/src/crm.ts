@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { type WorkingHours, workingHoursSchema } from './client-time';
 import { customFieldFiltersParam } from './custom-fields';
-import { type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
+import { ENRICH_FIELDS, type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -159,6 +160,8 @@ export const companyInputSchema = z.object({
   address: optionalText(500),
   postalCode: optionalText(20),
   timezone: optionalText(64),
+  /** Office hours on the company's clock (ADR 0089); null goes back to the country's usual day. */
+  workingHours: workingHoursSchema.nullable().optional(),
   notes: optionalText(5000),
   emails: pointList(requiredEmail),
   phones: pointList(requiredPhone),
@@ -215,6 +218,9 @@ export interface CompanyRow {
   leadNumber: string | null;
   status: CrmStatusRef | null;
   statusChangedAt: string | null;
+  /** The deal made or closed as won when the company became a client (ADR 0084). */
+  wonDealId: string | null;
+  wonAt: string | null;
   createdBy: PersonRef | null;
   updatedBy: PersonRef | null;
   manager: PersonRef | null;
@@ -241,6 +247,7 @@ export interface CompanyRow {
   address: string | null;
   postalCode: string | null;
   timezone: string | null;
+  workingHours: WorkingHours | null;
   notes: string | null;
   emails: ContactPoint[];
   phones: ContactPoint[];
@@ -298,6 +305,8 @@ export const contactInputSchema = z.object({
   jobTitle: optionalText(160),
   country: countryCode,
   timezone: optionalText(64),
+  /** This person's own office hours (ADR 0089); null uses their company's. */
+  workingHours: workingHoursSchema.nullable().optional(),
   companyId: uuidRef,
   ownerId: uuidRef,
   marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
@@ -326,6 +335,7 @@ export interface ContactRow {
   jobTitle: string | null;
   country: string | null;
   timezone: string | null;
+  workingHours: WorkingHours | null;
   company: { id: string; name: string } | null;
   owner: OwnerRef | null;
   marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
@@ -399,6 +409,8 @@ export const companyLeadSchema = z.object({
   employees: z.array(leadEmployeeSchema).max(50).default([]),
   /** The draft this lead was written in; it is deleted once the lead is saved. */
   draftId: z.string().uuid().optional(),
+  /** Details Find details found that the person unticked: auto-fill never writes them (ADR 0079). */
+  autofillSkip: z.array(z.enum(ENRICH_FIELDS)).max(ENRICH_FIELDS.length).optional(),
 });
 export type CompanyLeadInput = z.input<typeof companyLeadSchema>;
 

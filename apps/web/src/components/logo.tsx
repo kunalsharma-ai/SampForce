@@ -41,7 +41,14 @@ export function LogoMark({ className }: { className?: string }) {
           <stop offset="0" stopColor="#fff" stopOpacity=".55" />
           <stop offset=".55" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
+        <radialGradient id={`${h}-halo`}>
+          <stop offset="0" stopColor="#FFC857" stopOpacity=".75" />
+          <stop offset=".55" stopColor="#E02424" stopOpacity=".25" />
+          <stop offset="1" stopColor="#E02424" stopOpacity="0" />
+        </radialGradient>
       </defs>
+      {/* A soft halo that breathes behind the bolt in the animated corner logo; invisible otherwise. */}
+      <circle cx="33" cy="32" r="30" fill={`url(#${h}-halo)`} opacity="0" className="sf-part sf-halo" />
       {/* A ring of light that bursts out when the bolt strikes; invisible otherwise. */}
       <circle cx="29" cy="32" r="27" fill="none" stroke="#E02424" strokeWidth="3" opacity="0" className="sf-part sf-ring" />
       {/* The class names only move when a parent has sf-logo-anim (the animated corner logo, logo.css). */}

@@ -102,8 +102,11 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'lead_assigned', label: 'New lead assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
   { key: 'lead_reassigned', label: 'Lead reassigned', types: ['company.reassigned', 'lead.reassigned'] },
   { key: 'follow_up_assigned', label: 'Follow-up assigned', types: ['followup.assigned', 'task.assigned'] },
-  { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'task.due_soon'] },
+  { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'followup.daily', 'task.due_soon'] },
   { key: 'follow_up_overdue', label: 'Follow-up overdue', types: ['followup.overdue', 'task.overdue'] },
+  // Redesign R10: the events added by the redesign get categories, so they can be muted and silenced like the rest.
+  { key: 'task_updates', label: 'Task progress and comments', types: ['task.updated', 'task.commented', 'task.completed'] },
+  { key: 'team_status', label: 'Team status: check-in, breaks and check-out', types: ['team.status'] },
   { key: 'manager_remarks', label: 'Manager remarks', types: ['remark.', 'manager_remark.'] },
   { key: 'instructions', label: 'Senior management instructions', types: ['instruction.'] },
   { key: 'lead_transfers', label: 'Lead transfer requests and decisions', types: ['lead_transfer.', 'transfer.'] },

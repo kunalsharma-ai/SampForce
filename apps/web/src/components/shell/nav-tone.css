@@ -1,0 +1,142 @@
+/*
+ * The colourful sidebar (redesign, menu): each section has its own palette, every item its own colour from it, shown
+ * as a tinted icon tile. The current page gets a tinted pill with a gradient edge and glow, its icon tile fills with
+ * the gradient and pops, and a sheen runs across as you switch. Colours come from stageTones (stageStyle), which keeps
+ * text at 4.5:1 in light and dark; under reduced motion nothing moves.
+ */
+.sf-nav-ico {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 0.6rem;
+  border: 1px solid var(--st-bd);
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.9), var(--st-bg) 60%);
+  color: var(--st-fg);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 3px 8px -4px var(--st-dot);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background 0.25s ease;
+}
+.dark .sf-nav-ico {
+  border-color: var(--st-bd-d);
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.06), var(--st-bg-d) 70%);
+  color: var(--st-fg-d);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 3px 10px -4px var(--st-dot-d);
+}
+.sf-nav-link:hover .sf-nav-ico,
+.sf-nav-link:focus-visible .sf-nav-ico {
+  transform: translateY(-1px) rotate(-6deg) scale(1.08);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 6px 14px -5px var(--st-dot);
+}
+.sf-nav-link[aria-current='page'] .sf-nav-ico {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--st-dot), var(--tone-b, var(--st-dot)));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -4px var(--st-dot);
+  animation: sf-nav-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark .sf-nav-link[aria-current='page'] .sf-nav-ico {
+  background: linear-gradient(135deg, var(--st-dot-d), var(--tone-b, var(--st-dot-d)));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 18px -4px var(--st-dot-d);
+}
+.sf-nav-link[aria-current='page'] {
+  color: var(--st-fg);
+  font-weight: 600;
+}
+.dark .sf-nav-link[aria-current='page'] {
+  color: var(--st-fg-d);
+}
+
+/* The current page's pill; it glides from item to item (motion layoutId) and takes the new item's colour. */
+.sf-nav-active {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--st-bd);
+  background: linear-gradient(90deg, var(--st-bg), rgb(255 255 255 / 0.6));
+  box-shadow: 0 8px 20px -12px var(--st-dot);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.dark .sf-nav-active {
+  border-color: var(--st-bd-d);
+  background: linear-gradient(90deg, var(--st-bg-d), rgb(255 255 255 / 0.02));
+  box-shadow: 0 8px 22px -12px var(--st-dot-d);
+}
+.sf-nav-active::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.35rem;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--st-dot), var(--tone-b, var(--st-dot)));
+}
+.sf-nav-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: sf-nav-sheen 0.9s ease-out 0.15s;
+  pointer-events: none;
+}
+.dark .sf-nav-active::after {
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.12) 50%, transparent 70%);
+}
+
+/* Section headings: the section's colour, a glowing dot and a gradient rule. */
+.sf-nav-heading {
+  color: var(--st-fg);
+}
+.dark .sf-nav-heading {
+  color: var(--st-fg-d);
+}
+.sf-nav-heading-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--st-dot), var(--tone-b, var(--st-dot)));
+  box-shadow: 0 0 0 3px var(--st-bg), 0 0 10px var(--st-dot);
+}
+.dark .sf-nav-heading-dot {
+  box-shadow: 0 0 0 3px var(--st-bg-d), 0 0 10px var(--st-dot-d);
+}
+.sf-nav-heading-rule {
+  height: 2px;
+  flex: 1;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--st-dot), var(--tone-b, var(--st-dot)) 40%, transparent);
+  opacity: 0.45;
+}
+
+/* Sections slide in one after another when the menu first appears or More opens. */
+@media (prefers-reduced-motion: no-preference) {
+  .sf-nav-section {
+    animation: sf-nav-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-nav-ico,
+  .sf-nav-active,
+  .sf-nav-active::after,
+  .sf-nav-link[aria-current='page'] .sf-nav-ico {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes sf-nav-pop {
+  0% { transform: scale(0.7) rotate(-12deg); }
+  60% { transform: scale(1.15) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes sf-nav-sheen {
+  to { transform: translateX(120%); }
+}
+@keyframes sf-nav-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}

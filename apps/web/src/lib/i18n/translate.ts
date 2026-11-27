@@ -1,29 +1,63 @@
-import { type LanguageCode, SERVER_TEXT } from '@dealflow/types';
-import { ar } from './messages/ar';
-import { de } from './messages/de';
+import type { LanguageCode } from '@dealflow/types';
 import { en, type Messages, type ShellKey } from './messages/en';
-import { es } from './messages/es';
-import { fr } from './messages/fr';
-import { PHRASES, type PhraseKey } from './phrases';
+import type { PhraseKey } from './phrases';
 
 /** A dotted shell key (`nav.favourites`) or a page phrase keyed by its English text (`'Owner'`). */
 export type MessageKey = ShellKey | PhraseKey;
 
-const COLUMN: Record<Exclude<LanguageCode, 'en'>, number> = { es: 0, fr: 1, de: 2, ar: 3 };
-function phrases(lang: LanguageCode): Record<PhraseKey, string> {
-  const out = {} as Record<PhraseKey, string>;
-  for (const [key, row] of Object.entries(PHRASES) as [PhraseKey, readonly string[]][]) out[key] = lang === 'en' ? key : row[COLUMN[lang]]!;
-  return out;
+export type Catalogue = Messages & Record<PhraseKey, string>;
+
+/*
+ * English is built in: shell messages come from messages/en and a page phrase is its own English text. The other
+ * languages live in ./foreign, a chunk loaded the first time the interface needs one (`loadCatalogue`). Until it has
+ * arrived the text is English; components re-render when it does (`useCatalogueVersion` in ./index).
+ */
+const english = en as Record<string, string>;
+const loaded: Partial<Record<LanguageCode, Catalogue>> = {};
+let serverText: typeof import('./foreign').localizeServerText | null = null;
+let foreign: Promise<typeof import('./foreign')> | null = null;
+const pending = new Map<LanguageCode, Promise<void>>();
+let version = 0;
+const listeners = new Set<() => void>();
+
+/** Whether the language's text is here (English always is). */
+export function catalogueReady(language: LanguageCode): boolean {
+  return language === 'en' || !!loaded[language];
 }
 
-export type Catalogue = Messages & Record<PhraseKey, string>;
-export const CATALOGUES: Record<LanguageCode, Catalogue> = {
-  en: { ...en, ...phrases('en') },
-  es: { ...es, ...phrases('es') },
-  fr: { ...fr, ...phrases('fr') },
-  de: { ...de, ...phrases('de') },
-  ar: { ...ar, ...phrases('ar') },
-};
+/** Loads a language's text once; resolves when it can be used. A failed load is tried again on the next call. */
+export function loadCatalogue(language: LanguageCode): Promise<void> {
+  if (catalogueReady(language)) return Promise.resolve();
+  let p = pending.get(language);
+  if (!p) {
+    foreign ??= import('./foreign');
+    p = foreign
+      .then((m) => {
+        loaded[language] = m.buildCatalogue(language);
+        serverText = m.localizeServerText;
+        version++;
+        for (const l of listeners) l();
+      })
+      .catch((err: unknown) => {
+        foreign = null;
+        pending.delete(language);
+        throw err;
+      });
+    pending.set(language, p);
+  }
+  return p;
+}
+
+/** For useSyncExternalStore: changes each time a language's text arrives. */
+export function subscribeCatalogues(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+export const catalogueVersion = (): number => version;
+
+function catalogue(language: LanguageCode): Record<string, string | undefined> | undefined {
+  return language === 'en' ? english : (loaded[language] as Record<string, string | undefined> | undefined);
+}
 
 /** Keys that have plural forms, written without the `_one`/`_other` suffix. */
 export type PluralKey = MessageKey extends infer K ? (K extends `${infer B}_other` ? B : never) : never;
@@ -46,7 +80,7 @@ function interpolate(text: string, vars: Vars | undefined, locale: string): stri
  * test makes impossible for shipped keys) and fills `{name}` placeholders. Numbers are written in `formatLocale`.
  */
 export function translate(language: LanguageCode, key: MessageKey, vars?: Vars, formatLocale: string = language): string {
-  const text = CATALOGUES[language]?.[key] ?? CATALOGUES.en[key] ?? key;
+  const text = catalogue(language)?.[key] ?? english[key] ?? key;
   return interpolate(text, vars, formatLocale);
 }
 
@@ -57,10 +91,11 @@ export function translate(language: LanguageCode, key: MessageKey, vars?: Vars, 
  * Anything else is shown as it came.
  */
 export function translateData(language: LanguageCode, text: string, vars?: Vars, formatLocale: string = language): string {
-  const page = CATALOGUES[language]?.[text as MessageKey];
-  if (page !== undefined || language === 'en') return interpolate(page ?? text, vars, formatLocale);
-  const term = (value: string) => (CATALOGUES[language] as Record<string, string | undefined>)[value];
-  return interpolate(SERVER_TEXT.localize(language, text, term), vars, formatLocale);
+  const cat = catalogue(language);
+  if (language === 'en') return interpolate(english[text] ?? text, vars, formatLocale);
+  const page = cat?.[text];
+  if (page !== undefined || !cat || !serverText) return interpolate(page ?? text, vars, formatLocale);
+  return interpolate(serverText(language, text, (value) => cat[value]), vars, formatLocale);
 }
 
 /** Picks the plural form for `count` with Intl.PluralRules ("1 day", "2 days"; Arabic's six forms). */
@@ -71,13 +106,13 @@ export function translatePlural(language: LanguageCode, key: PluralKey, count: n
     pluralRules.set(language, rules);
   }
   const form = count === 0 ? 'zero' : rules.select(count);
-  const catalogue = CATALOGUES[language] as Record<string, string | undefined>;
+  const cat = catalogue(language) ?? {};
   // An explicit "_zero" form is used for 0 when the language has one (Arabic); otherwise the rule's own form.
   const text =
-    (form === 'zero' ? catalogue[`${key}_zero`] : undefined) ??
-    catalogue[`${key}_${count === 0 ? rules.select(0) : form}`] ??
-    catalogue[`${key}_other`] ??
-    (en as Record<string, string>)[`${key}_${new Intl.PluralRules('en').select(count)}`] ??
+    (form === 'zero' ? cat[`${key}_zero`] : undefined) ??
+    cat[`${key}_${count === 0 ? rules.select(0) : form}`] ??
+    cat[`${key}_other`] ??
+    english[`${key}_${new Intl.PluralRules('en').select(count)}`] ??
     key;
   return interpolate(text, { count, ...vars }, formatLocale);
 }

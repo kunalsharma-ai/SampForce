@@ -3,6 +3,9 @@ import type { PhraseTable } from './types';
 /** Plan features (ADR 0057): the upgrade page, the sidebar locks and the feature list on the Billing page. */
 export const plans = {
   '{feature} is not in your plan': ['{feature} no está en tu plan', '{feature} n’est pas dans votre offre', '{feature} ist nicht in Ihrem Tarif', '{feature} ليست ضمن خطتك'],
+  // ADR 0082: sections the Console Admin switches on
+  '{feature} is switched off': ['{feature} está desactivada', '{feature} est désactivée', '{feature} ist ausgeschaltet', '{feature} متوقفة'],
+  'Your SampForce administrator can switch it on for your organisation.': ['Tu administrador de SampForce puede activarla para tu organización.', 'Votre administrateur SampForce peut l’activer pour votre organisation.', 'Ihr SampForce-Administrator kann sie für Ihre Organisation einschalten.', 'يمكن لمسؤول SampForce تفعيلها لمؤسستك.'],
   'Not in your plan': ['No está en tu plan', 'Pas dans votre offre', 'Nicht in Ihrem Tarif', 'ليست ضمن خطتك'],
   'Your workspace is on the {plan} plan.': [
     'Tu espacio de trabajo está en el plan {plan}.',

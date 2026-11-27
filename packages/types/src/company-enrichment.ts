@@ -165,6 +165,7 @@ export const ENRICH_FIELDS = [
   'address',
   'postalCode',
   'timezone',
+  'workingHours',
   'addresses',
   'primaryEmail',
   'emails',
@@ -207,6 +208,7 @@ export const ENRICH_FIELD_LABELS: Record<EnrichField, string> = {
   address: 'Address',
   postalCode: 'Postal code',
   timezone: 'Time zone',
+  workingHours: 'Working hours',
   addresses: 'Other offices',
   primaryEmail: 'Email',
   emails: 'Emails',
@@ -277,4 +279,32 @@ export interface EnrichmentPreview {
   sources: { url: string; kind: 'WEBSITE' | 'WIKIDATA' }[];
   /** Why nothing was found (the site could not be reached...), or null. */
   error: string | null;
+  /** People the company publishes (team page, leadership, Wikidata, data providers), for the employee step. */
+  people: FoundPerson[];
+}
+
+/** Where a person was found (ADR 0079). */
+export const PERSON_SOURCES = ['WEBSITE', 'SCHEMA_ORG', 'WIKIDATA', 'HUNTER', 'APOLLO'] as const;
+export type PersonSource = (typeof PERSON_SOURCES)[number];
+export const PERSON_SOURCE_LABELS: Record<PersonSource, string> = {
+  WEBSITE: 'Company website',
+  SCHEMA_ORG: 'Company website (structured data)',
+  WIKIDATA: 'Wikidata',
+  HUNTER: 'Hunter.io',
+  APOLLO: 'Apollo.io',
+};
+
+/**
+ * A person the company publishes about itself: only what the source shows next to the name. The email is the one
+ * written on the page or given by the data provider, never a guess.
+ */
+export interface FoundPerson {
+  name: string;
+  /** Job title (designation) as written. */
+  title: string | null;
+  email: string | null;
+  linkedinUrl: string | null;
+  source: PersonSource;
+  /** The page or item the person was read from (null for a data provider). */
+  url: string | null;
 }

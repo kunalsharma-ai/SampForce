@@ -113,7 +113,9 @@ const WORKER_ALL = new Set([
 ]);
 /** Collections the worker may only read across workspaces (`worker_scan` FOR SELECT). */
 // ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
-const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'VisitorSettings', 'ZoomMeeting']);
+// Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
+// transaction per workspace to find out it is not yet 8:00 there.
+const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'VisitorSettings', 'ZoomMeeting']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',
@@ -146,7 +148,7 @@ const OPERATOR_READ = new Set([
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['TaskEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['TaskEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';
@@ -610,3 +612,20 @@ export const rawDate = (d: Date): { $date: string } => ({ $date: d.toISOString()
 export async function aggregate<T>(delegate: { aggregateRaw(args: { pipeline: object[] }): unknown }, pipeline: object[]): Promise<T[]> {
   return (await delegate.aggregateRaw({ pipeline })) as unknown as T[];
 }
+
+/** A date read back from a raw aggregation (extended JSON `{ $date }`, or a Date). */
+export function fromRawDate(v: unknown): Date | null {
+  if (v instanceof Date) return v;
+  if (v && typeof v === 'object' && '$date' in v) {
+    const d = (v as { $date: string | { $numberLong: string } }).$date;
+    return new Date(typeof d === 'string' ? d : Number(d.$numberLong));
+  }
+  return typeof v === 'string' ? new Date(v) : null;
+}
+
+/**
+ * Prisma writes `{ field: { in: list } }` for MongoDB as one `$or` branch per value inside `$expr`, so MongoDB compares
+ * every document with every value: with a few thousand ids a read takes seconds (2,666 ids: 1.4 s, against 53 ms as
+ * a native `$in`). Reads over lists that can grow that long use a raw `$in` through `aggregate` instead.
+ */
+export const LARGE_IN_LIST = 200;

@@ -14,6 +14,8 @@ import { BellRing, CheckCheck, Volume2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { NotificationItem } from '@/components/notifications/notification-item';
+import { useChatRealm } from '@/components/shell/chat-button';
+import { useChatSound } from '@/lib/chat';
 import { useT } from '@/lib/i18n';
 import {
   askDesktopPermission,
@@ -179,6 +181,8 @@ function PreferencesCard() {
         </Button>
       </div>
 
+      <ChatSoundSwitch />
+
       <fieldset className={cn('ps-7')} disabled={!prefs.sound}>
         <legend className="text-sm font-medium">{t('Play the sound for')}</legend>
         <div className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
@@ -228,5 +232,22 @@ function PreferencesCard() {
         </p>
       )}
     </Card>
+  );
+}
+
+/** Team chat's own chime (R9), set here with the other sounds (R10). It is kept on this device. */
+function ChatSoundSwitch() {
+  const t = useT();
+  const chat = useChatSound();
+  const realm = useChatRealm();
+  if (!realm) return null;
+  return (
+    <label className="flex items-start gap-3" data-chat-sound-setting="">
+      <input type="checkbox" className="mt-1 size-4 accent-[hsl(var(--sf-red))]" checked={chat.on} onChange={(e) => chat.set(e.target.checked)} />
+      <span>
+        <span className="block text-sm font-medium">{t('Play a sound for new team chat messages')}</span>
+        <span className="block text-xs text-muted-foreground">{t('A short chime when a message arrives in a conversation you are not looking at. Kept on this device.')}</span>
+      </span>
+    </label>
   );
 }

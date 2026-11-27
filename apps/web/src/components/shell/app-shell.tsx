@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  cn,
   Skeleton,
 } from '@dealflow/ui';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ import { useRegionalSync } from '@/lib/regional-sync';
 import { useSession, useSignOut } from '@/lib/session';
 import { useLockedFeature } from '@/lib/features';
 import { useShell } from '@/stores/shell';
+import { CelebrationHost } from '../achievements/celebration-host';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { SectionNotices } from '../notifications/section-notices';
@@ -29,12 +31,14 @@ import { PasswordConfirmationProvider } from '../security/confirm-deletion-dialo
 import { CustomizeMenuDialog } from './customize-menu';
 import { FeatureLocked } from './feature-locked';
 import { KeyboardShortcuts } from './keyboard-shortcuts';
+import { useChatRealm } from './chat-button';
 import { MobileBottomNav } from './mobile-nav';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { data, isPending, error } = useSession();
+  const chatRealm = useChatRealm();
   const pathname = usePathname();
   // The workspace brand colour goes through the theme engine, which keeps it readable in both modes.
   useAppearanceSync(!!data, data?.tenant.brandColor ?? null);
@@ -85,7 +89,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           )}
-          <main id="main" className="flex-1 px-4 pb-24 pt-6 md:px-8 lg:pb-6">
+          {/* With team chat, the right edge keeps a gutter for the quick chat tab (R9), so it never covers the page. */}
+          <main id="main" className={cn('flex-1 px-4 pb-24 pt-6 md:px-8 lg:pb-6', chatRealm && 'lg:pe-20')}>
             {isPending ? (
               <div
                 role="status"
@@ -123,6 +128,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         {data && <QuickCreateHost />}
+        {/* Celebrations for real achievements (ADR 0090), never during a security restriction. */}
+        {data && !data.restriction && <CelebrationHost />}
         {data && !data.restriction && <MobileBottomNav />}
         {data && <CustomizeMenuDialog />}
         <KeyboardShortcuts />

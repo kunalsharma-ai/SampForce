@@ -40,10 +40,24 @@ export function currencyOptions(): ComboOption[] {
 }
 
 let zoneCache: ComboOption[] | null = null;
+const RENAMED_ZONES: Record<string, string> = {
+  'Asia/Calcutta': 'Asia/Kolkata',
+  'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+  'Asia/Katmandu': 'Asia/Kathmandu',
+  'Asia/Rangoon': 'Asia/Yangon',
+  'Europe/Kiev': 'Europe/Kyiv',
+  'America/Godthab': 'America/Nuuk',
+  'Atlantic/Faeroe': 'Atlantic/Faroe',
+  'Pacific/Truk': 'Pacific/Chuuk',
+  'Pacific/Ponape': 'Pacific/Pohnpei',
+};
+
 export function timeZoneOptions(): ComboOption[] {
   if (zoneCache) return zoneCache;
   const zones: string[] = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['UTC'];
-  zoneCache = zones.map((z) => ({ value: z, label: z.replace(/_/g, ' '), keywords: z, hint: utcOffset(z) }));
+  // Chromium lists some zones under their old names (Asia/Calcutta); offer the current IANA names people search for.
+  const current = [...new Set(zones.map((z) => RENAMED_ZONES[z] ?? z))];
+  zoneCache = current.map((z) => ({ value: z, label: z.replace(/_/g, ' '), keywords: [z, ...Object.keys(RENAMED_ZONES).filter((o) => RENAMED_ZONES[o] === z)].join(' '), hint: utcOffset(z) }));
   return zoneCache;
 }
 

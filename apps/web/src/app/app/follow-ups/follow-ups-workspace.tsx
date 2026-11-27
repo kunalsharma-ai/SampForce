@@ -2,6 +2,7 @@
 
 import { FOLLOW_UP_BUCKETS, type FollowUpBucket } from '@dealflow/types';
 import { cn, Skeleton } from '@dealflow/ui';
+import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { FollowUpItem } from '@/components/crm/follow-ups';
 import { BUCKET_LABEL } from '@/components/crm/work-labels';
@@ -25,8 +26,12 @@ const BUCKET_TONE: Record<FollowUpBucket, string> = {
 /** Follow-ups by category, for me, my team (everyone reporting to me) or the whole workspace. */
 export function FollowUpsWorkspace() {
   const t = useT();
-  const [scope, setScope] = React.useState<'mine' | 'team' | 'all'>('mine');
-  const [bucket, setBucket] = React.useState<FollowUpBucket>('today');
+  // The dashboard's cards open the exact list: ?bucket=overdue&scope=team (redesign R6).
+  const params = useSearchParams();
+  const askedScope = params.get('scope');
+  const askedBucket = params.get('bucket');
+  const [scope, setScope] = React.useState<'mine' | 'team' | 'all'>(SCOPES.some((x) => x.value === askedScope) ? (askedScope as 'mine' | 'team' | 'all') : 'mine');
+  const [bucket, setBucket] = React.useState<FollowUpBucket>((FOLLOW_UP_BUCKETS as readonly string[]).includes(askedBucket ?? '') ? (askedBucket as FollowUpBucket) : 'today');
   const counts = useFollowUpCounts({ scope });
   const list = useFollowUps({ scope, bucket });
   return (

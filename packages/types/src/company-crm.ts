@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GEO_COUNTRY_ROWS } from './geo-countries';
+import { BUILT_IN_STAGES, STAGE_PHASES, type StageKey, type StagePhase } from './employee-stages';
 
 /*
  * Company-centric CRM configuration: organisation structure, record visibility, configurable statuses, lead
@@ -82,14 +83,20 @@ export const reorderSchema = z.object({ ids: z.array(z.string().uuid()).min(1).m
 
 // ───────────── Statuses ─────────────
 
-export const CRM_STATUS_KINDS = ['COMPANY', 'EMPLOYEE'] as const;
+/** STAGE is an employee's communication stage (ADR 0080), kept apart from the employee status. */
+export const CRM_STATUS_KINDS = ['COMPANY', 'EMPLOYEE', 'STAGE'] as const;
 export type CrmStatusKind = (typeof CRM_STATUS_KINDS)[number];
 
 /** What a status means to reports and dashboards, whatever it is called. */
 export const STATUS_MEANINGS = ['NEW', 'ACTIVE', 'CLIENT', 'CONCERN', 'ON_HOLD', 'LOST'] as const;
 export type StatusMeaning = (typeof STATUS_MEANINGS)[number];
 
-type DefaultStatus = { name: string; color: string; meaning: StatusMeaning };
+type DefaultStatus = { name: string; color: string; meaning: StatusMeaning; key?: StageKey; phase?: StagePhase };
+
+/** What a communication stage counts as in reports that only know status meanings. */
+export function phaseMeaning(phase: StagePhase): StatusMeaning {
+  return phase === 'NEW' ? 'NEW' : phase === 'WON' ? 'CLIENT' : phase === 'LOST' ? 'LOST' : phase === 'ON_HOLD' ? 'ON_HOLD' : 'ACTIVE';
+}
 export const DEFAULT_STATUSES: Record<CrmStatusKind, ReadonlyArray<DefaultStatus>> = {
   COMPANY: [
     { name: 'New Lead', color: '#7dd3fc', meaning: 'NEW' },
@@ -126,6 +133,7 @@ export const DEFAULT_STATUSES: Record<CrmStatusKind, ReadonlyArray<DefaultStatus
     { name: 'Not Interested', color: '#991b1b', meaning: 'LOST' },
     { name: 'On Hold', color: '#64748b', meaning: 'ON_HOLD' },
   ],
+  STAGE: BUILT_IN_STAGES.map((s) => ({ name: s.name, color: s.color, meaning: phaseMeaning(s.phase), key: s.key, phase: s.phase })),
 };
 
 export const hexColor = z
@@ -140,6 +148,8 @@ export const crmStatusInputSchema = z.object({
   description,
   color: hexColor,
   meaning: z.enum(STATUS_MEANINGS).default('ACTIVE'),
+  /** Communication stages only: which phase the stage belongs to (filters and dashboards count by phase). */
+  phase: z.enum(STAGE_PHASES).optional(),
   isDefault: z.boolean().optional(),
   archived: z.boolean().optional(),
 });
@@ -155,6 +165,9 @@ export interface CrmStatusRow {
   description: string | null;
   color: string;
   meaning: StatusMeaning;
+  /** Communication stages only (kind STAGE): the built-in stage's key, and the phase. */
+  key?: StageKey | null;
+  phase?: StagePhase | null;
   position: number;
   isDefault: boolean;
   archived: boolean;

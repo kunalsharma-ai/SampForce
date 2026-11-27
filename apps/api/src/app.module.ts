@@ -19,6 +19,7 @@ import { PasswordConfirmationGuard } from './common/password-confirmation';
 import { ChatModule } from './chat/chat.module';
 import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
+import { CallsModule } from './calls/calls.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
@@ -44,9 +45,12 @@ import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
 import { OwnServersModule } from './own-servers/own-servers.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { FieldAccessInterceptor } from './workspaces/field-access.interceptor';
 import { HierarchyGuard } from './workspaces/hierarchy.guard';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
+import { AvailabilityModule } from './availability/availability.module';
+import { AchievementsModule } from './achievements/achievements.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 import { AuditRequiredInterceptor } from './operator/audit-required.interceptor';
@@ -78,9 +82,12 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     TenantsModule,
     WorkspacesModule,
     WorkspaceWorkModule,
+    AvailabilityModule,
+    AchievementsModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,
+    CallsModule,
     ChatModule,
     SupportModule,
     AutomationModule,
@@ -125,6 +132,8 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     // Console writes must write a platform audit entry (ADR 0074, C3).
     { provide: APP_INTERCEPTOR, useClass: AuditRequiredInterceptor },
+    // Record fields the Console withholds from Manager and Executive Workspaces (R8, ADR 0092).
+    { provide: APP_INTERCEPTOR, useClass: FieldAccessInterceptor },
   ],
 })
 export class AppModule {}

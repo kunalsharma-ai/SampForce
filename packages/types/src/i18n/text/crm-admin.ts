@@ -6,6 +6,10 @@ export const crmAdmin = {
   'You can have up to 60 follow-up categories.': ['Puedes tener hasta 60 categorías de seguimiento.', 'Vous pouvez avoir jusqu’à 60 catégories de relances.', 'Sie können bis zu 60 Kategorien für Nachverfolgungen haben.', 'يمكنك إنشاء 60 فئة متابعة كحد أقصى.'],
   'Option not found.': ['Opción no encontrada.', 'Option introuvable.', 'Option nicht gefunden.', 'الخيار غير موجود.'],
   'Keep at least one option switched on': ['Deja al menos una opción activada', 'Gardez au moins une option activée', 'Lassen Sie mindestens eine Option eingeschaltet', 'أبقِ خيارًا واحدًا مفعّلًا على الأقل'],
+  // The journey board (redesign R5)
+  'Only the Super Workspace changes the journey stages.': ['Solo el Super Workspace cambia las etapas del recorrido.', 'Seul le Super Workspace modifie les étapes du parcours.', 'Nur der Super Workspace ändert die Phasen der Customer Journey.', 'مساحة العمل الرئيسية وحدها تغيّر مراحل الرحلة.'],
+  'Use a colour like #2563eb': ['Usa un color como #2563eb', 'Utilisez une couleur comme #2563eb', 'Verwenden Sie eine Farbe wie #2563eb', 'استخدم لونًا مثل #2563eb'],
+  'cannot be hidden': ['no se puede ocultar', 'ne peut pas être masqué', 'kann nicht ausgeblendet werden', 'لا يمكن إخفاؤها'],
   'This status is needed and cannot be hidden': ['Este estado es necesario y no se puede ocultar', 'Ce statut est nécessaire et ne peut pas être masqué', 'Dieser Status wird benötigt und kann nicht ausgeblendet werden', 'هذه الحالة ضرورية ولا يمكن إخفاؤها'],
   'must list every option once': ['debe incluir cada opción una vez', 'doit lister chaque option une fois', 'muss jede Option genau einmal enthalten', 'يجب أن تتضمن كل خيار مرة واحدة'],
   'Built-in options can be hidden, not deleted': ['Las opciones integradas se pueden ocultar, no eliminar', 'Les options intégrées peuvent être masquées, pas supprimées', 'Integrierte Optionen können ausgeblendet, aber nicht gelöscht werden', 'يمكن إخفاء الخيارات المدمجة لا حذفها'],
@@ -40,6 +44,14 @@ export const crmAdmin = {
 /** Reminder notifications (ADR 0062), stored in English and shown in the reader's language. */
 export const crmAdminNotifications = {
   'Follow-up overdue: {title}': ['Seguimiento vencido: {title}', 'Relance en retard : {title}', 'Überfällige Nachverfolgung: {title}', 'متابعة متأخرة: {title}'],
+  // Follow-up cadence (ADR 0083)
+  'Only the Super Workspace sets the follow-up cadence.': ['Solo el Super Workspace define la cadencia de seguimiento.', 'Seul le Super Workspace définit la cadence de relance.', 'Nur der Super-Workspace legt den Nachverfolgungsrhythmus fest.', 'مساحة العمل الرئيسية وحدها تحدد وتيرة المتابعة.'],
+  'already had the initial email': ['ya recibió el correo inicial', 'a déjà reçu l’e-mail initial', 'hat die erste E-Mail schon erhalten', 'تلقى البريد الأول بالفعل'],
+  'cannot be in the future': ['no puede estar en el futuro', 'ne peut pas être dans le futur', 'darf nicht in der Zukunft liegen', 'لا يمكن أن يكون في المستقبل'],
+  'is past outreach (an RFQ, a reply or a later stage)': ['ya pasó la fase de contacto (una RFQ, una respuesta o una etapa posterior)', 'a dépassé la prise de contact (une RFQ, une réponse ou une étape suivante)', 'ist über die Kontaktaufnahme hinaus (eine RFQ, eine Antwort oder eine spätere Phase)', 'تجاوز مرحلة التواصل (طلب عرض سعر أو رد أو مرحلة لاحقة)'],
+  'Follow-ups for today: {today} due, {overdue} overdue': ['Seguimientos de hoy: {today} pendientes, {overdue} atrasados', 'Relances du jour : {today} à faire, {overdue} en retard', 'Nachverfolgungen heute: {today} fällig, {overdue} überfällig', 'متابعات اليوم: {today} مستحقة، {overdue} متأخرة'],
+  'Follow-up {step} of {total} planned: {name}': ['Seguimiento {step} de {total} planificado: {name}', 'Relance {step} sur {total} planifiée : {name}', 'Nachverfolgung {step} von {total} geplant: {name}', 'تم تخطيط المتابعة {step} من {total}: {name}'],
+  'Follow-up {step} of {total}: {name}': ['Seguimiento {step} de {total}: {name}', 'Relance {step} sur {total} : {name}', 'Nachverfolgung {step} von {total}: {name}', 'المتابعة {step} من {total}: {name}'],
   'Follow-up due soon: {title}': ['Seguimiento próximo: {title}', 'Relance bientôt due : {title}', 'Nachverfolgung bald fällig: {title}', 'متابعة مستحقة قريبًا: {title}'],
   'Task overdue: {title}': ['Tarea vencida: {title}', 'Tâche en retard : {title}', 'Überfällige Aufgabe: {title}', 'مهمة متأخرة: {title}'],
   'Task due soon: {title}': ['Tarea próxima: {title}', 'Tâche bientôt due : {title}', 'Aufgabe bald fällig: {title}', 'مهمة مستحقة قريبًا: {title}'],

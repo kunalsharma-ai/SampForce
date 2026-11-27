@@ -167,6 +167,110 @@ The `email` part:
   - `company` can be `null` when the sender chose to send without linking a client.
 - `company` and `rfq` are set when the sender linked the email to a company lead or to an RFQ (same shape as above).
 
+## PUT /v1/clients/{externalId} — the client company and its contacts
+
+Added in ADR 0080. A person presses **Send to SampBidx** on a company, picks the employee who shared the RFQ (and
+any other employees who should be client contacts), reviews what goes, and sends. SampForce first creates or
+updates the company as a SampBidx **client** with this call, then sends the RFQ with `POST /v1/rfqs` (below), which
+then names the client and the contact.
+
+`{externalId}` is SampForce's company id, which never changes. **The same `externalId` must always update the same
+client**, never create a second one. `Content-Type: application/json`, same `Idempotency-Key` headers as every send.
+
+```json
+{
+  "system": "SampForce",
+  "workspace": "Frequent Research Fieldwork Solutions",
+  "transferId": "0d3e…",
+  "externalId": "3f5c…",
+  "company": {
+    "name": "Northwind Insights Ltd",
+    "website": "https://northwind.example",
+    "industry": "Market research",
+    "leadNumber": "FRFS07",
+    "notes": null,
+    "logoUrl": null
+  },
+  "offices": [{ "label": "Head office", "headOffice": true, "country": "IN", "city": "Mumbai", "address": null }],
+  "contacts": [
+    {
+      "externalId": "9a1b…",
+      "id": null,
+      "name": "Bilal Khan",
+      "email": "bilal@northwind.example",
+      "jobTitle": "Procurement Manager",
+      "phone": "+91 98100 00000",
+      "country": "IN",
+      "timeZone": "Asia/Kolkata",
+      "mayReceiveQuotes": true,
+      "marketingConsent": null
+    }
+  ],
+  "sentBy": { "id": "…", "name": "Rahul Verma", "email": "rahul@frequentresearch.com", "designation": "Business Development Manager" },
+  "clientTeam": { "poc": null, "owner": { "…": "…" }, "manager": null },
+  "note": null
+}
+```
+
+- The fields match the SampBidx Clients screen. SampForce only sends once company `name` and, for each contact,
+  `name`, `email`, `country` and `timeZone` are filled in (the person completes them in the review step).
+- `contacts[].externalId` is SampForce's employee id. `contacts[].id` is SampBidx's contact id from an earlier
+  answer, or `null` the first time. Match a contact by `id`, else by `externalId`, else by email; update it rather
+  than adding a duplicate. Contacts not in the list are **left as they are** (SampForce sends only the ones the
+  person ticked).
+- `marketingConsent` is `true`, `false` or `null` (not recorded). Bid number prefix is left to SampBidx.
+- `logoUrl` is always `null` for now: logos are not sent.
+- No pricing, tax, PMF, PSF, discount, prepayment, validity or payment terms are ever sent: SampForce has none from
+  the client. The bid manager sets them in SampBidx.
+
+Answer **200** (updated) or **201** (created) with the client's id and each contact's id:
+
+```json
+{
+  "id": "CL-1042",
+  "url": "https://bids.frequentresearch.com/clients/1042",
+  "status": "created",
+  "contacts": [{ "externalId": "9a1b…", "id": "CC-88" }]
+}
+```
+
+SampForce keeps these ids and sends them back next time. Errors are answered as below; a **409** means the client
+duplicates another record in SampBidx; SampForce shows "SampBidx reported a duplicate: …" with your message.
+If the client fails, the RFQ is not sent: the person sees the reason and **Try again**.
+
+### What the RFQ carries after a client send
+
+`POST /v1/rfqs` then has two more top-level fields, and the `rfq` part three more fields:
+
+```json
+{
+  "client": { "id": "CL-1042", "externalId": "3f5c…" },
+  "contact": { "id": "CC-88", "externalId": "9a1b…", "name": "Bilal Khan", "email": "bilal@northwind.example", "jobTitle": "Procurement Manager", "phone": "+91 98100 00000" },
+  "rfq": {
+    "serviceCategory": "QUANTITATIVE",
+    "service": "CAWI",
+    "countries": ["GB", "DE"],
+    "lines": [
+      { "country": "GB", "targetGroup": "Gen pop 18+", "quota": 500, "loiMinutes": 15, "incidenceRatePercent": 30, "cpi": null, "description": null },
+      { "country": "DE", "targetGroup": "Gen pop 18+", "quota": 300, "loiMinutes": 15, "incidenceRatePercent": 25, "cpi": null, "description": null }
+    ]
+  }
+}
+```
+
+- `contact` is **the employee who shared the RFQ**, which the person picked; it is not simply the company's primary
+  contact. Attach the bid to that client contact.
+- `serviceCategory` is `QUANTITATIVE` or `QUALITATIVE`; `service` is one of `CAWI`, `CATI`, `CAPI`, `F2F`, `IDI`,
+  `FGD`, `ONLINE_COMMUNITY`, `OTHER`. Either can be `null`.
+- `lines` has **one row per country and target group**. Keep the rows separate: two target groups in one country are
+  two rows. An RFQ without its own rows sends one row from its market, or none. `cpi` is the client's target CPI
+  when they gave one, else `null` (to quote).
+- An RFQ sent from the RFQ itself (not from the company) has `client` and `contact` as `null` when the company was
+  never sent as a client.
+
+Sending an RFQ to SampBidx never marks it as won in SampForce. Received, sent to SampBidx, accepted by SampBidx and
+the outcome stay four separate records.
+
 ## Answering a send
 
 Answer **200** or **201** with SampBidx's own id. `url` (a page in SampBidx) and `status` are optional:
@@ -251,6 +355,8 @@ that moment, so update SampBidx straight away.
 - [ ] `GET /v1/ping` with Bearer key check
 - [ ] `POST /v1/rfqs` reading the `rfq` part and the `files` parts
 - [ ] `POST /v1/rfq-emails` reading the `email` part and the optional `message` part
+- [ ] `PUT /v1/clients/{externalId}`: create or update the client by `externalId`, contacts by id, externalId or email; answer with the contact ids
+- [ ] `POST /v1/rfqs` reading `client`, `contact`, `serviceCategory`, `service` and the country `lines` (kept separate)
 - [ ] Same `Idempotency-Key` → same record, answered with the same id
 - [ ] Readable error messages in `{"error": {"message": "…"}}`
 - [ ] Signed status callbacks to SampForce on every status change

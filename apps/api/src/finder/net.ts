@@ -2,10 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { resolveMx } from 'node:dns/promises';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { publicFetch } from '../common/net-guard';
+import { BROWSER_USER_AGENT } from '../crm/site-fetch';
 
 const TIMEOUT_MS = 6000;
 const MAX_BYTES = 1_000_000;
-export const FINDER_USER_AGENT = 'SampForceBot/1.0 (email finder; reads public contact pages; honours robots.txt)';
 
 export interface FetchedPage {
   url: string;
@@ -46,7 +46,7 @@ export class FinderNet {
         if (fx) {
           res = await fetch(`${fx}/site/${u.host}${u.pathname}${u.search}`, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS) });
         } else {
-          res = await publicFetch(target, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': FINDER_USER_AGENT, accept: 'text/html' } }, false);
+          res = await publicFetch(target, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': BROWSER_USER_AGENT, accept: 'text/html' } }, false);
         }
       } catch {
         return null;
@@ -63,7 +63,7 @@ export class FinderNet {
     return null;
   }
 
-  /** Paths robots.txt asks crawlers (all, or SampForceBot) not to read. */
+  /** Paths robots.txt asks all crawlers (`User-agent: *`) not to read. */
   async disallowed(origin: string): Promise<string[]> {
     const page = await this.page(`${origin}/robots.txt`);
     if (!page) return [];
@@ -73,7 +73,7 @@ export class FinderNet {
       const line = raw.replace(/#.*/, '').trim();
       const [k, ...rest] = line.split(':');
       const v = rest.join(':').trim();
-      if (/^user-agent$/i.test(k ?? '')) applies = v === '*' || /sampforcebot/i.test(v);
+      if (/^user-agent$/i.test(k ?? '')) applies = v === '*';
       else if (applies && /^disallow$/i.test(k ?? '') && v) out.push(v);
     }
     return out;

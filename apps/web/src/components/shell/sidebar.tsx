@@ -6,7 +6,7 @@ import { ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizo
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useFeatures } from '@/lib/features';
+import { useFeatures, useSwitchedOff } from '@/lib/features';
 import { useNotificationSummary } from '@/lib/notification-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { type ModuleDef, moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
@@ -14,8 +14,29 @@ import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav
 import { usePreferences } from '@/stores/preferences';
 import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
+import { stageStyle } from '../crm/stage-chip';
+import './nav-tone.css';
+import { useChatUnreadTotal } from './chat-button';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
+/**
+ * Every section shows directly (Workspace, Engage, Intelligence, Organisation), each in its own colours. Redesign R2
+ * folded all but Workspace under a More button; Kunal wants them all in view.
+ */
+/** Each section's palette (redesign, menu): its items take the colours in turn, the heading the first two. */
+const PALETTE: Record<ModuleDef['group'] | 'Favourites', string[]> = {
+  Workspace: ['#4f46e5', '#2563eb', '#0891b2', '#0d9488', '#7c3aed', '#0284c7'],
+  Engage: ['#db2777', '#e11d48', '#ea580c', '#c026d3', '#9333ea'],
+  Intelligence: ['#7c3aed', '#6366f1', '#2563eb', '#9333ea', '#0891b2'],
+  Revenue: ['#16a34a', '#0d9488', '#059669', '#ca8a04', '#65a30d'],
+  Organization: ['#d97706', '#ea580c', '#dc2626', '#b45309', '#64748b'],
+  Favourites: ['#ca8a04', '#d97706', '#ea580c'],
+};
+function tone(group: keyof typeof PALETTE, i: number): React.CSSProperties {
+  const p = PALETTE[group];
+  return { ...stageStyle(p[i % p.length]!), '--tone-b': p[(i + 1) % p.length] } as React.CSSProperties;
+}
+
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/app' ? pathname === '/app' : pathname === href || pathname.startsWith(`${href}/`);
@@ -37,6 +58,7 @@ function NavLink({
   onNavigate,
   badge,
   layoutId,
+  style,
 }: {
   href: string;
   label: string;
@@ -46,6 +68,7 @@ function NavLink({
   onNavigate?: () => void;
   badge?: React.ReactNode;
   layoutId?: string;
+  style?: React.CSSProperties;
 }) {
   const { dir } = useT();
   const link = (
@@ -53,16 +76,20 @@ function NavLink({
       href={href}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
+      style={style}
+      data-nav-tone=""
       className={cn(
-        'relative flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
-        active ? 'text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        'sf-nav-link relative flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1.5 py-1 text-sm transition-colors',
+        active ? '' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
         collapsed && 'justify-center',
       )}
     >
-      {active && layoutId && (
-        <motion.span layoutId={layoutId} className="absolute inset-0 rounded-md bg-primary/10 ring-1 ring-primary/30" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+      {active && (
+        <motion.span layoutId={layoutId} className="sf-nav-active" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
       )}
-      <Icon className={cn('relative size-4 shrink-0', active && 'text-primary')} aria-hidden />
+      <span className="sf-nav-ico">
+        <Icon className="size-4" aria-hidden />
+      </span>
       {collapsed ? (
         <span className="sr-only">{label}</span>
       ) : (
@@ -98,14 +125,16 @@ function UnpinButton({ item, onToggle }: { item: NavItem; onToggle: (i: NavItem)
   );
 }
 
-function GroupHeading({ children, collapsed, id }: { children: React.ReactNode; collapsed: boolean; id: string }) {
+function GroupHeading({ children, collapsed, id, group }: { children: React.ReactNode; collapsed: boolean; id: string; group: keyof typeof PALETTE }) {
   return collapsed ? (
     <h2 id={id} className="sr-only">
       {children}
     </h2>
   ) : (
-    <h2 id={id} className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <h2 id={id} style={tone(group, 0)} data-nav-heading={group} className="sf-nav-heading flex items-center gap-2 px-2 pb-1.5 text-[11px] font-bold uppercase tracking-wider">
+      <span aria-hidden className="sf-nav-heading-dot" />
       {children}
+      <span aria-hidden className="sf-nav-heading-rule" />
     </h2>
   );
 }
@@ -114,81 +143,100 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const pathname = usePathname();
   const { nav } = useNavigation();
   const pins = useTogglePin();
-  const modules = orderedModules(nav);
+  const switchedOff = useSwitchedOff();
+  const modules = orderedModules(nav).filter((m) => m.inMenu !== false && !switchedOff(moduleHref(m)));
   const t = useT();
   const features = useFeatures();
   // Unread notifications per section (ADR 0075), next to the section they come from.
   const bySection = useNotificationSummary(features.ready && features.has('notifications')).data?.bySection;
+  // Unread team chat messages, on Team chat (the header no longer has a chat button, redesign R1).
+  const chatUnread = useChatUnreadTotal();
+
+  const renderGroup = (group: ModuleDef['group'], list: ModuleDef[], i = GROUPS.indexOf(group)) => {
+    if (list.length === 0) return null;
+    return (
+      <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules" className="sf-nav-section" style={{ '--i': i } as React.CSSProperties}>
+        <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`} group={group}>
+          {t(`nav.group.${group}`)}
+        </GroupHeading>
+        <ul className="space-y-0.5">
+          {list.map((m, n) => {
+            const href = moduleHref(m);
+            const feature = featureForPath(href);
+            const locked = !!feature && !features.has(feature);
+            return (
+              <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
+                <NavLink
+                  href={href}
+                  label={t(moduleKey(m) as MessageKey)}
+                  icon={m.icon}
+                  active={isActive(pathname, href)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                  layoutId={`${idPrefix}-active`}
+                  style={tone(group, n)}
+                  badge={
+                    m.slug === 'chat' && chatUnread !== null && !locked ? (
+                      chatUnread === 0 ? (
+                        <span className="sr-only" data-chat-unread={0}>
+                          {t('Team chat, {n} unread', { n: 0 })}
+                        </span>
+                      ) : (
+                        <span
+                          className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                          data-chat-unread={chatUnread}
+                        >
+                          <span aria-hidden>{chatUnread > 99 ? '99+' : chatUnread}</span>
+                          <span className="sr-only">{t('Team chat, {n} unread', { n: chatUnread })}</span>
+                        </span>
+                      )
+                    ) : m.status === 'planned' ? (
+                      <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
+                        {phaseLabel(m.phase, true)}
+                      </Badge>
+                    ) : !locked && bySection && (bySection as Record<string, number | undefined>)[m.slug] ? (
+                      <span
+                        className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                        data-nav-unread={m.slug}
+                        title={t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}
+                      >
+                        <span aria-hidden>{(bySection as Record<string, number>)[m.slug]! > 99 ? '99+' : (bySection as Record<string, number>)[m.slug]}</span>
+                        <span className="sr-only">{t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}</span>
+                      </span>
+                    ) : locked ? (
+                      <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
+                        <Lock className="size-3.5" aria-hidden />
+                        <span className="sr-only">{t('Not in your plan')}</span>
+                      </span>
+                    ) : null
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    );
+  };
 
   return (
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
       {nav.pinned.length > 0 && (
         <section aria-labelledby={`${idPrefix}-fav`} data-nav-section="favourites">
-          <GroupHeading collapsed={collapsed} id={`${idPrefix}-fav`}>
+          <GroupHeading collapsed={collapsed} id={`${idPrefix}-fav`} group="Favourites">
             {t('nav.favourites')}
           </GroupHeading>
           <ul className="space-y-0.5">
-            {nav.pinned.map((p) => (
+            {nav.pinned.map((p, n) => (
               <li key={p.href} className="group/row flex items-center gap-1">
-                <NavLink href={p.href} label={p.label} icon={itemIcon(p)} active={pathname === p.href} collapsed={collapsed} onNavigate={onNavigate} />
+                <NavLink href={p.href} label={p.label} icon={itemIcon(p)} active={pathname === p.href} collapsed={collapsed} onNavigate={onNavigate} layoutId={`${idPrefix}-active`} style={tone('Favourites', n)} />
                 {!collapsed && <UnpinButton item={p} onToggle={pins.toggle} />}
               </li>
             ))}
           </ul>
         </section>
       )}
-      {GROUPS.map((group) => {
-        const list = modules.filter((m) => m.group === group);
-        if (list.length === 0) return null;
-        return (
-          <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules">
-            <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`}>
-              {t(`nav.group.${group}`)}
-            </GroupHeading>
-            <ul className="space-y-0.5">
-              {list.map((m) => {
-                const href = moduleHref(m);
-                const feature = featureForPath(href);
-                const locked = !!feature && !features.has(feature);
-                return (
-                  <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
-                    <NavLink
-                      href={href}
-                      label={t(moduleKey(m) as MessageKey)}
-                      icon={m.icon}
-                      active={isActive(pathname, href)}
-                      collapsed={collapsed}
-                      onNavigate={onNavigate}
-                      layoutId={`${idPrefix}-active`}
-                      badge={
-                        m.status === 'planned' ? (
-                          <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
-                            {phaseLabel(m.phase, true)}
-                          </Badge>
-                        ) : !locked && bySection && (bySection as Record<string, number | undefined>)[m.slug] ? (
-                          <span
-                            className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
-                            data-nav-unread={m.slug}
-                            title={t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}
-                          >
-                            <span aria-hidden>{(bySection as Record<string, number>)[m.slug]! > 99 ? '99+' : (bySection as Record<string, number>)[m.slug]}</span>
-                            <span className="sr-only">{t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}</span>
-                          </span>
-                        ) : locked ? (
-                          <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
-                            <Lock className="size-3.5" aria-hidden />
-                            <span className="sr-only">{t('Not in your plan')}</span>
-                          </span>
-                        ) : null
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
+      {GROUPS.map((group) => renderGroup(group, modules.filter((m) => m.group === group)))}
     </nav>
   );
 }

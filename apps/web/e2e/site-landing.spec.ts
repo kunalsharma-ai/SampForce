@@ -16,6 +16,8 @@ async function shot(page: Page, name: string) {
 
 async function axe(page: Page) {
   await expect(page).toHaveTitle(/\S/);
+  // Fades still run with reduced motion (only movement stops), so wait for the finite ones to end before scanning.
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity));
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
@@ -26,7 +28,8 @@ async function axe(page: Page) {
  */
 test('the home page: light and dark, the sign-up portal step by step, and signing in', async ({ browser }) => {
   test.setTimeout(120_000);
-  const ctx = await browser.newContext({ colorScheme: 'light' });
+  // Reduced motion: axe must not scan cards that are still fading in (their colours are mid-blend).
+  const ctx = await browser.newContext({ colorScheme: 'light', reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Close smarter.');
@@ -81,7 +84,7 @@ test('the home page: light and dark, the sign-up portal step by step, and signin
   await portal.getByRole('button', { name: 'Create workspace' }).click();
   await expect(portal.getByText('Your workspace is ready')).toBeVisible();
   await expect(page).toHaveURL(/\/app\?welcome=1/);
-  await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What is happening across the organisation?', level: 1 })).toBeVisible();
   await ctx.close();
 
   // ── Sign in from a shared #sign-in link, with a wrong password first ──

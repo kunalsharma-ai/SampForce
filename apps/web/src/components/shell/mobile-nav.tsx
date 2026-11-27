@@ -2,19 +2,22 @@
 
 import type { Permission } from '@dealflow/types';
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@dealflow/ui';
-import { Handshake, LayoutDashboard, ListTodo, Plus, UserPlus } from 'lucide-react';
+import { Building2, Handshake, LayoutDashboard, ListTodo, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLeadsSectionOn } from '@/lib/features';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { CREATE } from '@/lib/shortcuts';
+import { QuickChatBarButton } from '@/components/chat/quick-chat';
+import { useChatRealm } from './chat-button';
 import { useQuickCreate } from '@/stores/quick-create';
 
 const PERMISSION: Record<string, Permission> = { leads: 'leads:write', contacts: 'contacts:write', companies: 'companies:write', deals: 'deals:write', task: 'activities:write' };
 
 const TABS = [
   { href: '/app', label: 'mobile.home', icon: LayoutDashboard },
-  { href: '/app/leads', label: 'mobile.leads', icon: UserPlus },
+  { href: '/app/companies', label: 'mobile.companies', icon: Building2 },
   null,
   { href: '/app/deals', label: 'mobile.deals', icon: Handshake },
   { href: '/app/activities', label: 'mobile.tasks', icon: ListTodo },
@@ -26,13 +29,16 @@ export function MobileBottomNav() {
   const { data } = useSession();
   const openCreate = useQuickCreate((s) => s.open);
   const tr = useT();
+  const leadsOn = useLeadsSectionOn();
+  // Quick chat (redesign R9) is a tab of the bar on phones, so nothing floats over the page.
+  const chatRealm = useChatRealm();
   return (
     <nav
       aria-label={tr('mobile.nav')}
       data-shell="bottom-nav"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
+      <ul className={cn('mx-auto grid max-w-lg', chatRealm ? 'grid-cols-6' : 'grid-cols-5')}>
         {TABS.map((t) =>
           t === null ? (
             <li key="create" className="grid place-items-center">
@@ -44,7 +50,7 @@ export function MobileBottomNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="center">
                   <DropdownMenuLabel>{tr('mobile.create')}</DropdownMenuLabel>
-                  {CREATE.map((c) => (
+                  {CREATE.filter((c) => c.kind !== 'leads' || leadsOn).map((c) => (
                     <DropdownMenuItem key={c.kind} disabled={!data?.permissions.includes(PERMISSION[c.kind]!)} onSelect={() => openCreate(c.kind)}>
                       <Plus aria-hidden /> {tr(`create.${c.kind}`)}
                     </DropdownMenuItem>
@@ -69,6 +75,11 @@ export function MobileBottomNav() {
               })()}
             </li>
           ),
+        )}
+        {chatRealm && (
+          <li>
+            <QuickChatBarButton realm={chatRealm} />
+          </li>
         )}
       </ul>
     </nav>

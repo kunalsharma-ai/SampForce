@@ -47,7 +47,7 @@ test('the corner logo animates in workspaces and the Console, and stays still un
   await closeUp(app, logo, '50-logo-intro-strike');
   await app.waitForTimeout(500);
   await closeUp(app, logo, '51-logo-intro-flash');
-  await expect.poll(() => running(logo)).toEqual(expect.arrayContaining(['sf-glow', 'sf-twinkle']));
+  await expect.poll(() => running(logo)).toEqual(expect.arrayContaining(['sf-flow', 'sf-glow', 'sf-halo', 'sf-shine-loop', 'sf-twinkle']));
   await app.waitForTimeout(1500);
   await closeUp(app, logo, '52-logo-rest');
   // Hover jolts the bolt, dashes the streaks, spins the spark and sweeps the shine again.
@@ -57,7 +57,7 @@ test('the corner logo animates in workspaces and the Console, and stays still un
   await closeUp(app, logo, '53-logo-hover');
   await app.mouse.move(700, 500);
   // Keyboard focus on the logo's link does the same.
-  await app.getByRole('link', { name: 'SampForce Command Center' }).focus();
+  await app.getByRole('link', { name: 'SampForce Dashboard' }).focus();
   await app.keyboard.press('Shift+Tab');
   await app.keyboard.press('Tab');
   await expect.poll(() => running(logo)).toContain('sf-jolt');
@@ -86,7 +86,7 @@ test('the corner logo animates in workspaces and the Console, and stays still un
   await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
   const consoleLogo = ops.locator('[data-console-sidebar] [data-logo-animated="yes"]');
   await expect(consoleLogo).toBeVisible();
-  await expect.poll(() => running(consoleLogo)).toEqual(expect.arrayContaining(['sf-glow', 'sf-twinkle']));
+  await expect.poll(() => running(consoleLogo)).toEqual(expect.arrayContaining(['sf-flow', 'sf-glow', 'sf-halo', 'sf-twinkle']));
   await ops.waitForTimeout(1200);
   await closeUp(ops, consoleLogo, '54-logo-console');
 });

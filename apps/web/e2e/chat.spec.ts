@@ -35,11 +35,11 @@ async function teammate(browser: Browser, page: Page, name: string, roleKey = 'm
   return { ctx, page: await ctx.newPage() };
 }
 
-test('colleagues chat live in a channel and direct messages, with files, record links, read receipts and search', async ({ page, browser }) => {
+test('colleagues chat live in a channel and direct messages, with emoji, reactions, read receipts and search', async ({ page, browser }) => {
   test.setTimeout(120_000);
   page.on('dialog', (d) => void d.accept());
   await signUp(page, 'Frequent Research Fieldwork Solutions');
-  const acme = await post(page, '/companies', { name: 'Acme Panels', country: 'IN', city: 'Pune' });
+  await post(page, '/companies', { name: 'Acme Panels', country: 'IN', city: 'Pune' });
   const priya = await teammate(browser, page, 'Priya Nair');
   const main = page.getByRole('main');
 
@@ -91,25 +91,33 @@ test('colleagues chat live in a channel and direct messages, with files, record 
   await expect(pm.locator('[data-chat-subtitle]')).toContainText('Test Person is typing…');
   await main.getByLabel('Message', { exact: true }).fill('');
 
-  // Priya answers with a file; the owner points the channel at the company.
-  await pm.locator('[data-chat-file-input]').setInputFiles({ name: 'quota-sheet.csv', mimeType: 'text/csv', buffer: Buffer.from('market,n\nIN,400\n') });
-  await expect(pm.getByText('quota-sheet.csv')).toBeVisible();
-  await pm.getByLabel('Message', { exact: true }).fill('Quota sheet for the India B2B tracker.');
+  // Team chat is text and emoji only (R9): no file or record-link buttons.
+  await expect(pm.locator('[data-chat-file-input]')).toHaveCount(0);
+  await expect(main.getByRole('button', { name: 'Attach a file' })).toHaveCount(0);
+  await expect(main.getByRole('button', { name: 'Link a company, RFQ or deal' })).toHaveCount(0);
+  await pm.getByLabel('Message', { exact: true }).fill('Quota sheet for the India B2B tracker is ready.');
   await pm.getByRole('button', { name: 'Send' }).click();
-  await expect(main.locator('[data-message]').filter({ hasText: 'Quota sheet for the India B2B tracker.' })).toBeVisible();
-  await expect(main.getByRole('link', { name: /quota-sheet\.csv/ })).toBeVisible();
-  await main.getByRole('button', { name: 'Link a company, RFQ or deal' }).click();
-  const picker = page.getByRole('dialog');
-  await picker.getByLabel('Search by name or number').fill('Acme');
-  await picker.getByRole('button', { name: /Acme Panels/ }).click();
-  await main.getByLabel('Message', { exact: true }).fill('Priya from Acme asked for the feasibility today.');
+  await expect(main.locator('[data-message]').filter({ hasText: 'Quota sheet for the India B2B tracker is ready.' })).toBeVisible();
+  // The full emoji picker: search, pick, and it lands in the message.
+  await main.getByRole('button', { name: 'Emoji', exact: true }).click();
+  const emoji = main.locator('[data-emoji-picker]');
+  await emoji.getByLabel('Search emoji').fill('rocket');
+  await emoji.getByRole('button', { name: 'rocket', exact: true }).click();
+  await main.getByLabel('Message', { exact: true }).pressSequentially(' Priya from Acme asked for the feasibility today.');
+  await expect(main.getByLabel('Message', { exact: true })).toHaveValue('🚀 Priya from Acme asked for the feasibility today.');
   await main.getByRole('button', { name: 'Send' }).click();
   await expect(pm.locator('[data-message]').filter({ hasText: 'Priya from Acme asked for the feasibility today.' })).toBeVisible();
-  const companyLink = main.getByRole('link', { name: new RegExp(`${acme.leadNumber} Acme Panels`) });
-  await expect(companyLink).toHaveAttribute('href', `/app/companies/${acme.id}`);
-  const download = page.waitForEvent('download');
-  await main.getByRole('link', { name: /quota-sheet\.csv/ }).click();
-  expect((await download).suggestedFilename()).toBe('quota-sheet.csv');
+  // A reaction on Priya's message shows on both sides; Priya adds hers to it.
+  const quota = main.locator('[data-message]').filter({ hasText: 'Quota sheet for the India B2B tracker is ready.' });
+  await quota.hover();
+  await quota.getByRole('button', { name: 'React' }).click();
+  await quota.getByRole('button', { name: 'React with 👍' }).click();
+  await expect(quota.locator('[data-reaction="👍"]')).toContainText('1');
+  const pquota = pm.locator('[data-message]').filter({ hasText: 'Quota sheet for the India B2B tracker is ready.' });
+  await expect(pquota.locator('[data-reaction="👍"]')).toContainText('1');
+  await pquota.locator('[data-reaction="👍"]').click();
+  await expect(quota.locator('[data-reaction="👍"]')).toContainText('2');
+  await expect(quota.locator('[data-reaction="👍"]')).toHaveAttribute('aria-pressed', 'true');
   await axe(page);
   await shot(page, '01-team-chat-project-updates-channel');
 
@@ -162,8 +170,6 @@ test('messages written without a connection wait on the device and are sent when
   await expect(rm.getByRole('status')).toContainText('You are offline.');
   await rm.getByLabel('Message', { exact: true }).fill('Pune site: 120 completes today.');
   await rm.getByLabel('Message', { exact: true }).press('Enter');
-  await rm.locator('[data-chat-file-input]').setInputFiles({ name: 'pune-tally.txt', mimeType: 'text/plain', buffer: Buffer.from('completes=120') });
-  await expect(rm.getByText('pune-tally.txt')).toBeVisible();
   await rm.getByLabel('Message', { exact: true }).fill('Tally attached.');
   await rm.getByLabel('Message', { exact: true }).press('Enter');
   await expect(rm.locator('[data-outbox="queued"]')).toHaveCount(2);
@@ -181,7 +187,6 @@ test('messages written without a connection wait on the device and are sent when
   // Back online, the outbox is sent in order, and the colleague receives both live.
   await expect(main.locator('[data-message]').filter({ hasText: 'Pune site: 120 completes today.' })).toBeVisible({ timeout: 15_000 });
   await expect(main.locator('[data-message]').filter({ hasText: 'Tally attached.' })).toBeVisible();
-  await expect(main.getByRole('link', { name: /pune-tally\.txt/ })).toBeVisible();
   const order = await main.locator('[data-message]').allInnerTexts();
   expect(order.findIndex((x) => x.includes('Pune site'))).toBeLessThan(order.findIndex((x) => x.includes('Tally attached')));
   await again.goto(`/app/chat?c=${ch.id}`);

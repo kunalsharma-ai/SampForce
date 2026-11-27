@@ -3,9 +3,9 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'Sales Activities',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
-  'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Client Portal', 'Customer Success',
+  'Revenue Intelligence', 'Forecasting',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
 ];
 
@@ -36,6 +36,8 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
 });
 
 test('every sidebar entry leads to a working page', async ({ page }) => {
+  // 36 pages, each opened and checked: more than the default 30 s when the suite runs in parallel.
+  test.setTimeout(120_000);
   await signUp(page);
   // Module sections only: Favourites repeats some of the same links.
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');
@@ -45,6 +47,13 @@ test('every sidebar entry leads to a working page', async ({ page }) => {
     await expect(page.getByText('This page does not exist')).toHaveCount(0);
   }
   expect(await nav.getByRole('link').count()).toBe(SIDEBAR.length);
+  // The Revenue section was taken out of the menu; its pages still open from their links.
+  for (const [path, heading] of [['/app/quotes', 'Quotes & Proposals'], ['/app/contracts', 'Contracts'], ['/app/portal', 'Client Portal'], ['/app/customer-success', 'Customer Success']] as const) {
+    await expect(nav.getByRole('link', { name: new RegExp(`^${heading.replace(/[&]/g, '\\&')}`) })).toHaveCount(0);
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByText('This page does not exist')).toHaveCount(0);
+  }
 });
 
 test('updates workspace settings and records them in the audit log', async ({ page }) => {
@@ -93,6 +102,8 @@ for (const theme of ['dark', 'light'] as const) {
   test(`has no WCAG 2.2 A/AA violations on key pages (${theme})`, async ({ page }) => {
     // Visits 22 pages with a full axe scan each; under a parallel run that takes longer than the default 30 s.
     test.setTimeout(120_000);
+    // The public pages animate cards in; scan them at rest, not mid-fade.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/login');
     await page.evaluate((t) => localStorage.setItem('dealflow:preferences', JSON.stringify({ state: { theme: t, motion: 'off' }, version: 0 })), theme);
     for (const path of ['/', '/pricing', '/login', '/signup']) {

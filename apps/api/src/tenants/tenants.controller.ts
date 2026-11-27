@@ -64,6 +64,13 @@ export class TenantsController {
     return this.teams.remove(auth, id, meta);
   }
 
+  @Get('menu-sections')
+  @RequirePermissions('tenant:read')
+  menuSections(@Auth() auth: AuthContext) {
+    return this.tenants.menuSections(auth);
+  }
+
+
   @Get()
   @RequirePermissions('tenant:read')
   current(@Auth() auth: AuthContext) {

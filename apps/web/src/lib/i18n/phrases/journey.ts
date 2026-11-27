@@ -1,0 +1,42 @@
+import type { PhraseTable } from './types';
+
+/** The company journey and the Pipeline journey board (ADR 0085). */
+export const journey = {
+  'New Company': ['Empresa nueva', 'Nouvelle entreprise', 'Neues Unternehmen', 'شركة جديدة'],
+  'In Follow-up': ['En seguimiento', 'En relance', 'In Nachverfolgung', 'قيد المتابعة'],
+  'In Discussion': ['En conversación', 'En discussion', 'Im Gespräch', 'قيد النقاش'],
+  'Deal pipelines': ['Embudos de oportunidades', 'Pipelines d’opportunités', 'Verkaufs-Pipelines', 'مسارات الصفقات'],
+  'Deal pipeline settings': ['Ajustes de embudos de oportunidades', 'Réglages des pipelines d’opportunités', 'Einstellungen der Verkaufs-Pipelines', 'إعدادات مسارات الصفقات'],
+  'Every company in its journey: from the first email through follow-ups, discussion, RFQs and negotiation to won or lost. Open a card to see its journey.': [
+    'Cada empresa en su recorrido: del primer correo, pasando por seguimientos, conversación, RFQ y negociación, hasta ganada o perdida. Abre una tarjeta para ver su recorrido.',
+    'Chaque entreprise dans son parcours : du premier e-mail aux relances, à la discussion, aux RFQ et à la négociation, jusqu’à gagnée ou perdue. Ouvrez une carte pour voir son parcours.',
+    'Jedes Unternehmen auf seinem Weg: von der ersten E-Mail über Nachverfolgungen, Gespräche, RFQs und Verhandlung bis gewonnen oder verloren. Öffnen Sie eine Karte, um den Weg zu sehen.',
+    'كل شركة في رحلتها: من البريد الأول مرورًا بالمتابعات والنقاش وطلبات عروض الأسعار والتفاوض حتى الفوز أو الخسارة. افتح بطاقة لترى رحلتها.',
+  ],
+  'Search companies or lead numbers': ['Buscar empresas o números de lead', 'Rechercher des entreprises ou des numéros de lead', 'Unternehmen oder Lead-Nummern suchen', 'ابحث عن الشركات أو أرقام العملاء المحتملين'],
+  'Only my companies': ['Solo mis empresas', 'Seulement mes entreprises', 'Nur meine Unternehmen', 'شركاتي فقط'],
+  'Journey stages': ['Etapas del recorrido', 'Étapes du parcours', 'Phasen des Wegs', 'مراحل الرحلة'],
+  'No companies here': ['No hay empresas aquí', 'Aucune entreprise ici', 'Hier sind keine Unternehmen', 'لا توجد شركات هنا'],
+  '{n} more: search to narrow the list': ['{n} más: busca para acotar la lista', '{n} de plus : cherchez pour réduire la liste', '{n} weitere: suchen Sie, um die Liste einzugrenzen', '{n} أخرى: ابحث لتضييق القائمة'],
+  'Where this company is in its journey, and what comes next.': ['En qué punto del recorrido está esta empresa y qué viene después.', 'Où en est cette entreprise dans son parcours, et la suite.', 'Wo dieses Unternehmen auf seinem Weg steht und was als Nächstes kommt.', 'أين وصلت هذه الشركة في رحلتها وما التالي.'],
+  '{company}: {stage}. Open the journey': ['{company}: {stage}. Abrir el recorrido', '{company} : {stage}. Ouvrir le parcours', '{company}: {stage}. Weg öffnen', '{company}: {stage}. افتح الرحلة'],
+  'Follow-up {step} of {total}': ['Seguimiento {step} de {total}', 'Relance {step} sur {total}', 'Nachfassen {step} von {total}', 'المتابعة {step} من {total}'],
+  'Overdue since {date}': ['Atrasado desde {date}', 'En retard depuis le {date}', 'Überfällig seit {date}', 'متأخر منذ {date}'],
+  'No next action': ['Sin próxima acción', 'Aucune prochaine action', 'Keine nächste Aktion', 'لا يوجد إجراء تالٍ'],
+  '{n} open RFQs': ['{n} RFQ abiertas', '{n} RFQ ouvertes', '{n} offene RFQs', '{n} طلبات عروض أسعار مفتوحة'],
+  'Company journey': ['Recorrido de la empresa', 'Parcours de l’entreprise', 'Weg des Unternehmens', 'رحلة الشركة'],
+  Current: ['Actual', 'Actuelle', 'Aktuell', 'الحالية'],
+  Ended: ['Terminado', 'Terminé', 'Beendet', 'انتهت'],
+  'Every company is in one of these stages on the Pipeline, worked out from its employees, RFQs, deals and status. Rename, recolour or hide them; New Company, RFQ Received, Won and Lost always show.': [
+    'Cada empresa está en una de estas etapas del Pipeline, calculada a partir de sus empleados, RFQ, oportunidades y estado. Cámbiales el nombre, el color u ocúltalas; Empresa nueva, RFQ recibida, Ganada y Perdida siempre se muestran.',
+    'Chaque entreprise est dans l’une de ces étapes du Pipeline, déduite de ses employés, RFQ, opportunités et statut. Renommez-les, recolorez-les ou masquez-les ; Nouvelle entreprise, RFQ reçue, Gagnée et Perdue restent visibles.',
+    'Jedes Unternehmen steht in der Pipeline in einer dieser Phasen, ermittelt aus Mitarbeitern, RFQs, Verkaufschancen und Status. Umbenennen, umfärben oder ausblenden; Neues Unternehmen, RFQ erhalten, Gewonnen und Verloren bleiben sichtbar.',
+    'كل شركة في إحدى هذه المراحل في مسار المبيعات، محسوبة من موظفيها وطلبات عروض الأسعار والصفقات والحالة. أعد تسميتها أو تلوينها أو أخفها؛ تظهر دائمًا شركة جديدة وتم استلام طلب عرض السعر والفوز والخسارة.',
+  ],
+  'Name of the stage {name}': ['Nombre de la etapa {name}', 'Nom de l’étape {name}', 'Name der Phase {name}', 'اسم المرحلة {name}'],
+  'Colour of the stage {name}': ['Color de la etapa {name}', 'Couleur de l’étape {name}', 'Farbe der Phase {name}', 'لون المرحلة {name}'],
+  'Always shown': ['Siempre visible', 'Toujours visible', 'Immer sichtbar', 'تظهر دائمًا'],
+  Shown: ['Visible', 'Visible', 'Sichtbar', 'ظاهرة'],
+  'Reset to defaults': ['Restablecer valores predeterminados', 'Rétablir les valeurs par défaut', 'Auf Standard zurücksetzen', 'إعادة الضبط إلى الافتراضي'],
+  'Only administrators of the Super Workspace can change the journey stages.': ['Solo los administradores del Super Workspace pueden cambiar las etapas del recorrido.', 'Seuls les administrateurs du Super Workspace peuvent modifier les étapes du parcours.', 'Nur Administratoren des Super-Workspace können die Phasen ändern.', 'يمكن لمسؤولي مساحة العمل الرئيسية فقط تغيير مراحل الرحلة.'],
+} as const satisfies PhraseTable;
