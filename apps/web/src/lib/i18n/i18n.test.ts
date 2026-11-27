@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CALL_OUTCOME_LABELS, CALL_WINDOW_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS } from '@dealflow/types';
+import { ORG_ACTIVITY_LABELS, ORG_COMPLETENESS_FIELDS, ORG_CREDENTIAL_ACCESS_LABELS, ORG_CREDENTIAL_KIND_LABELS, ORG_DOCUMENT_CATEGORY_LABELS, ORG_DOCUMENT_VISIBILITY_LABELS, ORG_SHARE_SECTION_LABELS } from '@dealflow/types';
 import {
   ENRICH_FIELD_LABELS,
   COMPANY_EMAIL_CTA_LABELS,
@@ -209,6 +210,8 @@ describe('page phrases', () => {
     ],
     ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
     // Calls (ADR 0088): outcomes, the good-time-to-call check and its weekdays, call states, dialer presets and placeholders.
+    // My Organization (ADR 0100): document categories and audiences, credential kinds, shared sections, history and completeness.
+    ['my organization labels', [...Object.values(ORG_DOCUMENT_CATEGORY_LABELS), ...Object.values(ORG_DOCUMENT_VISIBILITY_LABELS), ...Object.values(ORG_CREDENTIAL_KIND_LABELS), ...Object.values(ORG_CREDENTIAL_ACCESS_LABELS), ...Object.values(ORG_SHARE_SECTION_LABELS), ...Object.values(ORG_ACTIVITY_LABELS), ...ORG_COMPLETENESS_FIELDS.map((f) => f[1])]],
     ['call labels', [...Object.values(CALL_OUTCOME_LABELS), ...Object.values(CALL_WINDOW_LABELS), ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]), ...Object.values(DIALER_PLACEHOLDERS), 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', ...[...source('../../app/app/calls/calls-workspace.tsx').match(/const STATUS_LABEL[^\n]*/)![0].matchAll(/: '([^']+)'/g)].map((m) => m[1]!)]],
     // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
     // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the

@@ -1,6 +1,7 @@
 import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { OrgExpiryRemindersService } from '../my-organization/org-expiry-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
@@ -61,6 +62,8 @@ export interface WorkerTick {
   clientHealth: number;
   /** SampBidx chat messages tried again (ADR 0078). */
   sampbidxChat: number;
+  /** Expiry reminders for My Organization documents (ADR 0100). */
+  orgDocuments: number;
 }
 
 /**
@@ -101,6 +104,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly consoleNotices: ConsoleNotificationSweep,
     private readonly clientHealth: ConsoleHealthService,
     private readonly overview: ConsoleOverviewService,
+    private readonly orgDocuments: OrgExpiryRemindersService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -163,6 +167,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const pushes = await this.pushes.sendDue();
     const erasures = await this.closures.eraseDue();
     const sampbidxChat = await this.sampbidxChat.sweep();
+    const orgDocuments = await this.orgDocuments.sweep();
     // Console notifications once a minute: they read across every client, so not on every tick.
     // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
     let consoleNotifications = 0;
@@ -174,7 +179,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, orgDocuments };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

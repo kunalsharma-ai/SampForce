@@ -66,6 +66,7 @@ export const ar: Messages = {
   'module.customer-success': 'نجاح العملاء',
   'module.reports': 'التقارير والتحليلات',
   'module.gamification': 'تحفيز المبيعات',
+  'module.my-organization': 'مؤسستي',
   'module.team': 'إدارة الفريق',
   'module.integrations': 'التكاملات',
   'module.marketplace': 'المتجر',
