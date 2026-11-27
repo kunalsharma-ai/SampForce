@@ -4697,6 +4697,8 @@ model CrmSettings {
   digestDate        String?  @map("digest_date")
   /// { followUps, intervalDays, updatedAt, updatedById } (ADR 0083); null = 5 follow-ups 7 days apart.
   followUpCadence   Json?    @map("follow_up_cadence")
+  /// Journey stage names, colours and hidden flags set by the Super Workspace (ADR 0085).
+  journeyStages     Json?    @map("journey_stages")
   updatedById       String?  @map("updated_by_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

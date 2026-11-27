@@ -32,6 +32,7 @@ export function useMarkInitialEmail(contactId: string, companyId?: string | null
       void qc.invalidateQueries({ queryKey: ['employee-activity'] });
       void qc.invalidateQueries({ queryKey: ['employee-communication', contactId] });
       void qc.invalidateQueries({ queryKey: ['follow-ups'] });
+      void qc.invalidateQueries({ queryKey: ['company-journey'] });
       if (companyId) void qc.invalidateQueries({ queryKey: ['companies', companyId] });
     },
   });

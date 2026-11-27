@@ -6,6 +6,10 @@ export const crmAdmin = {
   'You can have up to 60 follow-up categories.': ['Puedes tener hasta 60 categorías de seguimiento.', 'Vous pouvez avoir jusqu’à 60 catégories de relances.', 'Sie können bis zu 60 Kategorien für Nachverfolgungen haben.', 'يمكنك إنشاء 60 فئة متابعة كحد أقصى.'],
   'Option not found.': ['Opción no encontrada.', 'Option introuvable.', 'Option nicht gefunden.', 'الخيار غير موجود.'],
   'Keep at least one option switched on': ['Deja al menos una opción activada', 'Gardez au moins une option activée', 'Lassen Sie mindestens eine Option eingeschaltet', 'أبقِ خيارًا واحدًا مفعّلًا على الأقل'],
+  // The journey board (redesign R5)
+  'Only the Super Workspace changes the journey stages.': ['Solo el Super Workspace cambia las etapas del recorrido.', 'Seul le Super Workspace modifie les étapes du parcours.', 'Nur der Super Workspace ändert die Phasen der Customer Journey.', 'مساحة العمل الرئيسية وحدها تغيّر مراحل الرحلة.'],
+  'Use a colour like #2563eb': ['Usa un color como #2563eb', 'Utilisez une couleur comme #2563eb', 'Verwenden Sie eine Farbe wie #2563eb', 'استخدم لونًا مثل #2563eb'],
+  'cannot be hidden': ['no se puede ocultar', 'ne peut pas être masqué', 'kann nicht ausgeblendet werden', 'لا يمكن إخفاؤها'],
   'This status is needed and cannot be hidden': ['Este estado es necesario y no se puede ocultar', 'Ce statut est nécessaire et ne peut pas être masqué', 'Dieser Status wird benötigt und kann nicht ausgeblendet werden', 'هذه الحالة ضرورية ولا يمكن إخفاؤها'],
   'must list every option once': ['debe incluir cada opción una vez', 'doit lister chaque option une fois', 'muss jede Option genau einmal enthalten', 'يجب أن تتضمن كل خيار مرة واحدة'],
   'Built-in options can be hidden, not deleted': ['Las opciones integradas se pueden ocultar, no eliminar', 'Les options intégrées peuvent être masquées, pas supprimées', 'Integrierte Optionen können ausgeblendet, aber nicht gelöscht werden', 'يمكن إخفاء الخيارات المدمجة لا حذفها'],

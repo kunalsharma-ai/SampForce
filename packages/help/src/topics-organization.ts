@@ -2164,6 +2164,30 @@ export const organizationHelp = {
       'مساحة المدير الأعلى وحدها تغيّره. يحصل الجميع صباحًا على ملخص للمتابعات المستحقة اليوم والمتأخرة.',
     ],
   },
+  'crm.journey': {
+    title: 'Journey stages',
+    what: [
+      'The stages every company moves through on the Pipeline, from New Company to Won, or Lost, Rejected, Not Interested or On Hold.',
+      'Las etapas que recorre cada empresa en el Pipeline, de Empresa nueva a Ganada, o Perdida, Rechazada, Sin interés o En pausa.',
+      'Les étapes que traverse chaque entreprise dans le Pipeline, de Nouvelle entreprise à Gagnée, ou Perdue, Rejetée, Pas intéressée ou En pause.',
+      'Die Phasen jedes Unternehmens in der Pipeline, von Neues Unternehmen bis Gewonnen, oder Verloren, Abgelehnt, Kein Interesse oder Pausiert.',
+      'المراحل التي تمر بها كل شركة في مسار المبيعات، من شركة جديدة إلى الفوز، أو الخسارة أو الرفض أو عدم الاهتمام أو الإيقاف المؤقت.',
+    ],
+    how: [
+      'SampForce works the stage out from the company’s employees, RFQs, deals and status, so nobody types it. Open a card on the Pipeline to see the steps done, the current one and what comes next.',
+      'SampForce calcula la etapa a partir de los empleados, las RFQ, las oportunidades y el estado de la empresa, así que nadie la escribe. Abre una tarjeta del Pipeline para ver los pasos hechos, el actual y lo que sigue.',
+      'SampForce déduit l’étape des employés, des RFQ, des opportunités et du statut de l’entreprise : personne ne la saisit. Ouvrez une carte du Pipeline pour voir les étapes faites, l’étape actuelle et la suivante.',
+      'SampForce ermittelt die Phase aus den Mitarbeitern, RFQs, Verkaufschancen und dem Status des Unternehmens, niemand tippt sie ein. Öffnen Sie eine Karte in der Pipeline, um erledigte, aktuelle und nächste Schritte zu sehen.',
+      'يحدد SampForce المرحلة من موظفي الشركة وطلبات عروض الأسعار والصفقات والحالة، فلا يكتبها أحد. افتح بطاقة في مسار المبيعات لترى الخطوات المنجزة والحالية والتالية.',
+    ],
+    where: [
+      'Only the Super Workspace renames, recolours or hides stages. New Company, RFQ Received, Won and Lost always show.',
+      'Solo el espacio Super cambia el nombre, el color o oculta etapas. Empresa nueva, RFQ recibida, Ganada y Perdida siempre se muestran.',
+      'Seul l’espace Super renomme, recolore ou masque les étapes. Nouvelle entreprise, RFQ reçue, Gagnée et Perdue restent toujours visibles.',
+      'Nur der Super-Arbeitsbereich benennt Phasen um, färbt sie ein oder blendet sie aus. Neues Unternehmen, RFQ erhalten, Gewonnen und Verloren werden immer angezeigt.',
+      'مساحة المدير الأعلى وحدها تعيد تسمية المراحل أو تلوينها أو إخفاءها. تظهر دائمًا مراحل شركة جديدة وتم استلام طلب عرض السعر والفوز والخسارة.',
+    ],
+  },
   'crm.currency': {
     title: 'Base currency',
     what: [

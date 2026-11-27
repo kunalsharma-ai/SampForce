@@ -35,7 +35,7 @@ test('a conflict reported by the API appears in German in a German workspace', a
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');
 
   // A new workspace is on the Free plan, which holds one pipeline: the API refuses a second one, in German.
-  await page.goto('/app/pipelines');
+  await page.goto('/app/settings/pipelines');
   const main = page.getByRole('main');
   await main.getByRole('button', { name: 'Neue Pipeline' }).click();
   await main.getByPlaceholder('Pipeline-Name').last().fill('Zweite Pipeline');

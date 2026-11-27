@@ -16,11 +16,10 @@ import { hasFeature } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { callerOf } from '../workspace-work/hierarchy';
-import { resolveOrganisation } from '../workspaces/access';
 import { badRef as invalid, notFound } from './crm-helpers';
 import { cadenceSettingOf, cadenceStates } from './cadence-state';
 import { EmployeeStagesService } from './employee-stages.service';
+import { inSuperWorkspace } from './super-workspace';
 import { contactScope, visibility } from './visibility';
 
 /** Who caused something: a signed-in person, or the owner of a synced mailbox. */
@@ -65,22 +64,16 @@ export class FollowUpCadenceService {
     const by = byId ? await tx.user.findUnique({ where: { id: byId }, select: { id: true, name: true } }) : null;
     return {
       ...parseFollowUpCadence(raw),
-      canEdit: auth.permissions.includes('crm:configure') && (await this.inSuperWorkspace(tx, auth)),
+      canEdit: auth.permissions.includes('crm:configure') && (await inSuperWorkspace(tx, auth)),
       updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
       updatedBy: by,
     };
   }
 
-  private async inSuperWorkspace(tx: TenantTx, auth: AuthContext): Promise<boolean> {
-    if (!auth.workspaceNodeId) return true;
-    const org = await resolveOrganisation(tx, auth.tenantId);
-    return callerOf(auth, org).level === 'SUPER';
-  }
-
   /** Only the Super Workspace sets the cadence for the organisation (Kunal: "into my super workspace"). */
   setSettings(auth: AuthContext, input: FollowUpCadence, meta: RequestMeta): Promise<FollowUpCadenceSettings> {
     return this.prisma.run(auth, async (tx) => {
-      if (!(await this.inSuperWorkspace(tx, auth))) {
+      if (!(await inSuperWorkspace(tx, auth))) {
         throw new ForbiddenException({ code: 'CADENCE_SUPER_ONLY', message: 'Only the Super Workspace sets the follow-up cadence.' });
       }
       const before = await this.cadenceOf(tx, auth.tenantId);
