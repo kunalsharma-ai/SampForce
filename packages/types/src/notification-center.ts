@@ -38,6 +38,7 @@ export const NOTIFICATION_SECTIONS = [
   { key: 'customer-success', label: 'Customer success', href: '/app/customer-success', types: [] },
   { key: 'help', label: 'Help and support', href: '/app/help', types: ['support.', 'escalation.'] },
   { key: 'billing', label: 'Billing', href: '/app/billing', types: ['billing.'] },
+  { key: 'learning', label: 'Learning & Development', href: '/app/learning', types: ['learning.'] },
 ] as const;
 export type NotificationSectionKey = (typeof NOTIFICATION_SECTIONS)[number]['key'];
 export const NOTIFICATION_SECTION_KEYS = NOTIFICATION_SECTIONS.map((s) => s.key) as [NotificationSectionKey, ...NotificationSectionKey[]];

@@ -142,14 +142,14 @@ const MAX_OCR_PAGES = 30;
 
 async function readPdf(data: Buffer): Promise<Extracted> {
   const lib = loadPdfJs();
-  const doc = await lib.getDocument({
+  const task = lib.getDocument({
     data: new Uint8Array(data),
-    isEvalSupported: false,
     disableFontFace: true,
     useSystemFonts: false,
     standardFontDataUrl: `${join(PDF_DIR(), 'standard_fonts')}/`,
     verbosity: 0,
-  }).promise;
+  });
+  const doc = await task.promise;
   try {
     const pages = Math.min(doc.numPages, MAX_PDF_PAGES);
     const texts: string[] = [];
@@ -185,7 +185,7 @@ async function readPdf(data: Buffer): Promise<Extracted> {
     }
     return ready(text, 'DOCUMENT', pages, doc.numPages > pages ? `Read the first ${pages} of ${doc.numPages} pages.` : `Read all ${pages} ${pages === 1 ? 'page' : 'pages'}.`);
   } finally {
-    await doc.destroy();
+    await task.destroy();
   }
 }
 

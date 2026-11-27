@@ -126,6 +126,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'visitors', label: 'High-intent website visitors', types: ['visitor.'] },
   { key: 'gamification', label: 'Badges and competitions', types: ['gamification.'] },
   { key: 'workflows', label: 'Workflow notifications', types: ['workflow.notify'] },
+  { key: 'learning', label: 'Learning & Development', types: ['learning.'] },
 ] as const;
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORIES)[number]['key'];
 const CATEGORY_KEYS = NOTIFICATION_CATEGORIES.map((c) => c.key) as [NotificationCategoryKey, ...NotificationCategoryKey[]];
