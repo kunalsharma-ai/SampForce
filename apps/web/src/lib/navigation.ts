@@ -57,8 +57,9 @@ export interface ModuleDef {
   /** Planned capabilities, shown on the module page until it ships. */
   capabilities: string[];
   /**
-   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section). The pages, data
-   * and links from records stay, and the command palette still finds them.
+   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section, and on 2026-11-27
+   * the Sales Gamification section). The pages, data and links from records stay, and the command palette still
+   * finds them.
    */
   inMenu?: false;
 }
@@ -167,7 +168,7 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Report builder over eight record types', 'Custom dashboards', 'CSV export (audited)', '3D views with 2D fallbacks', 'Scheduled exports (later phase)'] },
   { slug: 'gamification', label: 'Sales Gamification', icon: Trophy, group: 'Intelligence', status: 'available', phase: 3,
     summary: 'Configurable points, leaderboards, badges, competitions and team challenges from CRM records.',
-    capabilities: ['Admin-chosen scoring rules with daily limits', 'Personal and team leaderboards', 'Badges and target progress', 'Competitions and team challenges'] },
+    capabilities: ['Admin-chosen scoring rules with daily limits', 'Personal and team leaderboards', 'Badges and target progress', 'Competitions and team challenges'], inMenu: false },
   { slug: 'team', label: 'Team Management', icon: Users, group: 'Organization', status: 'available', phase: 1,
     summary: 'Members, roles and permissions.', capabilities: [] },
   { slug: 'integrations', label: 'Integrations', icon: Plug, group: 'Organization', status: 'available', phase: 1,
