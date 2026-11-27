@@ -33,7 +33,7 @@ async function join(browser: Browser, inviteUrl: string, name: string): Promise<
 
 /** The banner reads right, passes axe and fits; then it is photographed in light and dark at every size. */
 async function check(page: Page, path: string, name: string, badge: string, prefix: string) {
-  const banner = page.locator('[data-welcome]').first();
+  const banner = page.locator('[data-welcome-banner]').first();
   if (page.url() === 'about:blank') await page.goto(path);
   for (const theme of ['light', 'dark'] as const) {
     // The workspace app applies the appearance saved on the person's account; the Console keeps its own (light).
@@ -50,14 +50,14 @@ async function check(page: Page, path: string, name: string, badge: string, pref
       await page.setViewportSize(viewport);
       await page.goto(path);
       await expect(banner.locator('[data-welcome-hello]')).toHaveText(new RegExp(`${HELLO.source}${name}`));
-      await expect(banner).toHaveAttribute('data-welcome', /^(morning|afternoon|evening|night)$/);
+      await expect(banner).toHaveAttribute('data-welcome-banner', /^(morning|afternoon|evening|night)$/);
       await expect(banner.locator('[data-welcome-level]')).toHaveText(badge);
       await expect(banner.locator('[data-welcome-line]')).not.toBeEmpty();
       await expect(banner.locator('[data-welcome-date]')).not.toBeEmpty();
       // It never pushes the page sideways.
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
       if (size === 'desktop') {
-        const r = await new AxeBuilder({ page }).include('[data-welcome]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+        const r = await new AxeBuilder({ page }).include('[data-welcome-banner]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
         expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
       }
       if (PREVIEW_DIR) {
@@ -80,7 +80,7 @@ test('every home dashboard and the Console open with a welcome for the time of d
   const priya = await join(browser, p.inviteUrl, 'Priya Sharma');
 
   await check(priya, '/app', 'Priya', 'Executive Workspace', '01-executive');
-  await expect(priya.locator('[data-role-dashboard="EXECUTIVE"] [data-welcome]').getByRole('heading', { level: 1 })).toHaveText('What do I need to do today?');
+  await expect(priya.locator('[data-role-dashboard="EXECUTIVE"] [data-welcome-banner]').getByRole('heading', { level: 1 })).toHaveText('What do I need to do today?');
   await check(manager, '/app', 'Rahul', 'Manager Workspace', '02-manager');
   await check(page, '/app', 'Test', 'Super Workspace', '03-super');
 

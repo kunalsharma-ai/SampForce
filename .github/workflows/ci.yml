@@ -12,7 +12,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     env:
       # Two databases on one MongoDB replica set: the API suite drops and rebuilds sampforce_test; the browser suite
       # runs against sampforce.

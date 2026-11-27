@@ -57,7 +57,7 @@ export function WelcomeBanner({
   return (
     <section
       aria-labelledby={headingId}
-      data-welcome={part}
+      data-welcome-banner={part}
       className={cn('sf-welcome', className)}
       style={{ '--wb-a': colors[0], '--wb-b': colors[1], '--wb-sky-a': SKY[part] } as React.CSSProperties}
     >
