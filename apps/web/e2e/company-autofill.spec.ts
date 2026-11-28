@@ -148,11 +148,11 @@ test('Business Information holds every detail, tells auto-filled values apart, a
   // One Edit opens every field, grouped the same way.
   await info.getByRole('button', { name: 'Edit' }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit business information' });
-  await expect(dialog.getByLabel('Founded')).toHaveValue('2009');
-  await dialog.getByLabel('Founded').fill('2010');
-  const services = dialog.getByLabel('Services');
+  await expect(dialog.getByLabel('Founded', { exact: true })).toHaveValue('2009');
+  await dialog.getByLabel('Founded', { exact: true }).fill('2010');
+  const services = dialog.getByLabel('Services', { exact: true });
   await services.fill((await services.inputValue()).replace('Panel Management\n', '').replace('\nPanel Management', ''));
-  await dialog.getByLabel('Social profiles').fill('https://x.com/NorthwindIns\nhttps://www.tiktok.com/@northwind');
+  await dialog.getByLabel('Social profiles', { exact: true }).fill('https://x.com/NorthwindIns\nhttps://www.tiktok.com/@northwind');
   await dialog.getByRole('button', { name: 'Add detail' }).click();
   await dialog.getByRole('textbox', { name: 'Detail 1' }).fill('Panel size');
   await dialog.getByRole('textbox', { name: 'Value 1' }).fill('2.1 million members');

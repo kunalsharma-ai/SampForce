@@ -64,7 +64,8 @@ test('deletes the whole call history and a company interactions log at once', as
     expect(res.ok(), await res.text()).toBe(true);
   }
 
-  await page.goto('/app/calls');
+  // The history has its own tab on Calls (ADR 0101).
+  await page.goto('/app/calls?tab=history');
   const main = page.getByRole('main');
   await expect(main.getByTestId('call-row')).toHaveCount(3);
   await main.getByRole('button', { name: 'Delete all' }).click();
