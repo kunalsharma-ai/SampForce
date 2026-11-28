@@ -106,6 +106,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorWorkspaces': 'console-clients',
   'page.consoleClient': 'console-clients',
   'page.operatorCreateClient': 'console-clients',
+  'page.operatorSubscriptions': 'console-clients',
   'page.operatorWorkspace': 'console-clients',
   'page.operatorMobile': 'console-clients',
   'page.operatorPlans': 'console-plans',

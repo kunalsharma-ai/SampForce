@@ -72,6 +72,8 @@ export const SUBSCRIPTION_EVENT_KINDS = [
   'REACTIVATED',
   'SUSPENDED',
   'RESUMED',
+  'TRIAL_ENDED',
+  'PAYMENT_FAILED',
 ] as const;
 export type SubscriptionEventKind = (typeof SUBSCRIPTION_EVENT_KINDS)[number];
 
@@ -90,6 +92,8 @@ export const SUBSCRIPTION_EVENT_LABEL: Record<SubscriptionEventKind, string> = {
   REACTIVATED: 'Reactivated',
   SUSPENDED: 'Suspended',
   RESUMED: 'Access restored',
+  TRIAL_ENDED: 'Trial ended',
+  PAYMENT_FAILED: 'Payment failed',
 };
 
 export interface ConsoleSubscriptionEvent {
@@ -124,3 +128,41 @@ export const consoleSubscriptionTrialSchema = z
   .object({ days: z.number().int().min(1).max(90), planCode: z.string().trim().min(1).max(60).optional(), reason })
   .strict();
 export type ConsoleSubscriptionTrialInput = z.infer<typeof consoleSubscriptionTrialSchema>;
+
+/** One client in a list of the subscriptions page (control center K4). */
+export interface ConsoleSubscriptionRow {
+  id: string;
+  name: string;
+  customerId: string | null;
+  planName: string;
+  state: ClientSubscriptionState;
+  /** The day that makes the client appear in the list: trial end, renewal, cancellation or when payment went wrong. */
+  date: string | null;
+  priceCents: number | null;
+  currency: string;
+  billingFrequency: 'MONTH' | 'YEAR';
+  paymentStatus: string | null;
+}
+
+/** GET /operator/subscriptions/summary?days=30: the Console's subscriptions and billing page. */
+export const consoleSubscriptionsQuerySchema = z.object({ days: z.coerce.number().int().refine((n) => [7, 30, 90, 365].includes(n), 'Choose 7, 30, 90 or 365 days.').default(30) });
+export type ConsoleSubscriptionsQuery = z.infer<typeof consoleSubscriptionsQuerySchema>;
+
+export interface ConsoleSubscriptionsSummary {
+  generatedAt: string;
+  /** Clients with a subscription, by state. */
+  states: Record<ClientSubscriptionState, number>;
+  /** Moves over the chosen days, counted from the subscription history. */
+  movements: { days: number; started: number; upgraded: number; downgraded: number; renewed: number; trialsStarted: number; cancelled: number; reactivated: number; paymentFailed: number };
+  /**
+   * Agreed recurring value per month by currency, in minor units, of subscriptions that are running (active, trial,
+   * pending, payment failed): a yearly price counts as a twelfth. Null when the operator may not see billing figures.
+   */
+  monthlyValue: { currency: string; cents: number; clients: number }[] | null;
+  /** Clients without an agreed price are not in monthlyValue; their number is here. */
+  unpriced: number;
+  trialsEnding: ConsoleSubscriptionRow[];
+  renewalsDue: ConsoleSubscriptionRow[];
+  paymentProblems: ConsoleSubscriptionRow[];
+  cancelling: ConsoleSubscriptionRow[];
+}

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { type ConsoleClientCreated, type ConsoleClientDetail, type ConsoleSubscriptionEvent, subscriptionStateOf } from '@dealflow/types';
+import { type ConsoleClientCreated, type ConsoleClientDetail, type ConsoleSubscriptionEvent, type ConsoleSubscriptionsSummary, subscriptionStateOf } from '@dealflow/types';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PasswordService } from '../src/auth/password.service';
@@ -57,6 +57,7 @@ describe('Console subscription lifecycle', () => {
     await a.post('/api/v1/operator/login').set('origin', ORIGIN).send({ email, password }).expect(200);
     return a;
   };
+  const supportAgent = () => support;
   const events = async (id: string) => (await op(admin).get(`/clients/${id}/subscription/events`).expect(200)).body as ConsoleSubscriptionEvent[];
 
   beforeAll(async () => {
@@ -169,5 +170,50 @@ describe('Console subscription lifecycle', () => {
     await op(admin).post(`/clients/${id}/subscription/trial`, { days: 0, reason: 'Zero days' }).expect(400);
     await op(admin).post(`/clients/${id}/subscription/cancel`, { when: 'SOMETIME', reason: 'Bad value' }).expect(400);
     await op(admin).get(`/clients/${randomUUID()}/subscription/events`).expect(404);
+  });
+
+  it('summarises subscriptions by state, counts moves from the history, and lists what needs action', async () => {
+    const summary = async (a: Agent = admin, days = 30) => (await op(a).get(`/subscriptions/summary?days=${days}`).expect(200)).body as ConsoleSubscriptionsSummary;
+    const before = await summary();
+    const make = async (name: string, extra: object) =>
+      ((await op(admin).post('/clients', { organisation: { name: `${name} ${tag}` }, administrator: { name: 'Sue Summary', email: `${name.toLowerCase().replace(/ /g, '')}-${tag}@client.test` }, planCode: 'growth', seats: 3, reason: 'New client', ...extra }).expect(201)).body as ConsoleClientCreated).client.id;
+    // Paid yearly at 12,000.00 INR: 1,000.00 a month. Renews in 20 days, so it is due.
+    const due = await make('Summary Due', { paymentStatus: 'PAID', priceCents: 1_200_000, currency: 'INR', billingFrequency: 'YEAR', durationMonths: 12 });
+    await op(admin).put(`/clients/${due}/subscription`, { renewsOn: new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10), reason: 'Short first term' }).expect(200);
+    const trial = await make('Summary Trial', { paymentStatus: 'PAID', priceCents: 50_000, currency: 'INR' });
+    await op(admin).post(`/clients/${trial}/subscription/trial`, { days: 5, reason: 'Five-day evaluation' }).expect(200);
+    const overdue = await make('Summary Overdue', { paymentStatus: 'OVERDUE', priceCents: 70_000, currency: 'INR' });
+    const leaving = await make('Summary Leaving', { paymentStatus: 'PAID', priceCents: 30_000, currency: 'INR' });
+    await op(admin).post(`/clients/${leaving}/subscription/cancel`, { when: 'PERIOD_END', reason: 'Not renewing next year' }).expect(200);
+    await op(admin).put(`/clients/${leaving}/subscription`, { planCode: 'professional', reason: 'Upgraded before leaving' }).expect(200);
+
+    const after = await summary();
+    expect(after.states.ACTIVE - before.states.ACTIVE).toBe(2);
+    expect(after.states.TRIAL - before.states.TRIAL).toBe(1);
+    expect(after.states.PAYMENT_FAILED - before.states.PAYMENT_FAILED).toBe(1);
+    expect(after.movements.started - before.movements.started).toBe(4);
+    expect(after.movements.trialsStarted - before.movements.trialsStarted).toBe(1);
+    expect(after.movements.upgraded - before.movements.upgraded).toBe(1);
+    const inr = (s: ConsoleSubscriptionsSummary) => s.monthlyValue?.find((v) => v.currency === 'INR') ?? { cents: 0, clients: 0 };
+    // Yearly 12,000 → 1,000 a month; overdue 700 and cancelling-but-running 300 still count; the trial does not.
+    expect(inr(after).cents - inr(before).cents).toBe(100_000 + 70_000 + 30_000);
+    expect(inr(after).clients - inr(before).clients).toBe(3);
+    const names = (rows: { id: string }[]) => rows.map((r) => r.id);
+    expect(names(after.trialsEnding)).toContain(trial);
+    expect(names(after.renewalsDue)).toContain(due);
+    expect(names(after.renewalsDue)).not.toContain(leaving);
+    expect(names(after.paymentProblems)).toContain(overdue);
+    expect(names(after.cancelling)).toContain(leaving);
+    expect(after.cancelling.find((r) => r.id === leaving)).toMatchObject({ planName: 'SampForce Professional', state: 'ACTIVE' });
+
+    // The clients list filters by subscription state.
+    const listed = (await op(admin).get(`/clients/page?subscription=TRIAL&search=${encodeURIComponent(`Summary Trial ${tag}`)}`).expect(200)).body as { items: { id: string }[] };
+    expect(listed.items.map((r) => r.id)).toEqual([trial]);
+
+    // Without billing.view the money is left out; other figures stay.
+    const support = await summary(supportAgent());
+    expect(support.monthlyValue).toBeNull();
+    expect(support.states.TRIAL).toBe(after.states.TRIAL);
+    await op(admin).get('/subscriptions/summary?days=12').expect(400);
   });
 });

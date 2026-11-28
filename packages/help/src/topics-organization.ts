@@ -1564,6 +1564,30 @@ export const organizationHelp = {
       'استخدمه لكل عميل جديد. تظهر البيانات غير الموجودة على أنها غير موجودة ولا تُخمَّن أبدًا، ويحتفظ كل قيمة بمصدرها.',
     ],
   },
+  'page.operatorSubscriptions': {
+    title: 'Subscriptions & billing',
+    what: [
+      'Every client’s subscription by state, what changed over a period, the agreed value per month, and lists of trials ending, renewals due, payment problems and cancellations.',
+      'La suscripción de cada cliente por estado, lo que cambió en un periodo, el valor mensual acordado y listas de pruebas que terminan, renovaciones, problemas de pago y cancelaciones.',
+      'L’abonnement de chaque client par état, ce qui a changé sur une période, la valeur mensuelle convenue et les essais qui finissent, renouvellements, problèmes de paiement et résiliations.',
+      'Das Abo jedes Kunden nach Status, Änderungen im Zeitraum, der vereinbarte Monatswert und Listen zu endenden Tests, Verlängerungen, Zahlungsproblemen und Kündigungen.',
+      'اشتراك كل عميل حسب حالته، وما تغيّر خلال فترة، والقيمة الشهرية المتفق عليها، وقوائم التجارب المنتهية والتجديدات ومشكلات الدفع والإلغاءات.',
+    ],
+    how: [
+      'Choose the period for the changes. Select a state to see those clients, or a client in a list to open its Subscription tab and act there.',
+      'Elige el periodo de los cambios. Selecciona un estado para ver esos clientes, o un cliente de una lista para abrir su pestaña Suscripción.',
+      'Choisissez la période des changements. Sélectionnez un état pour voir ces clients, ou un client d’une liste pour ouvrir son onglet Abonnement.',
+      'Wählen Sie den Zeitraum. Wählen Sie einen Status, um diese Kunden zu sehen, oder einen Kunden in einer Liste, um seinen Tab Abo zu öffnen.',
+      'اختر فترة التغييرات. اختر حالة لرؤية عملائها، أو عميلًا في قائمة لفتح تبويب الاشتراك الخاص به.',
+    ],
+    where: [
+      'Money figures need the See billing permission. Trials are free, so they are not in the monthly value; a yearly price counts as a twelfth.',
+      'Las cifras de dinero requieren el permiso Ver facturación. Las pruebas son gratis y no cuentan; un precio anual cuenta como su doceava parte.',
+      'Les montants demandent le droit Voir la facturation. Les essais sont gratuits et ne comptent pas ; un prix annuel compte pour un douzième.',
+      'Beträge brauchen das Recht Abrechnung sehen. Tests sind kostenlos und zählen nicht; ein Jahrespreis zählt als ein Zwölftel.',
+      'تتطلب الأرقام المالية صلاحية عرض الفوترة. التجارب مجانية فلا تُحسب، ويُحسب السعر السنوي بقسمته على اثني عشر.',
+    ],
+  },
   'page.operatorOperators': {
     title: 'Operators',
     what: [

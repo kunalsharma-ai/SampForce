@@ -175,6 +175,7 @@ export const help = {
   'Workspace Management': ['Gestión de espacios de trabajo', 'Gestion des espaces de travail', 'Arbeitsbereichsverwaltung', 'إدارة مساحات العمل'],
   'Workspace rules': ['Reglas de espacios de trabajo', 'Règles des espaces de travail', 'Regeln für Arbeitsbereiche', 'قواعد مساحات العمل'],
   'Create client': ['Crear cliente', 'Créer un client', 'Kunden anlegen', 'إنشاء عميل'],
+  'Subscriptions & billing': ['Suscripciones y facturación', 'Abonnements et facturation', 'Abos und Abrechnung', 'الاشتراكات والفوترة'],
   'Mobile app': ['Aplicación móvil', 'Application mobile', 'Mobile App', 'تطبيق الجوال'],
   Web: ['Web', 'Web', 'Web', 'الويب'],
   'What kind of problem is it? (optional)': ['¿Qué tipo de problema es? (opcional)', 'De quel type de problème s’agit-il ? (facultatif)', 'Um welche Art von Problem geht es? (optional)', 'ما نوع المشكلة؟ (اختياري)'],

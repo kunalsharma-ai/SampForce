@@ -30,6 +30,7 @@ import { scan, errorMessage } from '../worker/queue';
 import { BillingProviders } from './billing-providers';
 import { featureOverrides, planDefinitions } from './entitlements';
 import { BillingProviderError, InvalidSignatureError, type ParsedEvent, type ProviderSubscription } from './providers';
+import { recordSubscriptionChange } from '../operator/subscription-events';
 
 const DAY = 86_400_000;
 /** Invoice-paid plans: billing managers are reminded this many days before the paid period ends. */
@@ -251,6 +252,7 @@ export class BillingService {
       if (sub.cancelAtPeriodEnd !== cancel) {
         await this.prisma.run(auth, async (tx) => {
           await tx.subscription.update({ where: { tenantId: auth.tenantId }, data: { cancelAtPeriodEnd: cancel } });
+          await recordSubscriptionChange(tx, { tenantId: auth.tenantId, before: sub, kind: cancel ? 'CANCEL_SCHEDULED' : 'REACTIVATED', changes: [cancel ? 'Cancelled by the client at the end of the term' : 'The client withdrew the cancellation'] });
           await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: cancel ? 'billing.cancel_scheduled' : 'billing.cancel_withdrawn', entityType: 'subscription', entityId: sub.id, meta });
         });
       }
@@ -268,6 +270,7 @@ export class BillingService {
     await this.prisma.run(auth, async (tx) => {
       if (remote) await this.applySubscription(tx, auth.tenantId, adapter.key, remote);
       else await tx.subscription.update({ where: { tenantId: auth.tenantId }, data: { cancelAtPeriodEnd: cancel } });
+      await recordSubscriptionChange(tx, { tenantId: auth.tenantId, before: sub, kind: cancel ? 'CANCEL_SCHEDULED' : 'REACTIVATED', changes: [cancel ? 'Cancelled by the client at the end of the term' : 'The client withdrew the cancellation'] });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: cancel ? 'billing.cancel_scheduled' : 'billing.cancel_withdrawn', entityType: 'subscription', entityId: sub.id, meta });
     });
     return { appliesAt: 'cycle_end' as const };
@@ -285,6 +288,7 @@ export class BillingService {
         where: { tenantId: auth.tenantId },
         data: { planCode, status: 'TRIALING', seats: TRIAL_SEATS, trialEndsAt, trialUsedAt: now, currentPeriodStart: now, currentPeriodEnd: trialEndsAt },
       });
+      await recordSubscriptionChange(tx, { tenantId: auth.tenantId, before: sub, kind: 'TRIAL_STARTED', changes: [`Free trial started by the client, until ${trialEndsAt.toISOString().slice(0, 10)}`] });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'billing.trial_started', entityType: 'subscription', entityId: sub.id, metadata: { planCode, trialEndsAt: trialEndsAt.toISOString() }, meta });
       return { trialEndsAt: trialEndsAt.toISOString() };
     });
@@ -395,6 +399,10 @@ export class BillingService {
         trialEndsAt: null, pastDueSince: null, cancelAtPeriodEnd: false,
       },
     });
+    await recordSubscriptionChange(tx, {
+      tenantId, before: sub, ...(sub.planCode === inv.planCode ? { kind: 'RENEWED' as const } : {}),
+      changes: [`Invoice paid (${payment.reference}): ${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)}`], operator: { id: null, email: payment.operator },
+    });
     const paid = await tx.invoice.update({
       where: { id: inv.id },
       data: { status: 'PAID', amountPaidCents: inv.totalCents, paidAt: payment.receivedAt, periodStart: start, periodEnd: end, paymentReference: payment.reference },
@@ -494,6 +502,7 @@ export class BillingService {
         where: { tenantId },
         data: { planCode: 'free', status: 'ACTIVE', seats: 1, billingInterval: 'MONTH', providerSubscriptionId: null, cancelAtPeriodEnd: false, pastDueSince: null, currentPeriodEnd: null, trialEndsAt: null },
       });
+      await recordSubscriptionChange(tx, { tenantId, before: current, kind: 'CANCELLED', changes: [`Ended at ${provider === 'STRIPE' ? 'Stripe' : 'Razorpay'}; back on Free`] });
       await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_ended', entityType: 'subscription', entityId: current.id, metadata: { provider, planCode: current.planCode, eventType } });
       await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid SampForce plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
       return;
@@ -518,6 +527,8 @@ export class BillingService {
     await tx.subscription.update({ where: { tenantId }, data });
     const changed = current.planCode !== planCode || current.status !== remote.status || current.seats !== remote.seats;
     if (changed) {
+      const failed = (remote.status === 'PAST_DUE' || remote.status === 'UNPAID') && current.status !== remote.status;
+      await recordSubscriptionChange(tx, { tenantId, before: current, ...(failed ? { kind: 'PAYMENT_FAILED' as const } : {}), changes: [`From ${provider === 'STRIPE' ? 'Stripe' : 'Razorpay'}${eventType ? ` (${eventType})` : ''}`] });
       await this.audit.record(tx, {
         tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_synced', entityType: 'subscription', entityId: current.id,
         metadata: { provider, eventType, from: { planCode: current.planCode, status: current.status, seats: current.seats }, to: { planCode, status: remote.status, seats: remote.seats } },
@@ -564,11 +575,13 @@ export class BillingService {
     for (const { tenant_id: tenantId } of due) {
       try {
         n += await this.prisma.run({ tenantId }, async (tx) => {
+          const beforeTick = await tx.subscription.findUnique({ where: { tenantId } });
           const ended = await tx.subscription.updateMany({
             where: { tenantId, status: 'TRIALING', trialEndsAt: { lt: new Date() }, providerSubscriptionId: null },
             data: { planCode: 'free', status: 'ACTIVE', seats: 1, trialEndsAt: null, currentPeriodEnd: null },
           });
           if (ended.count) {
+            if (beforeTick) await recordSubscriptionChange(tx, { tenantId, before: beforeTick, kind: 'TRIAL_ENDED', changes: ['Back on Free'] });
             await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.trial_ended', entityType: 'subscription' });
             await this.notifyBilling(tx, tenantId, { type: 'billing.trial_ended', title: 'Your SampForce trial has ended', body: 'The workspace is back on the Free plan. All data is kept; choose a plan to continue with paid features.', link: '/app/billing' });
             return 1;
@@ -577,11 +590,13 @@ export class BillingService {
           if (sub && sub.provider === 'OFFLINE' && sub.status === 'ACTIVE' && sub.currentPeriodEnd && sub.currentPeriodEnd < new Date()) {
             if (sub.cancelAtPeriodEnd) {
               await tx.subscription.update({ where: { tenantId }, data: { planCode: 'free', status: 'ACTIVE', seats: 1, billingInterval: 'MONTH', provider: 'NONE', cancelAtPeriodEnd: false, currentPeriodEnd: null } });
+              await recordSubscriptionChange(tx, { tenantId, before: sub, kind: 'CANCELLED', changes: ['The term ended as cancelled; back on Free'] });
               await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_ended', entityType: 'subscription', entityId: sub.id, metadata: { provider: 'OFFLINE', planCode: sub.planCode } });
               await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid SampForce plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
             } else {
               // The grace period counts from the end of the paid period.
               await tx.subscription.update({ where: { tenantId }, data: { status: 'PAST_DUE', pastDueSince: sub.currentPeriodEnd } });
+              await recordSubscriptionChange(tx, { tenantId, before: sub, kind: 'PAYMENT_FAILED', changes: ['The paid term ended without the renewal invoice paid'] });
               await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.period_ended_unpaid', entityType: 'subscription', entityId: sub.id });
               await this.notifyBilling(tx, tenantId, {
                 type: 'billing.renewal_due', title: 'Your SampForce plan is due for renewal',
@@ -606,6 +621,7 @@ export class BillingService {
           }
           const lapsed = await tx.subscription.updateMany({ where: { tenantId, status: 'PAST_DUE', pastDueSince: { lt: graceStart } }, data: { status: 'UNPAID' } });
           if (lapsed.count) {
+            if (sub) await recordSubscriptionChange(tx, { tenantId, before: sub, kind: 'PAYMENT_FAILED', changes: ['The grace period ended; Free plan limits apply until paid'] });
             await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.grace_ended', entityType: 'subscription' });
             await this.notifyBilling(tx, tenantId, { type: 'billing.unpaid', title: 'Paid features are paused', body: 'The grace period for the failed payment has ended, so Free plan limits apply until it is paid. No data has been removed.', link: '/app/billing' });
             return 1;

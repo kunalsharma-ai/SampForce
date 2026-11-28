@@ -128,6 +128,12 @@ describe('offline payment', () => {
     const after = await sub();
     expect(after.currentPeriodStart.getTime()).toBe(before.currentPeriodEnd!.getTime());
     expect(after.currentPeriodEnd!.getTime()).toBe(addMonths(before.currentPeriodEnd!, 1).getTime());
+ 
+    // Both payments are in the subscription history, recorded by the operator who marked them paid.
+    const events = await asTenant(owner.tenantId, (tx) => tx.subscriptionEvent.findMany({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: 'asc' } }));
+    expect(events.map((e) => e.kind)).toEqual(['UPGRADED', 'RENEWED']);
+    expect(events[1]!.changes[0]).toMatch(/^Invoice paid \(UTR124\)/);
+    expect(events[1]!.operatorEmail).toBeTruthy();
   });
 
   it('reminds billing managers once, a week before the paid period ends', async () => {

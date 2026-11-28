@@ -259,7 +259,7 @@ export function CreateClientWizard() {
     ...(!adminName.trim() ? { adminName: 'Enter the administrator’s name.' } : {}),
     ...(!EMAIL.test(adminEmail.trim()) ? { adminEmail: 'Enter the administrator’s email.' } : {}),
     ...(!(Number(sub.seats) >= 1) ? { seats: 'At least one seat.' } : {}),
-    ...(!plan ? { plan: 'No plan is on sale. Make one available on Plans & subscriptions first.' } : {}),
+    ...(!plan ? { plan: 'No plan is on sale. Make one available on Plans first.' } : {}),
   };
   const subOk = Object.keys(subErrors).length === 0;
   const [subTouched, setSubTouched] = useState(false);
