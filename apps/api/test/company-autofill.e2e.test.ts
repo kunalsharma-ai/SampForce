@@ -138,7 +138,9 @@ describe('company auto-fill', () => {
     // A few look-ups a minute per person.
     for (let i = 0; i < 4; i++) await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(200);
     await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(429);
-  });
+    // Six look-ups, each trying the site in a plain request and then in the hidden browser, can pass 20 seconds on a
+    // busy CI runner.
+  }, 60_000);
 
   describe('sites that hide their details (ADR 0079)', () => {
     let finder: ReturnType<typeof api>;
