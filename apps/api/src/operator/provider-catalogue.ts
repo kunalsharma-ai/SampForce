@@ -13,6 +13,8 @@ export interface CatalogueField {
   help?: string;
   /** An on/off setting: the console shows a switch and saves "true" or "false". */
   switch?: true;
+  /** A workspace, picked from a list in the console and stored as its web address name (slug). */
+  workspace?: true;
   /** A check beyond the environment variable's own rule; returns an error message, or null when the value is fine. */
   validate?: (value: string) => string | null;
   /** Rewrites a valid value into one spelling before it is stored. */
@@ -435,7 +437,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       { name: 'WEBSITE_API_BASE_URL', label: 'API address', required: true, help: 'The website super admin > System > Sampforce (sales) > API address, for example https://www.frequentresearch.com/api/v1/sampforce.', normalize: (v) => v.replace(/\/+$/, '') },
       { name: 'WEBSITE_API_KEY', label: 'API key (sfk_...)', required: true, help: 'Made under System > Sampforce (sales) > Make an API key. Shown there only once. Keep the default rights; leads:write lets SampForce send statuses back.', validate: (v) => (/^sfk_\S{8,}$/.test(v) ? null : 'The key starts with sfk_.') },
       { name: 'WEBSITE_WEBHOOK_SECRET', label: 'Webhook signing secret', required: false, help: 'The same text as SAMPFORCE_WEBHOOK_SECRET on the website (at least 16 characters). Without it only the pull sync brings enquiries in.' },
-      { name: 'WEBSITE_ENQUIRY_WORKSPACE', label: 'Receiving workspace (web address name)', required: true, help: "The workspace's web address name (slug), shown on the client's page in Clients. Saving it also switches the Website enquiries feature on for that client.", normalize: (v) => v.toLowerCase() },
+      { name: 'WEBSITE_ENQUIRY_WORKSPACE', label: 'Receiving workspace', required: true, workspace: true, help: 'The workspace that receives the enquiries. Pick it from the list. Saving it also switches the Website enquiries feature on for that workspace.' },
     ],
     tested: ['WEBSITE_API_BASE_URL', 'WEBSITE_API_KEY'],
     checkNote: "Calls the website's /ping with the key: it answers with the key's name and rights. Nothing is read or changed.",

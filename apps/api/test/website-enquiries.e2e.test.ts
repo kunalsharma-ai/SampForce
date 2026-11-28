@@ -296,7 +296,7 @@ describe('Website enquiries in the operator Console', () => {
     const agent = request.agent(app.getHttpServer());
     await agent.post('/api/v1/operator/login').set('origin', ORIGIN).send({ email, password }).expect(200);
     const post = (u: string, b: object = {}) => agent.post(`/api/v1/operator${u}`).set('origin', ORIGIN).send(b);
-    type Row = { key: string; state: string; setup: { urls: { label: string; url: string }[] }; webhook: { state: string } | null; lastCheck: { ok: boolean; message: string } | null };
+    type Row = { key: string; state: string; setup: { urls: { label: string; url: string }[] }; webhook: { state: string } | null; lastCheck: { ok: boolean; message: string } | null; env: { name: string; input: string; hint: string | null }[] };
     const row = async () => ((await agent.get('/api/v1/operator/providers').expect(200)).body as Row[]).find((r) => r.key === 'website_enquiries')!;
     const r0 = await row();
     expect(r0).toMatchObject({ state: 'not_configured', webhook: { state: 'waiting' } });
@@ -309,6 +309,10 @@ describe('Website enquiries in the operator Console', () => {
     // The section is on for that workspace now.
     const s = (await api(owner).get('/website-enquiries/summary').expect(200)).body as EnquirySummary;
     expect(s).toMatchObject({ connected: true, sync: { configured: true } });
+    // The workspace's full name works too (any case); its web address name is what is stored.
+    expect((await row()).env.find((f: { name: string }) => f.name === 'WEBSITE_ENQUIRY_WORKSPACE')).toMatchObject({ input: 'workspace', hint: slug });
+    await post('/providers/website_enquiries/keys', { values: { WEBSITE_ENQUIRY_WORKSPACE: 'receiving org' } }).expect(200);
+    expect((await row()).env.find((f: { name: string }) => f.name === 'WEBSITE_ENQUIRY_WORKSPACE')).toMatchObject({ hint: slug });
     const checked = (await post('/providers/website_enquiries/check').expect(200)).body as Row;
     expect(checked).toMatchObject({ state: 'verified', lastCheck: { ok: true, message: expect.stringContaining('"Sampforce production"') } });
     // The key is stored in the database, not shown back in full.

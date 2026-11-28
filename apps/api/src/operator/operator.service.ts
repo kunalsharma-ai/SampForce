@@ -320,7 +320,7 @@ export class OperatorService {
         const value: unknown = this.env[f.name];
         return {
           name: f.name, label: f.label, required: f.required, secret: MANAGED_KEYS[f.name].secret,
-          input: f.switch ? ('switch' as const) : MANAGED_KEYS[f.name].secret ? ('secret' as const) : ('text' as const),
+          input: f.switch ? ('switch' as const) : f.workspace ? ('workspace' as const) : MANAGED_KEYS[f.name].secret ? ('secret' as const) : ('text' as const),
           set: value !== undefined && value !== null && value !== '',
           source: st.source,
           imported: st.imported,
@@ -413,11 +413,19 @@ export class OperatorService {
       else if (extra) details.push({ path: `values.${name}`, message: extra });
       else changes[name] = def?.normalize ? def.normalize(parsed.value) : parsed.value;
     }
-    // Website enquiries (ADR 0095): the receiving workspace must exist, by its web address name.
-    const receiving = changes.WEBSITE_ENQUIRY_WORKSPACE
-      ? await this.prisma.run({ operatorScan: true }, (tx) => tx.tenant.findFirst({ where: { slug: changes.WEBSITE_ENQUIRY_WORKSPACE!, deletedAt: null }, select: { id: true, name: true } }))
-      : null;
-    if (changes.WEBSITE_ENQUIRY_WORKSPACE && !receiving) details.push({ path: 'values.WEBSITE_ENQUIRY_WORKSPACE', message: `No workspace has the web address name "${changes.WEBSITE_ENQUIRY_WORKSPACE}". Copy it from the client's page in Clients.` });
+    // Website enquiries (ADR 0095): the receiving workspace must exist. It is picked from a list (its web address name),
+    // but its full name is accepted too, and the web address name is what is stored.
+    let receiving: { id: string; name: string; slug: string } | null = null;
+    const wanted = changes.WEBSITE_ENQUIRY_WORKSPACE?.trim();
+    if (wanted) {
+      const found = await this.prisma.run({ operatorScan: true }, (tx) =>
+        tx.tenant.findMany({ where: { deletedAt: null, OR: [{ slug: wanted.toLowerCase() }, { name: { equals: wanted, mode: 'insensitive' } }] }, select: { id: true, name: true, slug: true }, take: 3 }),
+      );
+      const bySlug = found.find((t) => t.slug === wanted.toLowerCase());
+      receiving = bySlug ?? (found.length === 1 ? found[0]! : null);
+      if (receiving) changes.WEBSITE_ENQUIRY_WORKSPACE = receiving.slug;
+      else details.push({ path: 'values.WEBSITE_ENQUIRY_WORKSPACE', message: found.length > 1 ? `More than one workspace is called "${wanted}". Pick the right one from the list.` : `No workspace is called "${wanted}". Pick it from the list.` });
+    }
     if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: details[0]!.message, details });
     const done = await this.keys.apply(changes, op.id);
     // Naming the receiving workspace also switches the section on for it, so one step sets it up.
