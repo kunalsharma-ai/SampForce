@@ -11,11 +11,14 @@ export const ORIGIN = 'http://localhost:3000';
 const FILE_STARTED_AT = new Date();
 
 export async function startApp(): Promise<INestApplication> {
-  // Test files share one database and run one after another. Earlier files leave company auto-fill runs queued for
-  // made-up websites; this file's worker would claim them and app.close() would wait out each look-up (up to about
-  // 30 seconds), timing out the afterAll hook. Runs queued before this file started are closed first.
+  // Test files share one database and run one after another, and the worker reads every workspace's queues. Work
+  // that earlier files left queued is set aside first, so this file's worker only does this file's work:
+  // - company auto-fill runs for made-up websites: app.close() would wait out each look-up (up to about 30 seconds);
+  // - domain events never relayed: worker.drain() would relay hundreds of them, 100 a tick, for up to 10 ticks.
   const db = ownerClient();
-  await db.companyEnrichment.updateMany({ where: { status: 'PENDING', createdAt: { lt: FILE_STARTED_AT } }, data: { status: 'FAILED', error: 'Closed by the test set-up: queued by an earlier test file.' } });
+  const leftover = { lt: FILE_STARTED_AT };
+  await db.companyEnrichment.updateMany({ where: { status: 'PENDING', createdAt: leftover }, data: { status: 'FAILED', error: 'Closed by the test set-up: queued by an earlier test file.' } });
+  await db.domainEvent.updateMany({ where: { processedAt: null, createdAt: leftover }, data: { processedAt: new Date(), lastError: 'Set aside by the test set-up: queued by an earlier test file.' } });
   await db.$disconnect();
   const app = await createApp();
   await app.init();
