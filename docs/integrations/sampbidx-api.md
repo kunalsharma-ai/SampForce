@@ -18,10 +18,16 @@ example `https://bids.frequentresearch.com/api`. SampForce adds `/v1/...` to it.
 
 ## Connecting
 
-1. In SampBidx, create an API key for SampForce.
-2. In SampForce, a workspace admin opens **Integrations → SampBidx**, enters the API address and the key, and
-   presses **Check and save**. SampForce calls `GET /v1/ping` once and saves only if SampBidx answers 200.
-3. SampForce then shows a **status callback URL** and a **callback signing secret**. Store both in SampBidx.
+SampBidx's Integration Hub asks for the callback URL and signing secret before it saves and creates the key, so
+SampForce gives them out first:
+
+1. In SampForce, a workspace admin opens **Integrations → SampBidx** (or **SampBidx settings**) and presses **Show
+   the callback URL and signing secret** (`POST /apps/sampbidx/callback-setup`). The connection stays "not
+   connected" and status updates to that URL are refused until step 3.
+2. In SampBidx, paste them into **Status callback URL** and **Callback signing secret**, save, and create an API
+   key for SampForce.
+3. Back in SampForce, enter SampBidx's API address and the key, and press **Check and save**. SampForce calls
+   `GET /v1/ping` once and saves only if SampBidx answers 200. The callback URL and secret stay the same.
 
 In production a public address must be `https://`. SampForce refuses private and internal addresses (10.x,
 192.168.x, 172.16-31.x, localhost and so on) so a typed-in address cannot reach internal systems, unless the
@@ -42,7 +48,10 @@ Accept: application/json
 User-Agent: SampForce
 ```
 
-Answer **401** or **403** for a wrong or revoked key. SampForce then marks the connection as needing a new key.
+Answer **401** or **403** for a wrong or revoked key. When a send is refused with 401 or 403, SampForce asks
+`GET /v1/ping` again with the same key: if ping refuses it too, the connection is marked as needing a new key; if
+ping accepts it, the send fails with "SampBidx accepts the API key but refused the client (403 at PUT /v1/clients): …"
+and the connection stays usable, because the key is fine and that path is what is missing or not allowed.
 
 ## GET /v1/ping
 
@@ -366,8 +375,10 @@ Errors SampForce shows to the person:
 | Status | What SampForce shows |
 | --- | --- |
 | 400 or 422 with `{"error": {"message": "…"}}` | "SampBidx refused the RFQ: …" with your message, so make it readable |
-| 401 / 403 | The key was refused; an admin must enter a new one |
-| 404 | No API at that address |
+| 401 / 403, and ping refuses the key too | The key was refused; an admin must enter a new one |
+| 401 / 403, but ping accepts the key | "SampBidx accepts the API key but refused … (403 at PUT /v1/clients)", with your message |
+| 404 at `/v1/ping` | No API at that address |
+| 404 at another path | "SampBidx has not built PUT /v1/clients yet (404)" |
 | 413 | Files too large |
 | 429 | SampBidx is busy |
 | 5xx, timeout (60 s), network error | "Try again shortly"; the send can be retried |

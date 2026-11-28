@@ -12,6 +12,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { inSentence, rich, type Translator, useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
+import { SampbidxCallbackSetup } from '@/components/sampbidx/callback-setup';
 
 const OUTCOME: Record<string, string> = {
   oauth_state_invalid: 'The connect link expired or belonged to another session. Try connecting again.',
@@ -683,6 +684,7 @@ function SampbidxCard({ app }: { app: AppStatus }) {
             </p>
           </div>
         )}
+        {!c && canManage && <SampbidxCallbackSetup />}
         {showForm && (
           <form
             className="space-y-2 rounded-md border border-dashed p-3"

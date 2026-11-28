@@ -58,6 +58,18 @@ test('SampBidx settings test the connection step by step, and deals and won comp
   await page.goto('/app/integrations/sampbidx');
   const status = page.getByRole('region', { name: 'SampBidx connection status' });
   await expect(status).toContainText('Not connected');
+
+  // SampBidx asks for the callback URL and signing secret before it creates a key: SampForce gives them first.
+  const setup = page.getByTestId('sampbidx-callback-setup');
+  await setup.getByRole('button', { name: 'Show the callback URL and signing secret' }).click();
+  const callbackUrl = await setup.getByLabel('Status callback URL').inputValue();
+  const callbackSecret = await setup.getByLabel('Callback signing secret').inputValue();
+  expect(callbackUrl).toMatch(/^http.*\/api\/v1\/apps\/sampbidx\/callbacks\/[a-f0-9]{24}$/);
+  expect(callbackSecret.length).toBeGreaterThanOrEqual(16);
+  await expect(setup.getByRole('button', { name: 'Copy the signing secret' })).toBeVisible();
+  await expect(status).toContainText('Not connected');
+  await axe(page);
+  await shotPage(page, '00-callback-before-key-light');
   await page.getByLabel('SampBidx API address').fill(SBX_URL);
   await page.getByLabel('API key', { exact: true }).fill(SBX_KEY);
   await page.getByRole('button', { name: 'Test these details' }).click();
@@ -74,6 +86,8 @@ test('SampBidx settings test the connection step by step, and deals and won comp
   await expect(page.getByText(/SampBidx accepted the address and the key/)).toBeVisible();
   await page.getByRole('button', { name: 'Check and save' }).click();
   await expect(page.getByText('SampBidx accepted the key. It is saved.')).toBeVisible();
+  // The same URL and secret as before the key, so what was typed into SampBidx stays right.
+  expect(await (await page.request.get('/api/v1/apps/sampbidx/callback-secret')).json()).toEqual({ callbackUrl, secret: callbackSecret });
   await expect(status).toContainText('Connected');
   await expect(status).toContainText('ends in 6789');
   await expect(page.locator('body')).not.toContainText(SBX_KEY);

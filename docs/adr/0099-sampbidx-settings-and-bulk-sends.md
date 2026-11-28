@@ -55,3 +55,21 @@ credentials never reach the browser, nothing is invented (prices, taxes, discoun
   fail with SampBidx's real answer (404) and show it, and a won company send updates the client only.
 - The deals bulk bar slot from the Deals redesign (`components/deals/sampbidx-bulk-slot.tsx`) is filled in here.
 - Item reasons are stored in English in the batch, like transfer errors.
+
+## Addendum (2026-11-28): callback details before a key, and a refused path is not a refused key
+
+- SampBidx's real Integration Hub will not save, and so will not create the API key, until it has the status
+  callback URL and signing secret. SampForce showed those only after a key was saved. Now `POST
+  /apps/sampbidx/callback-setup` (`integrations:manage`) makes them first: a connection row with status DISCONNECTED,
+  no address and no key, which every reader already treats as "not connected" (sends refused, callbacks refused, the
+  overview and the Integrations card say Not connected, a test does not change it). Calling it again, or saving the
+  key later, keeps the same URL and secret. Audited as `app.callback_prepared`; the first saved key is then
+  `app.connected`, not `app.keys_replaced`.
+- Kunal's client sends failed with "SampBidx refused the API key" while the key check passed a minute earlier: SampBidx
+  answers 401/403 at `PUT /v1/clients`, which it has not built. SampForce read that as a revoked key and marked the
+  whole connection ERROR, which also blocked RFQ sends that work. Now a 401/403 on any path other than `/v1/ping` is
+  checked against `/v1/ping` with the same key; if ping accepts it the send fails with code `forbidden` and the
+  message "SampBidx accepts the API key but refused the client (403 at PUT /v1/clients): <SampBidx's reason>. SampBidx
+  must allow PUT /v1/clients for this key; a new key does not change this." and the connection is left as it is. A 404
+  at a path other than `/v1/ping` now says "SampBidx has not built PUT /v1/clients yet (404)." instead of "no API at
+  that address". Chat sends treat `forbidden` as final (no automatic retries).

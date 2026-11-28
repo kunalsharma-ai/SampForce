@@ -143,4 +143,21 @@ export const sampbidxBulk = {
   'Keep sending in the background': ['Seguir enviando en segundo plano', 'Continuer l’envoi en arrière-plan', 'Im Hintergrund weiter senden', 'متابعة الإرسال في الخلفية'],
   'won company': ['empresa ganada', 'entreprise gagnée', 'gewonnenes Unternehmen', 'شركة مكسوبة'],
   'won companies': ['empresas ganadas', 'entreprises gagnées', 'gewonnene Unternehmen', 'شركات مكسوبة'],
+  // Callback URL and secret before a key (SampBidx asks for them first)
+  'Step 1: give SampBidx the callback URL and signing secret': ['Paso 1: da a SampBidx la URL de devolución y el secreto de firma', 'Étape 1 : donnez à SampBidx l’URL de rappel et le secret de signature', 'Schritt 1: SampBidx die Rückmelde-URL und das Signaturgeheimnis geben', 'الخطوة 1: أعطِ SampBidx عنوان الاستدعاء وسر التوقيع'],
+  'SampBidx asks for these before it saves and creates the API key. Paste them into SampBidx’s Status callback URL and Callback signing secret, save there, create the key, then paste the key below. They stay the same when the key is saved.': [
+    'SampBidx los pide antes de guardar y crear la clave de API. Pégalos en Status callback URL y Callback signing secret de SampBidx, guarda allí, crea la clave y pégala abajo. No cambian al guardar la clave.',
+    'SampBidx les demande avant d’enregistrer et de créer la clé d’API. Collez-les dans Status callback URL et Callback signing secret de SampBidx, enregistrez-y, créez la clé, puis collez-la ci-dessous. Ils ne changent pas quand la clé est enregistrée.',
+    'SampBidx verlangt sie, bevor es speichert und den API-Schlüssel erstellt. Fügen Sie sie in SampBidx unter Status callback URL und Callback signing secret ein, speichern Sie dort, erstellen Sie den Schlüssel und fügen Sie ihn unten ein. Sie bleiben gleich, wenn der Schlüssel gespeichert wird.',
+    'يطلب SampBidx هذين قبل أن يحفظ وينشئ مفتاح API. الصقهما في حقلي Status callback URL وCallback signing secret في SampBidx، واحفظ هناك، وأنشئ المفتاح، ثم الصقه أدناه. يبقيان كما هما عند حفظ المفتاح.',
+  ],
+  'Copy the callback URL': ['Copiar la URL de devolución', 'Copier l’URL de rappel', 'Rückmelde-URL kopieren', 'نسخ عنوان الاستدعاء'],
+  'Copy the signing secret': ['Copiar el secreto de firma', 'Copier le secret de signature', 'Signaturgeheimnis kopieren', 'نسخ سر التوقيع'],
+  'Show the callback URL and signing secret': ['Mostrar la URL de devolución y el secreto de firma', 'Afficher l’URL de rappel et le secret de signature', 'Rückmelde-URL und Signaturgeheimnis anzeigen', 'إظهار عنوان الاستدعاء وسر التوقيع'],
+  'If the key test passes but a send says SampBidx refused a path (403), SampBidx has not allowed or built that path yet. A new key does not change this: ask the SampBidx team to add it.': [
+    'Si la prueba de la clave pasa pero un envío dice que SampBidx rechazó una ruta (403), SampBidx aún no ha permitido o creado esa ruta. Una clave nueva no cambia esto: pide al equipo de SampBidx que la añada.',
+    'Si le test de la clé réussit mais qu’un envoi indique que SampBidx a refusé un chemin (403), SampBidx n’a pas encore autorisé ou créé ce chemin. Une nouvelle clé n’y change rien : demandez à l’équipe SampBidx de l’ajouter.',
+    'Wenn der Schlüsseltest besteht, ein Versand aber meldet, dass SampBidx einen Pfad abgelehnt hat (403), hat SampBidx diesen Pfad noch nicht freigegeben oder gebaut. Ein neuer Schlüssel ändert das nicht: Bitten Sie das SampBidx-Team, ihn hinzuzufügen.',
+    'إذا نجح اختبار المفتاح لكن ذكر الإرسال أن SampBidx رفض مسارًا (403)، فإن SampBidx لم يسمح بهذا المسار أو لم يبنه بعد. المفتاح الجديد لا يغيّر ذلك: اطلب من فريق SampBidx إضافته.',
+  ],
 } as const satisfies PhraseTable;

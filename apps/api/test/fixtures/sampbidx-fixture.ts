@@ -71,6 +71,8 @@ export interface SampbidxFixture {
   messages: SbxMessage[];
   calls: string[];
   failNext(n: number): void;
+  /** Paths (like "/v1/clients") that answer 403 even with the right key, as a SampBidx that has not allowed or built them. */
+  forbidden: Set<string>;
   close(): Promise<void>;
 }
 
@@ -113,6 +115,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   const clients = new Map<string, SbxClient>();
   const deals = new Map<string, SbxDeal>();
   let failures = 0;
+  const forbidden = new Set<string>();
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://fixture');
     const chunks: Buffer[] = [];
@@ -134,6 +137,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
       if (!u.pathname.startsWith('/api/v1/')) return void json(404, { error: { message: 'Not found' } });
       const path = u.pathname.slice('/api'.length);
       if (req.headers.authorization !== `Bearer ${SBX.key}`) return void json(401, { error: { message: 'Invalid API key' } });
+      if ([...forbidden].some((f) => path.startsWith(f))) return void json(403, { error: { message: 'Not allowed for this key' } });
       if (req.method === 'GET' && path === '/v1/ping') return void json(200, { ok: true, account: { name: SBX.account }, apiVersion: 'v1' });
       if (req.method === 'POST' && path === '/v1/messages') {
         if (failures > 0) {
@@ -241,6 +245,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
     messages,
     calls,
     failNext: (n) => void (failures = n),
+    forbidden,
     close: () => new Promise((r) => server.close(() => r())),
   };
 }

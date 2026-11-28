@@ -7,6 +7,7 @@ import { Ban, Building2, ChevronDown, CircleCheck, CircleDashed, FileText, Hands
 import Link from 'next/link';
 import * as React from 'react';
 import { Progress } from '@/components/sampbidx/bulk-send';
+import { SampbidxCallbackSetup } from '@/components/sampbidx/callback-setup';
 import { useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
@@ -195,6 +196,7 @@ function ConnectionCard({ baseUrl, connected }: { baseUrl: string | null; connec
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
+        {!connected && <SampbidxCallbackSetup idPrefix="sbx-settings-setup" />}
         <p className="text-muted-foreground">{t('Test first: SampForce calls SampBidx and shows each step, without saving. Save stores the key encrypted on the server; it never comes back to the browser.')}</p>
         <form
           className="space-y-3"
@@ -246,6 +248,7 @@ function ConnectionCard({ baseUrl, connected }: { baseUrl: string | null; connec
             <li>{t('A public address must use https://. If SampBidx runs on the same server or your own network, a SampForce operator must approve its address in Console → Providers → Workspace servers → Approved private hosts.')}</li>
             <li>{t('Inside Docker, localhost is SampForce itself: use SampBidx’s container name or server address.')}</li>
             <li>{t('The API key is one SampBidx made for SampForce. A refused key needs a new one from SampBidx.')}</li>
+            <li>{t('If the key test passes but a send says SampBidx refused a path (403), SampBidx has not allowed or built that path yet. A new key does not change this: ask the SampBidx team to add it.')}</li>
           </ul>
           <p className="mt-2">
             <Link href="/app/integrations#app-sampbidx" className="font-medium text-primary hover:underline">
