@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'Performance', 'Recognition', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Inbound contacts', 'Accounts', 'Sales Activities',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'Approvals', 'Performance', 'Recognition', 'RFQs', 'Team chat', 'My achievements', 'Learning & Development', 'Team status', 'Inbound contacts', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Revenue Intelligence', 'Forecasting',
-  'Reports & Analytics', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
+  'Reports & Analytics', 'My Organization', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
 ];
 
 test('redirects visitors without a session to sign-in', async ({ page }) => {
@@ -36,7 +36,7 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
 });
 
 test('every sidebar entry leads to a working page', async ({ page }) => {
-  // 36 pages, each opened and checked: more than the default 30 s when the suite runs in parallel.
+  // 39 pages, each opened and checked: more than the default 30 s when the suite runs in parallel.
   test.setTimeout(120_000);
   await signUp(page);
   // Module sections only: Favourites repeats some of the same links.

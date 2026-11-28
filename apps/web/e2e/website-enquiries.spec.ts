@@ -113,13 +113,13 @@ test('the website is connected in the Console, enquiries arrive, and one is foll
   await expectNoA11yViolations(page);
   await shot(page, 'website-enquiry-overview', true);
 
-  // Filter by type: the chat lead only.
-  const chatTile = main.getByRole('button', { name: /^\d+ Live chat leads/ });
+  // Filter by type: the chat enquiry only.
+  const chatTile = main.getByRole('button', { name: /^\d+ Live chat enquiries/ });
   await chatTile.click();
   await expect(chatTile).toHaveAttribute('aria-pressed', 'true');
   await expect(main.getByRole('list', { name: 'Website enquiries' }).getByRole('listitem')).toHaveCount(1);
   await expect(main.getByRole('list', { name: 'Website enquiries' })).toContainText('Lina Haddad');
-  await main.getByRole('button', { name: 'Remove filter Live chat leads' }).click();
+  await main.getByRole('button', { name: 'Remove filter Live chat enquiries' }).click();
   await expect(main.getByRole('list', { name: 'Website enquiries' }).getByRole('listitem')).toHaveCount(11);
 
   // Open the new RFQ: every field the form asked, then follow it up.

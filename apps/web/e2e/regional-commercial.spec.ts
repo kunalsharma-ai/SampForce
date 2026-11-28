@@ -117,6 +117,8 @@ test('Arabic shows billing and approvals right to left, starts a trial and passe
 
   await page.goto('/app/approvals');
   await expect(main.getByRole('heading', { name: 'الموافقات', level: 1 })).toBeVisible();
+  // Automation and quote approvals have their own tab in the Approval section (ADR 0098).
+  await main.getByRole('tab', { name: 'الأتمتة وعروض الأسعار' }).click();
   await expect(main.getByRole('tablist', { name: 'حالة الموافقة' })).toBeVisible();
   await expect(main.getByText('لا شيء بانتظار الموافقة.')).toBeVisible();
   await axe(page);

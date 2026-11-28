@@ -95,16 +95,18 @@ test('every section is free of overlapping text and sideways scrolling, at every
   expect(failures, failures.join('\n\n')).toEqual([]);
 });
 
-test('the Add my dialer window keeps its title clear of the close button and fits on screen', async ({ page }) => {
+test('the Add a dialer window keeps its title clear of the close button and fits on screen', async ({ page }) => {
   test.setTimeout(120_000);
   await signUp(page, 'Dialer Layout Research');
   for (const size of LAYOUT_SIZES) {
     await page.setViewportSize({ width: size.width, height: size.height });
-    await page.goto('/app/calls');
-    await page.getByRole('button', { name: /Add (my )?dialer/ }).first().click();
+    // Dialers are added on the Dialer settings tab of Calls (ADR 0101).
+    await page.goto('/app/calls?tab=settings');
+    await page.getByRole('button', { name: /Add (a |my )?dialer/ }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: /My dialer \(custom link\)/ }).click().catch(() => undefined);
+    // The longest set-up form: a custom cloud dialer, with its address, keys and request.
+    await dialog.getByRole('button', { name: /^Any cloud dialer \(API\)/ }).click();
     const box = (await dialog.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(0);
     expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1);

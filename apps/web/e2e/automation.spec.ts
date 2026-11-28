@@ -90,7 +90,8 @@ test('waits for approval before emailing and reports why a run failed', async ({
     await expect(page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Approval needed/ })).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 20_000 });
   await page.keyboard.press('Escape');
-  await page.goto('/app/approvals');
+  // Automation approvals have their own tab in the Approval section (ADR 0098).
+  await page.goto('/app/approvals?box=automation');
   await expect(page.getByRole('heading', { name: /Email the record: "Great to meet you" to nina@buyer.test/ })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('[data-section-read="yes"]')).toContainText('Marked as read');
   await expectNoA11yViolations(page);

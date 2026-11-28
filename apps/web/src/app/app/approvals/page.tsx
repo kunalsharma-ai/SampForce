@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { PageHeader } from '@/components/page-header';
 import { ApprovalCenter } from './approval-center';
 
 export const metadata: Metadata = { title: 'Approvals' };
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: 'Approvals' };
 export default function ApprovalsPage() {
   return (
     <div className="max-w-5xl">
+      <PageHeader title="Approvals" />
       <Suspense>
         <ApprovalCenter />
       </Suspense>
