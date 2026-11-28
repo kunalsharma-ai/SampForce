@@ -31,11 +31,13 @@ import { CallHistory, type Target } from '@/components/calls/call-history';
 import { SoundsToggle, WorkspaceCallSettings } from '@/components/calls/call-settings';
 import { DialerSettingsPanel, ProviderMark } from '@/components/calls/dialer-settings';
 import { OutcomeChip } from '@/components/calls/outcomes';
+import { PhoneNumber } from '@/components/calls/phone-number';
 import { CallRecordings } from '@/components/calls/recordings';
 import { CompanyLogo } from '@/components/crm/company-logo';
 import { formatDateTime } from '@/components/crm/follow-ups';
 import { Select } from '@/components/crm/select';
 import { playIncoming, playKey } from '@/lib/call-sounds';
+import { DialContext, type DialLink, type DialRequest, dialableNumber } from '@/lib/dial-number';
 import { openDialer, talkTime, useCallDetails, useCallFavorites, useCallMutations, useCalls, useCallSearch, useCallStats, useClearNumberFlag, useDialers, useFavoriteMutation } from '@/lib/calls';
 import { useFollowUps } from '@/lib/company-work';
 import { fmtLocale, type MessageKey, useT } from '@/lib/i18n';
@@ -105,8 +107,35 @@ export function CallsWorkspace() {
     setTabState('dialer');
     url({ tab: 'dialer' });
   };
+  // A number clicked anywhere on the page goes into the dialer, ready to call.
+  // Cleared once the dialer has taken it, so coming back to the Dialer tab later does not put it in again.
+  const [dialRequest, setDialRequest] = React.useState<DialRequest | null>(null);
+  const dialSeq = React.useRef(0);
+  const urlRef = React.useRef(url);
+  urlRef.current = url;
+  const fill = React.useCallback(
+    (raw: string, link?: DialLink | null) => {
+      const number = dialableNumber(raw);
+      if (!number || !canCall) return false;
+      dialSeq.current += 1;
+      setDialRequest({ number, link: link ?? null, seq: dialSeq.current });
+      setTabState('dialer');
+      urlRef.current({ tab: 'dialer' });
+      return true;
+    },
+    [canCall],
+  );
+  const dial = React.useMemo(() => ({ fill }), [fill]);
+  // Phone links and marked numbers anywhere inside, including ones loaded later, do the same.
+  const onClickCapture = (e: React.MouseEvent) => {
+    const el = (e.target as Element | null)?.closest?.('a[href^="tel:" i], a[href^="callto:" i], [data-dial-number]');
+    if (!el) return;
+    const raw = el.getAttribute('data-dial-number') || el.getAttribute('href') || '';
+    if (fill(raw)) e.preventDefault();
+  };
   return (
-    <div className="space-y-5">
+    <DialContext.Provider value={dial}>
+    <div className="space-y-5" onClickCapture={onClickCapture}>
       <CallStatsStrip watchIncoming={watchIncoming} onAnswer={started} />
       <div role="tablist" aria-label={t('Calls')} className="flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
         {TABS.filter((x) => canCall || (x.key !== 'settings' && x.key !== 'dialer')).map(({ key, label, icon: Icon }) => (
@@ -125,7 +154,7 @@ export function CallsWorkspace() {
       {tab === 'dialer' && canCall && (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <div className="min-w-0 space-y-5">
-            <DialerPhone dialerId={chosen?.id ?? null} onDialer={setDialerId} callerId={callerId} onCallerId={setCallerId} onPick={pick} onStarted={started} />
+            <DialerPhone request={dialRequest} onRequestUsed={() => setDialRequest(null)} dialerId={chosen?.id ?? null} onDialer={setDialerId} callerId={callerId} onCallerId={setCallerId} onPick={pick} onStarted={started} />
           </div>
           <div className="min-w-0 space-y-5">
             {activeId && <ActiveCall key={activeId} id={activeId} onDone={() => setActiveId(null)} />}
@@ -157,6 +186,7 @@ export function CallsWorkspace() {
         </section>
       )}
     </div>
+    </DialContext.Provider>
   );
 }
 
@@ -192,7 +222,9 @@ function CallStatsStrip({ watchIncoming, onAnswer }: { watchIncoming: boolean; o
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{t('Incoming call: {name}', { name: c.employee?.name ?? c.company?.name ?? c.number })}</p>
-            <p className="text-sm opacity-90">{[c.employee && c.company?.name, c.number, t('on {dialer}', { dialer: c.dialer.name })].filter(Boolean).join(' · ')}</p>
+            <p className="text-sm opacity-90">
+              {[c.employee && c.company?.name, t('on {dialer}', { dialer: c.dialer.name })].filter(Boolean).join(' · ')} · <PhoneNumber number={c.number} link={{ companyId: c.company?.id ?? null, contactId: c.employee?.id ?? null, source: 'OTHER', label: [c.employee?.name, c.company?.name].filter(Boolean).join(' · ') || null }} />
+            </p>
           </div>
           <Button className="bg-white text-indigo-700 hover:bg-white/90" onClick={() => onAnswer(c.id)}>
             {t('Open the call')}
@@ -254,7 +286,7 @@ const KEYS: [string, string][] = [
 ];
 const CODE_KEY = 'sampforce.calls.country';
 
-function DialerPhone({ dialerId, onDialer, callerId, onCallerId, onPick, onStarted }: { dialerId: string | null; onDialer: (id: string | null) => void; callerId: string | null; onCallerId: (v: string | null) => void; onPick: (t: Target) => void; onStarted: (id: string) => void }) {
+function DialerPhone({ request, onRequestUsed, dialerId, onDialer, callerId, onCallerId, onPick, onStarted }: { request: DialRequest | null; onRequestUsed: () => void; dialerId: string | null; onDialer: (id: string | null) => void; callerId: string | null; onCallerId: (v: string | null) => void; onPick: (t: Target) => void; onStarted: (id: string) => void }) {
   const t = useT();
   const dialers = useDialers();
   const usable = (dialers.data?.dialers ?? []).filter((d) => d.active);
@@ -263,7 +295,28 @@ function DialerPhone({ dialerId, onDialer, callerId, onCallerId, onPick, onStart
   const [number, setNumber] = React.useState('');
   const [code, setCode] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  // The number last put in by a click, with the record it belongs to; editing the number lets go of the record.
+  const [filled, setFilled] = React.useState<{ number: string; link: DialLink | null } | null>(null);
+  const [flash, setFlash] = React.useState(false);
+  const input = React.useRef<HTMLInputElement>(null);
+  const section = React.useRef<HTMLElement>(null);
+  const linked = filled && filled.number === number ? filled.link : null;
   const m = useCallMutations();
+  React.useEffect(() => {
+    if (!request) return;
+    setNumber(request.number);
+    setFilled({ number: request.number, link: request.link });
+    setError(null);
+    setFlash(true);
+    onRequestUsed();
+    section.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    input.current?.focus({ preventScroll: true });
+  }, [request, onRequestUsed]);
+  React.useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(false), 1200);
+    return () => clearTimeout(id);
+  }, [flash]);
   React.useEffect(() => {
     let saved = '';
     try {
@@ -283,17 +336,19 @@ function DialerPhone({ dialerId, onDialer, callerId, onCallerId, onPick, onStart
   const call = async () => {
     setError(null);
     try {
-      const r = await m.start.mutateAsync({ numberSource: 'OTHER', number, dialerId, phoneApp: !dialerId, countryCode: code || null, callerId });
+      const where = linked ? { companyId: linked.companyId, contactId: linked.contactId, numberSource: linked.source } : { numberSource: 'OTHER' as const };
+      const r = await m.start.mutateAsync({ ...where, number, dialerId, phoneApp: !dialerId, countryCode: code || null, callerId });
       if (r.launchUrl) openDialer(r.launchUrl);
       onStarted(r.call.id);
       setNumber('');
+      setFilled(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('Could not start the call.'));
     }
   };
   const typed = !/^\s*(\+|00)/.test(number);
   return (
-    <section aria-labelledby="dialer-phone" className="overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
+    <section ref={section} aria-labelledby="dialer-phone" className="overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
       <div className="space-y-3 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-4 text-white">
         <div className="flex items-center gap-2">
           <h2 id="dialer-phone" className="sr-only">
@@ -336,6 +391,8 @@ function DialerPhone({ dialerId, onDialer, callerId, onCallerId, onPick, onStart
             ))}
           </Select>
           <Input
+            ref={input}
+            data-testid="dialer-number"
             value={number}
             onChange={(e) => setNumber(e.target.value)}
             onKeyDown={(e) => {
@@ -345,12 +402,23 @@ function DialerPhone({ dialerId, onDialer, callerId, onCallerId, onPick, onStart
             inputMode="tel"
             placeholder={t('Number')}
             aria-label={t('Number to call')}
-            className="h-12 flex-1 border-white/20 bg-white/10 text-center font-mono text-2xl tracking-wider text-white placeholder:text-white/40"
+            className={cn('h-12 min-w-0 flex-1 border-white/20 bg-white/10 text-center font-mono text-white transition placeholder:text-white/40', number.length <= 11 ? 'text-2xl tracking-wider' : number.length <= 15 ? 'text-xl tracking-wide' : 'text-base', flash && 'bg-emerald-400/30 ring-2 ring-emerald-300')}
           />
           <Button size="icon" variant="ghost" className="size-12 text-white hover:bg-white/10" aria-label={t('Delete the last digit')} onClick={() => setNumber((n) => n.slice(0, -1))} disabled={!number}>
             <Backspace aria-hidden className="rtl:-scale-x-100" />
           </Button>
         </div>
+        <p className="sr-only" role="status">
+          {filled && filled.number === number ? t('{number} is in the dialer, ready to call.', { number }) : ''}
+        </p>
+        {linked?.label && (
+          <p className="flex items-center gap-2 text-xs text-white/80" data-testid="dialer-linked">
+            <span className="min-w-0 flex-1 truncate">{t('For {name}', { name: linked.label })}</span>
+            <button type="button" className="shrink-0 underline hover:text-white" onClick={() => setFilled(null)}>
+              {t('Call as a new number')}
+            </button>
+          </p>
+        )}
       </div>
       <div className="space-y-4 p-4">
         <div className="mx-auto grid max-w-72 grid-cols-3 gap-3" role="group" aria-label={t('Keypad')}>
@@ -436,9 +504,10 @@ function FindToCall({ onPick }: { onPick: (t: Target) => void }) {
 
 function TargetRow({ r, onPick }: { r: CallTarget; onPick: () => void }) {
   const t = useT();
+  const company = r.companyName ?? (r.kind === 'company' ? r.name : null);
   return (
-    <li>
-      <button type="button" onClick={onPick} className="flex w-full items-center gap-3 rounded-lg p-2 text-start transition hover:bg-muted">
+    <li className="flex items-center gap-2 rounded-lg transition hover:bg-muted">
+      <button type="button" onClick={onPick} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-start">
         {r.kind === 'company' ? (
           <CompanyLogo company={{ name: r.name, logo: r.logo }} size="xs" />
         ) : (
@@ -450,12 +519,20 @@ function TargetRow({ r, onPick }: { r: CallTarget; onPick: () => void }) {
           <span className="block truncate text-sm font-medium">{r.name}</span>
           <span className="block truncate text-xs text-muted-foreground">{r.subtitle ?? (r.kind === 'company' ? t('Company') : t('Employee'))}</span>
         </span>
-        <span className="shrink-0 text-end font-mono text-[0.7rem] text-muted-foreground">
-          {r.phone && <span className="block">{r.phone}</span>}
-          {r.companyPhone && <span className="block opacity-75">{r.companyPhone}</span>}
-          {!r.phone && !r.companyPhone && <span>{t('No number')}</span>}
-        </span>
       </button>
+      <span className="shrink-0 pe-2 text-end font-mono text-[0.7rem] text-muted-foreground">
+        {r.phone && (
+          <span className="block">
+            <PhoneNumber number={r.phone} link={{ companyId: r.companyId, contactId: r.contactId, source: 'EMPLOYEE', label: [r.name, company].filter(Boolean).join(' · ') }} />
+          </span>
+        )}
+        {r.companyPhone && (
+          <span className="block opacity-75">
+            <PhoneNumber number={r.companyPhone} link={{ companyId: r.companyId, contactId: null, source: 'COMPANY', label: company }} />
+          </span>
+        )}
+        {!r.phone && !r.companyPhone && <span>{t('No number')}</span>}
+      </span>
     </li>
   );
 }
@@ -614,8 +691,8 @@ function CallCard({ target, dialerId, dialerName, callerId, canCall, onPick, onS
           <Detail icon={UserRound} label="Employee name" value={d.employee?.name} tone="bg-sky-500" />
           <Detail icon={UserRound} label="Designation" value={d.employee?.designation} tone="bg-indigo-500" />
           <Detail icon={Mail} label="Employee email" value={d.employee?.email} href={d.employee?.email ? `mailto:${d.employee.email}` : undefined} tone="bg-violet-500" />
-          <Detail icon={Phone} label="Employee phone" value={d.employee?.phone} mono tone="bg-emerald-500" />
-          <Detail icon={Phone} label="Company phone" value={d.company?.phone} mono tone="bg-amber-500" />
+          <Detail icon={Phone} label="Employee phone" value={d.employee?.phone} mono tone="bg-emerald-500" dial={d.employee ? { companyId: d.company?.id ?? null, contactId: d.employee.id, source: 'EMPLOYEE', label: [d.employee.name, d.company?.name].filter(Boolean).join(' · ') } : undefined} />
+          <Detail icon={Phone} label="Company phone" value={d.company?.phone} mono tone="bg-amber-500" dial={d.company ? { companyId: d.company.id, contactId: null, source: 'COMPANY', label: d.company.name } : undefined} />
         </dl>
         {d.detailsHidden && <p className="text-xs text-muted-foreground">{t('Some details are hidden: your role does not show the contact details of records other people own.')}</p>}
         {canCall && (
@@ -710,7 +787,7 @@ function CallCard({ target, dialerId, dialerName, callerId, canCall, onPick, onS
   );
 }
 
-function Detail({ icon: Icon, label, value, href, mono, tone }: { icon: typeof Phone; label: MessageKey; value: string | null | undefined; href?: string; mono?: boolean; tone: string }) {
+function Detail({ icon: Icon, label, value, href, mono, tone, dial }: { icon: typeof Phone; label: MessageKey; value: string | null | undefined; href?: string; mono?: boolean; tone: string; dial?: DialLink }) {
   const t = useT();
   return (
     <div className="relative min-w-0 rounded-xl border border-border py-2.5 pe-2.5 ps-[3.25rem]">
@@ -722,7 +799,9 @@ function Detail({ icon: Icon, label, value, href, mono, tone }: { icon: typeof P
       </dt>
       <dd className={cn('truncate text-sm font-medium', mono && 'font-mono', !value && 'font-normal text-muted-foreground')} title={value ?? undefined}>
         {value ? (
-          href ? (
+          dial ? (
+            <PhoneNumber number={value} link={dial} />
+          ) : href ? (
             <a href={href} className="text-primary hover:underline">
               {value}
             </a>

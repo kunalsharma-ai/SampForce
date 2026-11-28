@@ -5,6 +5,7 @@ import { Button, cn, Field, Input, Skeleton } from '@dealflow/ui';
 import { ArrowDownLeft, ArrowUpRight, Ban, CalendarClock, Circle, Flag, Handshake, Mail, Mic, MicOff, Pause, Phone, PhoneOff, Play, ShieldCheck, Square, Upload, Users, Webhook } from 'lucide-react';
 import * as React from 'react';
 import { ProviderMark } from '@/components/calls/dialer-settings';
+import { callDialLink, PhoneNumber } from '@/components/calls/phone-number';
 import { OutcomeIcon, readableOn, useOutcomeLabel, useOutcomeLookup } from '@/components/calls/outcomes';
 import { Select, Textarea } from '@/components/crm/select';
 import { playConnected, playEnded, startRingback } from '@/lib/call-sounds';
@@ -91,7 +92,7 @@ export function ActiveCall({ id, onDone }: { id: string; onDone: () => void }) {
             </h2>
             <p className="truncate text-sm opacity-90">{[c.employee?.designation, c.employee && c.company?.name].filter(Boolean).join(' · ')}</p>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-xs opacity-90">
-              <span>{c.number}</span>
+              <PhoneNumber number={c.number} link={callDialLink(c)} className="hover:text-white dark:hover:text-white" />
               {c.callerId && <span>· {t('shows {number}', { number: c.callerId })}</span>}
             </p>
           </div>
