@@ -87,7 +87,7 @@ test('German builds a prospect list from a CSV file, with German counts and Mock
   await axe(page);
 });
 
-test('Arabic sets up website tracking and a lead form, right to left', async ({ page }) => {
+test('Arabic sets up website tracking and a contact form, right to left', async ({ page }) => {
   test.setTimeout(90_000);
   await signUp(page, 'Zuwar');
   await chooseLanguage(page, 'ar');
@@ -110,9 +110,9 @@ test('Arabic sets up website tracking and a lead form, right to left', async ({ 
 
   await page.goto('/app/marketing');
   await expect(main.getByRole('heading', { level: 1, name: 'التسويق' })).toBeVisible();
-  await main.getByRole('tab', { name: 'نماذج العملاء المحتملين' }).click();
-  await expect(main.getByText('لا توجد نماذج عملاء محتملين بعد.')).toBeVisible();
-  await main.getByRole('button', { name: 'نموذج عملاء محتملين جديد' }).click();
+  await main.getByRole('tab', { name: 'نماذج جهات الاتصال' }).click();
+  await expect(main.getByText('لا توجد نماذج جهات اتصال بعد.')).toBeVisible();
+  await main.getByRole('button', { name: 'نموذج جهات اتصال جديد' }).click();
   await page.getByLabel('الاسم الداخلي').fill('طلب عرض');
   await page.getByLabel('العنوان الذي يراه الزوار').fill('احجز عرضًا');
   await axe(page);
