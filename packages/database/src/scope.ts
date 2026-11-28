@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { rankOrderBy, withDerivedFields } from './derived';
 import { roundDecimals } from './money';
+import { noteRemoval } from './recycle';
 
 /**
  * Workspace isolation for MongoDB (ADR 0058).
@@ -86,16 +87,24 @@ export const LOOKUP_FIELDS = {
   LeadForm: { fields: ['publicToken'], extra: {} },
   ApiKey: { fields: ['keyHash'], extra: {} },
   AppConnection: { fields: ['provider', 'externalAccountId'], extra: {} },
+  // A cloud dialer's events address (ADR 0101): the provider posts to it without a session.
+  Dialer: { fields: ['eventsHookId'], extra: { deletedAt: null } },
   PortalSettings: { fields: ['slug'], extra: { enabled: true } },
   ScimToken: { fields: ['tokenHash'], extra: { revokedAt: null } },
   SsoConnection: { fields: ['loginSlug'], extra: { enabled: true } },
   Subscription: { fields: ['providerCustomerId', 'providerSubscriptionId'], extra: {} },
-  VisitorSettings: { fields: ['siteKey'], extra: {} },
+  // Learning certificates (ADR 0097): the public verification page finds a certificate by its code.
+  LearningCertificate: { fields: ['code'], extra: {} },
 } as const;
 export type LookupModel = keyof typeof LOOKUP_FIELDS;
 
 /** Queue collections the worker may read and write across workspaces (`worker_scan` FOR ALL). */
 const WORKER_ALL = new Set([
+  // Team approvals and deleted items (ADR 0098): the worker expires, escalates and purges across workspaces.
+  'TeamApproval',
+  'TeamApprovalSettings',
+  'RecycleBatch',
+  'RecycleEntry',
   'AiRun',
   // Company logo look-ups (ADR 0070): the worker claims PENDING logos across workspaces.
   'CompanyLogo',
@@ -113,9 +122,12 @@ const WORKER_ALL = new Set([
 ]);
 /** Collections the worker may only read across workspaces (`worker_scan` FOR SELECT). */
 // ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
+// OrgDocument: expiry reminders for My Organization documents (ADR 0100) find the documents close to expiry.
 // Tenant: the morning follow-up summary (ADR 0083) reads the workspaces' time zones in one query, instead of opening a
 // transaction per workspace to find out it is not yet 8:00 there.
-const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant', 'VisitorSettings', 'ZoomMeeting']);
+// Contact: the follow-up cadence job (ADR 0096) finds contacts whose period after the first email has passed; it reads ids only and moves each one inside its own workspace.
+// LearningAssignment: learning deadline reminders (ADR 0097) find the workspaces with assignments due; each is sent in its context.
+const WORKER_READ = new Set(['LearningAssignment', 'ChatMessage', 'Contact', 'Contract', 'CrmSettings', 'OrgDocument', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'Tenant']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',
@@ -148,7 +160,7 @@ const OPERATOR_READ = new Set([
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['TaskEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['TaskEvent', 'PerformancePlanEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';
@@ -571,6 +583,8 @@ export function workspaceGuard(base: PrismaClient) {
           }
           if (a.include) a.include = await scopeNested(model, a.include, ctx, lookups);
           if (a.select) a.select = await scopeNested(model, a.select, ctx, lookups);
+          // Deleted items (ADR 0098): inside a delete request, note what this write removes so it can be restored.
+          if (operation !== 'create' && operation !== 'createMany' && operation !== 'upsert') await noteRemoval(base, model, operation, a);
           return query(a);
         },
       },

@@ -1,4 +1,5 @@
-import { type ApiErrorBody, PASSWORD_CONFIRMATION_HEADER, PASSWORD_CONFIRMATION_REQUIRED } from '@dealflow/types';
+import { type ApiErrorBody, APPROVAL_REQUIRED, PASSWORD_CONFIRMATION_HEADER, PASSWORD_CONFIRMATION_REQUIRED } from '@dealflow/types';
+import { approvalAsker, approvalAskOf } from './approval-asker';
 import { passwordConfirmationAsker } from './password-confirmation';
 import { useRegional } from '@/stores/regional';
 
@@ -65,6 +66,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       const pass = await ask({ method: (init.method ?? 'GET').toUpperCase(), path, message: err.message });
       if (!pass) throw new ApiError(0, 'CONFIRMATION_CANCELLED', 'Nothing was deleted.');
       return api<T>(path, { ...init, headers: { ...headers, [PASSWORD_CONFIRMATION_HEADER]: pass } }, retry);
+    }
+    // An Executive Workspace's delete needs the manager's approval first (ADR 0098): offer to ask for it. Nothing is
+    // deleted either way; once approved, the Approvals page sends this same request again.
+    const askApproval = approvalAsker();
+    if (res.status === 403 && err?.code === APPROVAL_REQUIRED && askApproval) {
+      const sent = await askApproval(approvalAskOf((init.method ?? 'GET').toUpperCase(), path, json, err.message, err.details));
+      throw new ApiError(0, sent ? 'APPROVAL_REQUESTED' : 'APPROVAL_NOT_REQUESTED', sent ? 'Sent to your manager for approval. Nothing was deleted yet.' : 'Nothing was deleted.');
     }
     throw new ApiError(
       res.status,

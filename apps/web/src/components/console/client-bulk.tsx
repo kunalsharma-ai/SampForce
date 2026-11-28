@@ -65,7 +65,7 @@ export function BulkDialog({ action, ids, onClose }: { action: ConsoleBulkAction
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose(!!r)}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{BULK_TITLE[action]}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {r ? 'Finished.' : `For ${clients}. Each client is changed and recorded in the audit log on its own.`}

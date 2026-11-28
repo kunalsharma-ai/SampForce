@@ -20,6 +20,7 @@ import { aiErrorMessage } from '@/lib/ai';
 import { relativeTime } from '@/lib/format';
 import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { DeleteAllButton } from '@/components/delete-all-button';
 import { voiceApi, useVoiceMutation, useVoiceNotes, useVoiceTranscriptionStatus } from '@/lib/voice';
 import { gated } from '@/components/shell/feature-locked';
 
@@ -63,7 +64,10 @@ function RecordVoiceNotesPanel({ record }: { record: VoiceRecordTarget }) {
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="text-base">{t('Voice notes')}</CardTitle>
-        <VoiceNoteButton record={record} label={t('New voice note')} />
+        <span className="flex flex-wrap items-center gap-2">
+          <DeleteAllButton path="/voice-notes" query={{ type: record.type, id: record.id }} hasItems={items.length > 0} permission="activities:write" feature="voice_notes" invalidate={['voice-notes']} />
+          <VoiceNoteButton record={record} label={t('New voice note')} />
+        </span>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
@@ -400,7 +404,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
       )}
 
       {note.actions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('Nothing in this note looks like a task, note, lead or contact to save.')}</p>
+        <p className="text-sm text-muted-foreground">{t('Nothing in this note looks like a task, note or contact to save.')}</p>
       ) : (
         <ul className="space-y-3" aria-label={t('Suggested actions')}>
           {note.actions.map((s, i) => (

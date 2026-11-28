@@ -24,7 +24,7 @@ export const roleDashboards = {
   '{title}: {value} of {target}': ['{title}: {value} de {target}', '{title} : {value} sur {target}', '{title}: {value} von {target}', '{title}: {value} من {target}'],
   '{title}: no target set': ['{title}: sin objetivo', '{title} : aucun objectif', '{title}: kein Ziel gesetzt', '{title}: لا يوجد هدف'],
   'No open deals yet.': ['Aún no hay oportunidades abiertas.', 'Aucune opportunité ouverte pour l’instant.', 'Noch keine offenen Deals.', 'لا توجد صفقات مفتوحة بعد.'],
-  '{n} leads': ['{n} leads', '{n} prospects', '{n} Leads', '{n} عملاء محتملين'],
+  '{n} companies': ['{n} empresas', '{n} entreprises', '{n} Unternehmen', '{n} شركات'],
   'Work load by executive': ['Carga de trabajo por ejecutivo', 'Charge de travail par commercial', 'Arbeitslast je Mitarbeiter', 'عبء العمل لكل تنفيذي'],
   'Work load by team': ['Carga de trabajo por equipo', 'Charge de travail par équipe', 'Arbeitslast je Team', 'عبء العمل لكل فريق'],
   'Overdue work': ['Trabajo atrasado', 'Travail en retard', 'Überfällige Arbeit', 'العمل المتأخر'],
@@ -47,5 +47,5 @@ export const roleDashboards = {
   '{on} of {all} checked in': ['{on} de {all} con entrada registrada', '{on} sur {all} ont pointé', '{on} von {all} eingecheckt', '{on} من {all} سجّلوا الحضور'],
   'Targets by workspace': ['Objetivos por espacio de trabajo', 'Objectifs par espace de travail', 'Ziele je Arbeitsbereich', 'الأهداف حسب مساحة العمل'],
   'Productivity by team': ['Productividad por equipo', 'Productivité par équipe', 'Produktivität je Team', 'الإنتاجية حسب الفريق'],
-  'Leads per person': ['Leads por persona', 'Prospects par personne', 'Leads pro Person', 'العملاء المحتملون لكل شخص'],
+  'Companies per person': ['Empresas por persona', 'Entreprises par personne', 'Unternehmen pro Person', 'الشركات لكل شخص'],
 } as const satisfies PhraseTable;

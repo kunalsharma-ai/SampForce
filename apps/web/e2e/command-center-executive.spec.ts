@@ -69,7 +69,7 @@ test('an executive works from their dashboard, asks for a lead transfer, and the
   await expect(rmain.getByRole('heading', { name: 'Rahul Verma' })).toBeVisible();
   await expect(rmain.getByRole('heading', { name: 'Welcome, Rahul' })).toHaveCount(0);
   const kpis = rmain.getByRole('list', { name: 'Key metrics' });
-  await expect(kpis.getByRole('button', { name: 'Leads generated: 1. Show the records' })).toBeVisible();
+  await expect(kpis.getByRole('button', { name: 'Companies created: 1. Show the records' })).toBeVisible();
   await expect(kpis.getByRole('button', { name: 'Positive responses: 1. Show the records' })).toBeVisible();
   await expect(kpis.getByRole('button', { name: 'Revenue generated: $12,000. Show the records' })).toBeVisible();
   await expect(rp.locator('[data-work="today"]')).toContainText('Call Priya about the India B2B study');
@@ -77,9 +77,9 @@ test('an executive works from their dashboard, asks for a lead transfer, and the
   await axe(rp);
   await shot(rp, '01-executive-dashboard');
 
-  await kpis.getByRole('button', { name: 'Leads generated: 1. Show the records' }).click();
+  await kpis.getByRole('button', { name: 'Companies created: 1. Show the records' }).click();
   const drill = rp.getByRole('dialog');
-  await expect(drill.getByRole('heading', { name: 'Leads generated' })).toBeVisible();
+  await expect(drill.getByRole('heading', { name: 'Companies created' })).toBeVisible();
   await expect(drill.getByTestId('cc-drill-rows')).toContainText('Acme Panels Pvt Ltd');
   await shot(rp, '02-kpi-drill-down');
   await rp.keyboard.press('Escape');

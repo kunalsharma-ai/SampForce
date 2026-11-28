@@ -96,7 +96,7 @@ test('the Console decides which sections and fields an Executive Workspace sees'
 
   // The Leads and Accounts switch lives here now.
   const sections = ops.locator('[data-client-menu-sections]');
-  await expect(sections.getByRole('switch', { name: /Show the Leads page/ })).toBeChecked();
+  await expect(sections.getByRole('switch', { name: /Show the Inbound contacts page/ })).toBeChecked();
   await sections.scrollIntoViewIfNeeded();
   await shot(ops, '03-console-hidden-sections');
 

@@ -71,7 +71,7 @@ export function HomeNotifications() {
           </ul>
         ) : (
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            {list.isPending ? t('Loading…') : t('New leads, tasks, approvals and reminders appear here as they happen.')}
+            {list.isPending ? t('Loading…') : t('New companies, tasks, approvals and reminders appear here as they happen.')}
           </p>
         )}
       </div>

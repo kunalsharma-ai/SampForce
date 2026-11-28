@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LeadQualificationCard } from '@/components/ai/record-ai';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
-import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { RecordSequences } from '@/components/crm/record-sequences';
@@ -18,7 +17,6 @@ import { Select } from '@/components/crm/select';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
-import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
@@ -54,7 +52,7 @@ export function LeadDetail({ id }: { id: string }) {
         badges={<Badge tone={LEAD_STATUS_TONE[l.status]}>{t.maybe(titleCase(l.status))}</Badge>}
         actions={
           !converted && canConvert ? (
-            <Button size="sm" onClick={() => setConverting(true)} disabled={l.status === 'UNQUALIFIED'} title={l.status === 'UNQUALIFIED' ? t('Unqualified leads cannot be converted') : undefined}>
+            <Button size="sm" onClick={() => setConverting(true)} disabled={l.status === 'UNQUALIFIED'} title={l.status === 'UNQUALIFIED' ? t('Unqualified inbound contacts cannot be converted') : undefined}>
               <ArrowRightLeft aria-hidden /> {t('Convert')}
             </Button>
           ) : null
@@ -63,7 +61,7 @@ export function LeadDetail({ id }: { id: string }) {
       {converted && (
         <Card className="mb-4 border-success/40">
           <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm">
-            {t('Converted {date}. This lead is now read-only.', { date: formatDate(l.convertedAt) })}
+            {t('Converted {date}. This inbound contact is now read-only.', { date: formatDate(l.convertedAt) })}
             {l.convertedContactId && <Link className="text-primary hover:underline" href={`/app/contacts/${l.convertedContactId}`}>{t('Open contact')}</Link>}
             {l.convertedOpportunityId && <Link className="text-primary hover:underline" href={`/app/deals/${l.convertedOpportunityId}`}>{t('Open deal')}</Link>}
           </CardContent>
@@ -107,9 +105,7 @@ export function LeadDetail({ id }: { id: string }) {
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
           <RecordMeetings target={{ leadId: id }} />
-          <RecordZoomMeetings target={{ leadId: id }} />
           <RecordVoiceNotes record={{ type: 'lead', id, name: l.fullName }} />
-          <RecordWebActivityCard type="lead" id={id} />
           <RecordSequences leadId={id} email={l.email} />
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />
@@ -151,7 +147,7 @@ function Duplicates({ id, canWrite }: { id: string; canWrite: boolean }) {
               <span className="text-muted-foreground">{reason[d.reason]}</span>
               {d.entity === 'lead' && canWrite && (
                 <Button size="sm" variant="outline" className="ms-auto" disabled={merge.isPending} onClick={() => merge.mutate(d.id)}>
-                  {t('Merge into this lead')}
+                  {t('Merge into this inbound contact')}
                 </Button>
               )}
             </li>
@@ -313,7 +309,7 @@ function ConvertDialog({ lead, onClose }: { lead: LeadRow; onClose: () => void }
               {t('Cancel')}
             </Button>
             <Button type="submit" disabled={convert.isPending}>
-              {convert.isPending ? t('Converting…') : t('Convert lead')}
+              {convert.isPending ? t('Converting…') : t('Convert to contact')}
             </Button>
           </div>
         </form>

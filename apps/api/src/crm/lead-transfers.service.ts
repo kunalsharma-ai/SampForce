@@ -47,11 +47,11 @@ export class LeadTransfersService {
       if (!company) throw notFound('Company');
       if (!canSeeDetails(v, company.ownerId)) throw new BadRequestException({ code: 'DETAILS_HIDDEN', message: 'Your role cannot see or change the details of this company.' });
       if (await tx.leadTransfer.findFirst({ where: { tenantId: auth.tenantId, companyId: company.id, status: 'PENDING' }, select: { id: true } })) {
-        throw new BadRequestException({ code: 'TRANSFER_PENDING', message: 'This lead already has a transfer request waiting for a decision.' });
+        throw new BadRequestException({ code: 'TRANSFER_PENDING', message: 'This company already has a transfer request waiting for a decision.' });
       }
       if (input.toUserId) {
         if (!(await tx.membership.findFirst({ where: { tenantId: auth.tenantId, userId: input.toUserId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('toUserId');
-        if (input.toUserId === company.ownerId) throw badRef('toUserId', 'already owns this lead');
+        if (input.toUserId === company.ownerId) throw badRef('toUserId', 'already owns this company');
       }
       if (input.contactId && !(await tx.contact.findFirst({ where: { id: input.contactId, tenantId: auth.tenantId, companyId: company.id, deletedAt: null }, select: { id: true } }))) throw badRef('contactId');
       const fileIds = [...new Set(input.fileIds)];
@@ -68,7 +68,7 @@ export class LeadTransfersService {
       const by = await this.nameOf(tx, auth.userId);
       await this.notifications.send(tx, auth.tenantId, deciders, {
         type: 'lead_transfer.requested',
-        title: `Lead transfer request: ${label(company)}`,
+        title: `Company transfer request: ${label(company)}`,
         body: row.remarks ? `${by}: ${row.remarks}` : `Requested by ${by}.`,
         link: `/app?view=executive&transfer=${row.id}`,
       });
@@ -130,7 +130,7 @@ export class LeadTransfersService {
       const by = await this.nameOf(tx, auth.userId);
       await this.notifications.send(tx, auth.tenantId, people, {
         type: status === 'REJECTED' ? 'lead_transfer.rejected' : 'lead_transfer.approved',
-        title: status === 'REJECTED' ? `Lead transfer rejected: ${label(company)}` : `Lead transfer approved: ${label(company)}`,
+        title: status === 'REJECTED' ? `Company transfer rejected: ${label(company)}` : `Company transfer approved: ${label(company)}`,
         body: input.note ? `${by}: ${input.note}` : `Decided by ${by}.`,
         link: `/app/companies/${company.id}`,
       });
@@ -148,7 +148,7 @@ export class LeadTransfersService {
       if (!company) throw notFound('Company');
       if (input.toUserId) {
         if (!(await tx.membership.findFirst({ where: { tenantId: auth.tenantId, userId: input.toUserId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('toUserId');
-        if (input.toUserId === company.ownerId) throw badRef('toUserId', 'already owns this lead');
+        if (input.toUserId === company.ownerId) throw badRef('toUserId', 'already owns this company');
       }
       if (input.contactId && !(await tx.contact.findFirst({ where: { id: input.contactId, tenantId: auth.tenantId, companyId: company.id, deletedAt: null }, select: { id: true } }))) throw badRef('contactId');
       const fileIds = input.fileIds ? [...new Set(input.fileIds)] : undefined;
@@ -173,7 +173,7 @@ export class LeadTransfersService {
       const by = await this.nameOf(tx, auth.userId);
       await this.notifications.send(tx, auth.tenantId, deciders, {
         type: 'lead_transfer.requested',
-        title: `Lead transfer request updated: ${label(company)}`,
+        title: `Company transfer request updated: ${label(company)}`,
         body: row.remarks ? `${by}: ${row.remarks}` : `Updated by ${by}.`,
         link: `/app?view=executive&transfer=${row.id}`,
       });

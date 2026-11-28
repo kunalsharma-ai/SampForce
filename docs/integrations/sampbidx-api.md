@@ -271,6 +271,77 @@ If the client fails, the RFQ is not sent: the person sees the reason and **Try a
 Sending an RFQ to SampBidx never marks it as won in SampForce. Received, sent to SampBidx, accepted by SampBidx and
 the outcome stay four separate records.
 
+## The client's relationship: won companies (ADR 0099)
+
+`PUT /v1/clients/{externalId}` carries one more field, `relationship`. It is `null` while the company is not won.
+For a won company (sent from **Send won companies to SampBidx** or any later client send) it is:
+
+```json
+"relationship": {
+  "status": "WON",
+  "wonAt": "2026-11-20T10:12:00.000Z",
+  "wonDeal": { "externalId": "7d2e…", "number": "DEAL-0012", "name": "Northwind tracker", "amount": 8000, "currency": "EUR", "closedAt": "2026-11-20T10:12:00.000Z" }
+}
+```
+
+Mark the client as a customer. Nothing about prices, taxes, discounts or prepayment is in it.
+
+## PUT /v1/deals/{externalId} — a deal for a client (ADR 0099)
+
+SampForce sends deals one at a time from **Send deals to SampBidx** (many selected deals at once, each its own
+request). `externalId` is SampForce's deal id: **create the deal, or update the one you already have for that id**.
+SampForce always sends the deal's company as a client first (`PUT /v1/clients/…`) when you do not have it yet or it
+changed, so the client exists by the time the deal arrives.
+
+Headers as for every send: `Authorization: Bearer <key>`, `Content-Type: application/json`, `Idempotency-Key`
+(the SampForce transfer id; a retry carries the same one) and `X-SampForce-Transfer-Id`.
+
+```json
+{
+  "system": "SampForce",
+  "workspace": "Frequent Research Fieldwork Solutions",
+  "transferId": "c0a8…",
+  "sentBy": { "name": "Asha Rao", "email": "asha@example.com", "designation": "Sales Manager" },
+  "clientTeam": { "poc": null, "owner": null, "manager": null },
+  "note": null,
+  "externalId": "7d2e…",
+  "client": { "id": "CL-1042", "externalId": "3f5c…" },
+  "contact": { "id": "CC-88", "externalId": "9a1b…", "name": "Priya Nair", "email": "priya@acmepanels.example", "jobTitle": "Head of Insights", "phone": null },
+  "deal": {
+    "id": "7d2e…",
+    "number": "DEAL-0012",
+    "name": "India B2B tracker",
+    "amount": 5000,
+    "currency": "USD",
+    "status": "OPEN",
+    "pipeline": "Sales Pipeline",
+    "stage": "Qualification",
+    "probability": null,
+    "expectedCloseDate": null,
+    "closedAt": null,
+    "lossReason": null,
+    "owner": "Asha Rao",
+    "manager": null,
+    "createdAt": "2026-11-27T09:00:00.000Z"
+  }
+}
+```
+
+- `status` is `OPEN`, `WON` or `LOST`. `amount` is the deal value the salesperson entered in SampForce (always above
+  0), in `currency`. It is not a price, tax, discount or prepayment.
+- `contact` is the deal's contact, or `null` when the deal has none. `number` can be `null` for very old deals.
+- Answer **201** (created) or **200** (updated) with `{ "id": "DL-…", "url": "https://…" (optional), "status": "received" (optional) }`.
+  Without an `id` SampForce treats the send as failed.
+- **422** with `{"error": {"message": "…"}}` when you cannot take it (for example an unknown client); SampForce shows
+  your message to the person, who can correct the record and retry.
+
+## Connection test
+
+The SampBidx settings page in SampForce (Integrations → SampBidx settings) tests the connection step by step:
+the address, whether SampForce may call it (public https, or a private address an operator approved), whether
+anything answers, whether `GET /v1/ping` exists (a 404 here means this API is not built at that address yet),
+whether the key is accepted, and whether you have sent a signed status update yet. Only `GET /v1/ping` is called.
+
 ## Answering a send
 
 Answer **200** or **201** with SampBidx's own id. `url` (a page in SampBidx) and `status` are optional:
@@ -357,6 +428,8 @@ that moment, so update SampBidx straight away.
 - [ ] `POST /v1/rfq-emails` reading the `email` part and the optional `message` part
 - [ ] `PUT /v1/clients/{externalId}`: create or update the client by `externalId`, contacts by id, externalId or email; answer with the contact ids
 - [ ] `POST /v1/rfqs` reading `client`, `contact`, `serviceCategory`, `service` and the country `lines` (kept separate)
+- [ ] `PUT /v1/clients/{externalId}` reading `relationship` (won companies)
+- [ ] `PUT /v1/deals/{externalId}`: create or update the deal by `externalId`, linked to the client; answer with its id
 - [ ] Same `Idempotency-Key` → same record, answered with the same id
 - [ ] Readable error messages in `{"error": {"message": "…"}}`
 - [ ] Signed status callbacks to SampForce on every status change

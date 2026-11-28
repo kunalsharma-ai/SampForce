@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { contentSecurityPolicy, newNonce } from './csp';
+import { VIDEO_FRAME_HOSTS, VIDEO_IMAGE_HOSTS } from '@dealflow/types';
+import { contentSecurityPolicy, LEARNING_FRAME_HOSTS, LEARNING_IMAGE_HOSTS, newNonce } from './csp';
 
 describe('content security policy', () => {
   it('requires the nonce for scripts and forbids framing and plugins', () => {
@@ -17,6 +18,15 @@ describe('content security policy', () => {
     expect(dev).toContain("'unsafe-eval'");
     expect(dev).not.toContain('upgrade-insecure-requests');
     expect(contentSecurityPolicy('n')).not.toContain('upgrade-insecure-requests');
+  });
+
+  it('frames only the app itself and the video players learning lessons embed', () => {
+    expect(LEARNING_FRAME_HOSTS).toEqual([...VIDEO_FRAME_HOSTS]);
+    expect(LEARNING_IMAGE_HOSTS).toEqual([...VIDEO_IMAGE_HOSTS]);
+    const p = contentSecurityPolicy('n');
+    expect(p).toContain(`frame-src 'self' ${VIDEO_FRAME_HOSTS.join(' ')}`);
+    expect(p).toContain('https://i.ytimg.com');
+    expect(p).toContain("frame-ancestors 'none'");
   });
 
   it('makes a fresh 128-bit nonce each time', () => {

@@ -69,8 +69,10 @@ test('a company goes from new lead to won deal, a lost deal reaches its owner, a
   const section = manager.locator('#employee-activity');
   await expect(row(section, 'Priya Nair')).toContainText('Fresh Email Pending');
 
-  // 2. The initial email went out: marking it plans follow-up 1.
-  await row(section, 'Priya Nair').getByRole('button', { name: 'Mark initial email as sent' }).click();
+  // 2. The initial email went out eight days ago with no answer: the 7-day follow-up period has passed, so follow-up 1
+  //    is created at once (ADR 0096).
+  await call(manager.request, 'post', `/contacts/${priya}/initial-email`, { sentAt: new Date(Date.now() - 8 * 86_400_000).toISOString() });
+  await manager.reload();
   await expect(row(section, 'Priya Nair')).toContainText('Initial Email Sent');
   await expect(row(section, 'Priya Nair')).toContainText(/Follow-up 1 of \d+, due/);
   await shot(manager, '01-initial-email-sent');

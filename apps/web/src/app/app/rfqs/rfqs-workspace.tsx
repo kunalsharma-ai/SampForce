@@ -11,6 +11,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { SampbidxTransferList, TransferEmailDialog, useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
 import { useSampbidxTransfers } from '@/lib/sampbidx';
+import { DeleteAllButton } from '@/components/delete-all-button';
 
 const REPORTS: { by: 'company' | 'employee' | 'owner'; label: MessageKey }[] = [
   { by: 'company', label: 'By company' },
@@ -111,7 +112,10 @@ export function RfqsWorkspace() {
             <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('No RFQs yet. Add one from a company page.')}</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">{t('{count} RFQs', { count: list.data.total })}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">{t('{count} RFQs', { count: list.data.total })}</p>
+                <DeleteAllButton path="/rfqs" query={{ status, open, q: q.trim() }} hasItems={list.data.total > 0} permission="companies:write" feature="rfqs" invalidate={['rfqs']} />
+              </div>
               <ul className="space-y-2">
                 {list.data.items.map((r) => (
                   <RfqItem key={r.id} r={r} onEdit={canWrite ? setEditing : undefined} />

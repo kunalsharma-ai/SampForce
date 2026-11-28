@@ -49,6 +49,8 @@ import { TeamStatusBoard } from '@/components/availability/team-status-board';
 import { count, money } from '@/components/command-center/tier-parts';
 import { STAGE_CHIP, stageStyle } from '@/components/crm/stage-chip';
 import { InfoTip } from '@/components/info-tip';
+import { EmployeeOfMonthCard } from '@/components/recognition/employee-of-month-card';
+import { PipDashboardCard } from '@/components/recognition/pip-card';
 import { ErrorText } from '@/components/revenue/tabs';
 import { useAvailabilityTeam } from '@/lib/availability';
 import { useFollowUps } from '@/lib/company-work';
@@ -60,6 +62,8 @@ import { useCan, useSession } from '@/lib/session';
 import { useTargets } from '@/lib/workspace-work';
 import { useWorkspaceDashboard } from '@/lib/workspace-dashboard';
 import { useQuickCreate } from '@/stores/quick-create';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
+import { useHasFeature } from '@/lib/features';
 
 /*
  * The three role dashboards (redesign R6, ADR 0086). Each answers one question: the executive's "What do I need to do
@@ -86,10 +90,14 @@ const QUESTION: Record<Level, MessageKey> = {
 export function RoleDashboard({ level }: { level: Level }) {
   const [period, setPeriod] = React.useState<WorkspaceDashboardPeriod>(level === 'EXECUTIVE' ? 'TODAY' : 'MONTH');
   const q = useWorkspaceDashboard(period);
+  const chat = useHasFeature('team_chat');
   const picker = level === 'EXECUTIVE' ? null : <PeriodTabs value={period} onChange={setPeriod} />;
   return (
     <div className="space-y-5" data-role-dashboard={level}>
       <Greeting level={level} picker={picker} />
+      <BirthdayCelebration wishes={chat} />
+      <PipDashboardCard />
+      <EmployeeOfMonthCard manageLink={level !== 'EXECUTIVE'} own={level !== 'SUPER'} />
       {q.isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
@@ -112,7 +120,7 @@ export function RoleDashboard({ level }: { level: Level }) {
 function PeriodTabs({ value, onChange }: { value: WorkspaceDashboardPeriod; onChange: (p: WorkspaceDashboardPeriod) => void }) {
   const t = useT();
   return (
-    <div role="radiogroup" aria-label={t('Period')} className="inline-flex max-w-full overflow-x-auto rounded-full border border-border bg-surface/80 p-0.5 shadow-sm backdrop-blur">
+    <div role="radiogroup" aria-label={t('Period')} className="grid w-full grid-cols-2 gap-0.5 rounded-2xl border border-border bg-surface/80 p-0.5 shadow-sm backdrop-blur sm:inline-flex sm:w-auto sm:max-w-full sm:gap-0 sm:overflow-x-auto sm:rounded-full">
       {WORKSPACE_DASHBOARD_PERIODS.map((p) => (
         <button
           key={p}
@@ -157,6 +165,7 @@ function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) 
       hello={t(HELLO[part])}
       name={first}
       initials={initials}
+      photoUrl={session?.user.photoUrl ?? null}
       colors={[ROLE[level].a, ROLE[level].b]}
       date={new Intl.DateTimeFormat(t.formatLocale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
       badge={
@@ -174,6 +183,10 @@ function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) 
         </div>
       }
       aside={picker}
+      clockLabel={t('Current time')}
+      locale={t.formatLocale}
+      specialDaysPath="/special-days/today"
+      specialLabels={{ HOLIDAY: t('Public holiday today'), OBSERVANCE: t('Celebrated today'), COMPANY: t('Company event today') }}
     >
       <QuickActions />
     </WelcomeBanner>
@@ -504,7 +517,7 @@ function Ranking({ rows, currency, title, data }: { rows: WorkspacePerformance[]
                     <span className="truncate text-sm font-semibold">{r.workspace.name}</span>
                     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {r.targetPercent !== null ? `${Math.round(r.targetPercent)}% · ` : ''}
-                      {t('{n} leads', { n: count(r.leads) })} · {money(r.revenue, currency)}
+                      {t('{n} companies', { n: count(r.leads) })} · {money(r.revenue, currency)}
                     </span>
                   </span>
                   <span className="mt-1 block h-2 overflow-hidden rounded-full bg-muted">
@@ -566,7 +579,7 @@ function ExecutiveToday({ d }: { d: ExecutiveDay }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t('Today’s work')} role="group">
         <Tile icon={CalendarCheck} label={t('Follow-ups due')} value={count(d.work.pendingFollowUps)} detail={d.work.overdueFollowUps ? t('{count} overdue', { count: d.work.overdueFollowUps }) : null} href={`/app/follow-ups?bucket=${d.work.overdueFollowUps ? 'overdue' : 'today'}&scope=mine`} color="#d97706" alert={d.work.overdueFollowUps > 0} data="follow-ups" />
         <Tile icon={ListChecks} label={t('Tasks to do')} value={count(d.tasks.open)} detail={d.tasks.overdue ? t('{count} overdue', { count: d.tasks.overdue }) : null} href="/app/tasks" color="#7c3aed" alert={d.tasks.overdue > 0} data="tasks" />
-        <Tile icon={UserPlus} label={t('Leads today')} value={d.today.leadTarget !== null ? `${count(d.today.leads)} / ${count(d.today.leadTarget)}` : count(d.today.leads)} detail={d.today.remaining !== null ? t('{n} still to go', { n: count(d.today.remaining) }) : null} href="/app/companies" color="#4f46e5" data="leads" />
+        <Tile icon={UserPlus} label={t('Companies today')} value={d.today.leadTarget !== null ? `${count(d.today.leads)} / ${count(d.today.leadTarget)}` : count(d.today.leads)} detail={d.today.remaining !== null ? t('{n} still to go', { n: count(d.today.remaining) }) : null} href="/app/companies" color="#4f46e5" data="leads" />
         <Tile icon={PhoneCall} label={t('Calls today')} value={d.today.callTarget !== null ? `${count(d.today.calls)} / ${count(d.today.callTarget)}` : count(d.today.calls)} detail={money(d.today.revenue, d.currency)} href="/app/activities" color="#0891b2" data="calls" />
       </div>
       <div className="grid gap-4 lg:grid-cols-5">
@@ -599,7 +612,7 @@ function ManagerTeam({ d }: { d: ManagerDashboardView }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" role="group" aria-label={t('Team results')}>
-        <Tile icon={UserPlus} label={t('Leads generated')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} href="/app/companies" color="#4f46e5" data="leads" />
+        <Tile icon={UserPlus} label={t('Companies created')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} href="/app/companies" color="#4f46e5" data="leads" />
         <Tile icon={CircleDollarSign} label={t('Sales achieved')} value={money(d.totals.revenue, d.currency)} detail={t('Deals won: {n}', { n: count(d.totals.dealsWon) })} href="/app/revenue" color="#16a34a" data="revenue" />
         <Tile icon={ListTodo} label={t('Tasks pending')} value={count(e.tasks.open)} detail={t('{n} done this period', { n: count(e.tasks.doneInPeriod) })} href="/app/tasks" color="#7c3aed" alert={e.tasks.overdue > 0} data="tasks" />
         <Tile icon={AlarmClock} label={t('Overdue follow-ups')} value={count(d.work.overdueFollowUps)} detail={t('{n} pending', { n: count(d.work.pendingFollowUps) })} href="/app/follow-ups?bucket=overdue&scope=team" color="#d97706" alert={d.work.overdueFollowUps > 0} data="overdue" />
@@ -645,7 +658,7 @@ function SuperOrganisation({ d }: { d: SuperDashboard }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" role="group" aria-label={t('Organisation results')}>
-        <Tile icon={UserPlus} label={t('Leads generated')} value={count(d.totals.leads)} href="/app/companies" color="#4f46e5" data="leads" />
+        <Tile icon={UserPlus} label={t('Companies created')} value={count(d.totals.leads)} href="/app/companies" color="#4f46e5" data="leads" />
         <Tile icon={PhoneCall} label={t('Calls')} value={count(d.totals.calls)} href="/app/activities" color="#0891b2" data="calls" />
         <Tile icon={Trophy} label={t('Deals won')} value={count(d.totals.dealsWon)} href="/app/deals?view=list" color="#ca8a04" data="won" />
         <Tile icon={CircleDollarSign} label={t('Sales achieved')} value={money(d.totals.revenue, d.currency)} href="/app/revenue" color="#16a34a" data="revenue" />
@@ -757,10 +770,10 @@ function Productivity({ d }: { d: SuperDashboard }) {
               <tr className="text-start text-xs text-muted-foreground">
                 <th scope="col" className="pb-2 text-start font-medium">{t('Team')}</th>
                 <th scope="col" className="pb-2 text-end font-medium">{t('People')}</th>
-                <th scope="col" className="pb-2 text-end font-medium">{t('Leads')}</th>
+                <th scope="col" className="pb-2 text-end font-medium">{t('Companies')}</th>
                 <th scope="col" className="pb-2 text-end font-medium">{t('Calls')}</th>
                 <th scope="col" className="pb-2 text-end font-medium">{t('Deals won')}</th>
-                <th scope="col" className="pb-2 text-end font-medium">{t('Leads per person')}</th>
+                <th scope="col" className="pb-2 text-end font-medium">{t('Companies per person')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

@@ -28,6 +28,23 @@ photos already existed (ADR 0072, M6) but were tucked into Account security and 
 - Lists elsewhere (owner refs, member rows) were not changed: avatars look people up by user id in the cached cards,
   so no list endpoint loads profile data.
 
+- **The photo everywhere** (Kunal, 2026-11-27): the welcome banner on every home dashboard shows the photo in its
+  avatar ring (initials when there is none or it fails to load). Console operators are separate accounts, so they
+  get an `OperatorPhoto` of their own (`PUT/DELETE /operator/me/photo`, served at `GET /operator/photos/:id` to
+  signed-in operators only); without one, the Console uses the photo of the SampForce account with the same email,
+  so a photo chosen on My profile shows in the Console too, without a second upload. It shows on the Console top
+  bar, the Overview greeting, the operators list and the Console account page, where it can be replaced or removed.
+  The phone app already used the profile photo.
+
+- **Birthdays** (Kunal, 2026-11-27): My profile takes a date of birth (day and month; the year is optional). Teammates
+  see only the day and month unless the person shares the year (`birthYearVisible`, off by default), and nothing at
+  all when they keep it private (`celebrateBirthday` off). `GET /people/birthdays?date=` lists today's birthdays in
+  the workspace for the reader's own local date (time zones differ, so the browser or phone sends it); 29 February
+  is celebrated on 28 February in other years. Every dashboard tab shows a celebration (photos, confetti, "Wish"
+  buttons that send a team chat message; your own birthday says Happy birthday), as do the phone app's home screen
+  and the Console Overview (`GET /operator/birthdays`, operators matched to their SampForce account by email). It is
+  a separate card under the welcome banner rather than part of the banner's special-day ribbon.
+
 ## Consequences
 
 - Workspaces with many hundreds of people load one larger cards list; acceptable, it is cached for a minute.

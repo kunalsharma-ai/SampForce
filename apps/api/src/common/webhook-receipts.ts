@@ -4,7 +4,7 @@ import { PrismaService } from './prisma.service';
 import { fingerprintOf } from './provider-keys';
 
 /** Deployment-wide webhooks whose signing secret is entered in the operator console (ADR 0053). */
-export const RECEIPT_PROVIDERS = ['stripe', 'razorpay', 'zoom', 'docusign'] as const;
+export const RECEIPT_PROVIDERS = ['stripe', 'razorpay', 'docusign', 'website'] as const;
 export type ReceiptProvider = (typeof RECEIPT_PROVIDERS)[number];
 
 export const WEBHOOK_RECEIPT_PREFIX = 'webhook_receipt:';
@@ -13,8 +13,8 @@ export const WEBHOOK_RECEIPT_PREFIX = 'webhook_receipt:';
 export const RECEIPT_SECRET = {
   stripe: 'STRIPE_WEBHOOK_SECRET',
   razorpay: 'RAZORPAY_WEBHOOK_SECRET',
-  zoom: 'ZOOM_WEBHOOK_SECRET_TOKEN',
   docusign: 'DOCUSIGN_CONNECT_HMAC_KEY',
+  website: 'WEBSITE_WEBHOOK_SECRET',
 } as const satisfies Record<ReceiptProvider, keyof ApiEnv>;
 
 /** Fingerprint of the signing secret set now, or null when none is set. */
@@ -60,6 +60,12 @@ export class WebhookReceipts {
   verified(provider: ReceiptProvider, event: string): Promise<void> {
     const key = receiptKey(this.env, provider);
     return this.write(provider, `verified:${key}`, (r) => ({ ...r, lastVerified: { at: new Date().toISOString(), event: event.slice(0, 80), key } }));
+  }
+
+  /** The receipt as stored, for pages outside the console that show it (Website Enquiry, ADR 0095). */
+  async read(provider: ReceiptProvider): Promise<WebhookReceipt> {
+    const row = await this.prisma.platformSetting.findUnique({ where: { key: WEBHOOK_RECEIPT_PREFIX + provider } });
+    return readReceipt(row?.value);
   }
 
   rejected(provider: ReceiptProvider, reason: string): Promise<void> {

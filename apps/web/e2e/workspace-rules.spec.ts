@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { FEATURE_KEYS } from '@dealflow/types';
-import { E2E_DATABASE_URL, setPlan, signUp, workspaceAction } from './helpers';
+import { E2E_DATABASE_URL, setPlan, signUp, workspaceAction, perWorkspaceDelete } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -53,6 +53,8 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
 
   // The client, on that plan, with a Manager Workspace that has every action.
   await signUp(page, 'Frequent Research Field');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   await setPlan(page, planCode);
   const me = await (await page.request.get('/api/v1/auth/me')).json();
   const ws = await (await page.request.post('/api/v1/workspaces', { data: { level: 'MANAGER', name: 'North Field Team', person: { inviteEmail: `north.${Date.now()}@example.com` } }, headers: ORIGIN })).json();

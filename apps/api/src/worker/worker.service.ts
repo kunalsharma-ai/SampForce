@@ -1,12 +1,19 @@
-import { ZoomService } from '../apps/zoom.service';
 import { SampbidxChatService } from '../apps/sampbidx-chat.service';
+import { TaskPlansService } from '../task-plans/task-plans.service';
+import { PipsService } from '../recognition/pips.service';
+import { RecognitionService } from '../recognition/recognition.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
+import { OrgExpiryRemindersService } from '../my-organization/org-expiry-reminders.service';
+import { LearningRemindersService } from '../learning/reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
 import { ApprovalsService } from '../automation/approvals.service';
+import { RecycleBinService } from '../team-approvals/recycle-bin.service';
+import { TeamApprovalsService } from '../team-approvals/team-approvals.service';
 import { EventRelay } from '../automation/event-relay.service';
 import { WorkflowExecutor } from '../automation/executor.service';
 import { ContractsService } from '../commercial/contracts.service';
@@ -14,7 +21,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
 import { GamificationService } from '../gamification/gamification.service';
-import { VisitorsService } from '../visitors/visitors.service';
+import { WebsiteEnquirySync } from '../website-enquiries/website-enquiry-sync.service';
 import { ProspectsService } from '../prospects/prospects.service';
 import { DealHealthService } from '../intelligence/deal-health.service';
 import { SequenceRunner } from '../sequences/sequence-runner.service';
@@ -28,6 +35,9 @@ import { ConsoleHealthService } from '../operator/console-health.service';
 import { ConsoleOverviewService } from '../operator/console-overview.service';
 
 export interface WorkerTick {
+  /** Team approvals expired or escalated, and deleted items past their keep period removed (ADR 0098). */
+  teamApprovals: number;
+  deletedItemsPurged: number;
   events: number;
   executions: number;
   deliveries: number;
@@ -40,13 +50,13 @@ export interface WorkerTick {
   sequences: number;
   /** Badges awarded by the hourly gamification sweep. */
   badges: number;
-  /** Website tracking rows deleted under each workspace's retention period. */
-  visitorRetention: number;
+  /** Website enquiries pulled from the website API, and SampForce statuses sent back to it (ADR 0095). */
+  websiteEnquiries: number;
   prospectImports: number;
-  /** Zoom transcripts imported into meeting notes. */
-  zoomTranscripts: number;
   /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
   reminders: number;
+  /** Contacts moved into Follow-ups once the period after their first email passed (ADR 0096). */
+  cadenceMoves: number;
   /** Company logos looked up from company websites (ADR 0070). */
   logos: number;
   /** Company auto-fill runs (ADR 0076). */
@@ -57,10 +67,18 @@ export interface WorkerTick {
   erasures: number;
   /** Console notifications delivered to operators (ADR 0074, C3b). */
   consoleNotifications: number;
+  /** Learning deadline reminders sent (ADR 0097), once a minute. */
+  learningReminders: number;
   /** Clients whose health score was measured (ADR 0074, C5): each once a day, and again after the weights change. */
   clientHealth: number;
   /** SampBidx chat messages tried again (ADR 0078). */
   sampbidxChat: number;
+  /** Recurring task instances made, counted, closed and reminded (ADR 0096). */
+  taskPlans: number;
+  /** Employee of the Month targets counted (and month-end selections) and improvement plans counted (ADR 0102). */
+  recognition: number;
+  /** Expiry reminders for My Organization documents (ADR 0100). */
+  orgDocuments: number;
 }
 
 /**
@@ -81,6 +99,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly executor: WorkflowExecutor,
     private readonly deliverer: WebhookDeliverer,
     private readonly approvals: ApprovalsService,
+    private readonly teamApprovals: TeamApprovalsService,
+    private readonly recycleBin: RecycleBinService,
     private readonly integrations: IntegrationsService,
     private readonly aiRunner: AiRunner,
     private readonly contracts: ContractsService,
@@ -89,11 +109,14 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly billing: BillingService,
     private readonly sequences: SequenceRunner,
     private readonly gamification: GamificationService,
-    private readonly visitors: VisitorsService,
+    private readonly websiteEnquiries: WebsiteEnquirySync,
     private readonly prospects: ProspectsService,
-    private readonly zoom: ZoomService,
     private readonly sampbidxChat: SampbidxChatService,
+    private readonly taskPlans: TaskPlansService,
+    private readonly recognition: RecognitionService,
+    private readonly pips: PipsService,
     private readonly reminders: CrmRemindersService,
+    private readonly cadence: FollowUpCadenceService,
     private readonly logos: CompanyLogosService,
     private readonly autofill: CompanyEnrichmentService,
     private readonly pushes: MobilePushService,
@@ -101,6 +124,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly consoleNotices: ConsoleNotificationSweep,
     private readonly clientHealth: ConsoleHealthService,
     private readonly overview: ConsoleOverviewService,
+    private readonly orgDocuments: OrgExpiryRemindersService,
+    private readonly learningReminders: LearningRemindersService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -140,12 +165,15 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
 
   /** One pass over every queue. Relays first so new events start their workflows in the same tick. */
   private lastConsoleSweep = 0;
+  private lastLearningSweep = 0;
 
   async tick(): Promise<WorkerTick> {
     const events = await this.relay.relayBatch();
     const executions = await this.executor.runDue();
     const deliveries = await this.deliverer.deliverDue();
     const approvalsExpired = await this.approvals.expireDue();
+    const teamApprovals = await this.teamApprovals.sweep();
+    const deletedItemsPurged = await this.recycleBin.sweep();
     const syncs = await this.integrations.syncDue();
     const aiRuns = await this.aiRunner.runDue();
     const contracts = await this.contracts.runDue();
@@ -153,9 +181,10 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const billing = await this.billing.runDue();
     const sequences = await this.sequences.runDue();
     const badges = await this.gamification.sweep();
-    const visitorRetention = await this.visitors.sweep();
+    const websiteEnquiries = await this.websiteEnquiries.sweep();
     const prospectImports = await this.prospects.sweep();
-    const zoomTranscripts = await this.zoom.importDue();
+    // Before reminders, so a follow-up created now is in this pass's morning summary.
+    const cadenceMoves = await this.cadence.moveDue();
     const reminders = await this.reminders.sweep();
     const logos = await this.logos.runDue();
     const autofills = await this.autofill.runDue();
@@ -163,6 +192,14 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const pushes = await this.pushes.sendDue();
     const erasures = await this.closures.eraseDue();
     const sampbidxChat = await this.sampbidxChat.sweep();
+    const taskPlans = await this.taskPlans.sweep();
+    const recognition = (await this.recognition.sweep()) + (await this.pips.sweep());
+    const orgDocuments = await this.orgDocuments.sweep();
+    let learningReminders = 0;
+    if (Date.now() - this.lastLearningSweep >= 60_000) {
+      this.lastLearningSweep = Date.now();
+      learningReminders = await this.learningReminders.sweep();
+    }
     // Console notifications once a minute: they read across every client, so not on every tick.
     // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
     let consoleNotifications = 0;
@@ -174,7 +211,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { teamApprovals, deletedItemsPurged, events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, websiteEnquiries, prospectImports, reminders, cadenceMoves, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat, taskPlans, recognition, orgDocuments, learningReminders };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

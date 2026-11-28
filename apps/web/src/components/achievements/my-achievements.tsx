@@ -59,12 +59,12 @@ function LeadCard({ p, title }: { p: LeadProgress; title: string }) {
         <p className="font-semibold">{title}</p>
         {p.target ? (
           <>
-            <p>{t('{actual} of {target} valid leads', { actual: num(p.actual), target: num(p.target) })}</p>
+            <p>{t('{actual} of {target} valid companies', { actual: num(p.actual), target: num(p.target) })}</p>
             <p className="text-muted-foreground">{p.remaining > 0 ? t('{n} still to go', { n: num(p.remaining) }) : t('Target reached')}</p>
             <p className="text-xs text-muted-foreground">{p.targetSource === 'ASSIGNED' ? t('Set by your manager') : t('Your personal target')}</p>
           </>
         ) : (
-          <p className="text-muted-foreground">{t('{n} valid leads. No target set.', { n: num(p.actual) })}</p>
+          <p className="text-muted-foreground">{t('{n} valid companies. No target set.', { n: num(p.actual) })}</p>
         )}
         {p.notCounted > 0 && <p className="text-xs text-muted-foreground">{t('{n} not counted (no website, email, phone or LinkedIn, or already in SampForce)', { n: num(p.notCounted) })}</p>}
       </div>
@@ -78,7 +78,7 @@ function Summary({ s }: { s: AchievementSummary }) {
   return (
     <div className="space-y-6">
       <section aria-labelledby="ach-today" className="space-y-3">
-        <h2 id="ach-today" className="text-lg font-semibold">{t('Lead targets')}</h2>
+        <h2 id="ach-today" className="text-lg font-semibold">{t('Company targets')}</h2>
         <div className="grid gap-3 md:grid-cols-3">
           <LeadCard p={s.leads.today} title={t('Today')} />
           <LeadCard p={s.leads.week} title={t('This week')} />
@@ -111,8 +111,8 @@ function Summary({ s }: { s: AchievementSummary }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat icon={Handshake} tone="deal" label={t('Deals converted')} value={s.totals.dealsConverted} />
           <Stat icon={Send} tone="rfq" label={t('RFQs submitted')} value={s.totals.rfqsSubmitted} />
-          <Stat icon={Target} tone="quota" label={t('Daily lead targets reached')} value={s.totals.dailyLeadTargets} />
-          <Stat icon={CalendarCheck2} tone="milestone" label={t('Weekly and monthly lead targets')} value={s.totals.weeklyLeadTargets + s.totals.monthlyLeadTargets} />
+          <Stat icon={Target} tone="quota" label={t('Daily company targets reached')} value={s.totals.dailyLeadTargets} />
+          <Stat icon={CalendarCheck2} tone="milestone" label={t('Weekly and monthly company targets')} value={s.totals.weeklyLeadTargets + s.totals.monthlyLeadTargets} />
           <Stat icon={CheckCheck} tone="task" label={t('Tasks completed')} value={s.totals.tasksCompleted} />
           <Stat icon={ListChecks} tone="sweep" label={t('Days with every task done')} value={s.totals.allTasksDays} />
           <Stat icon={Trophy} tone="target" label={t('Sales targets reached')} value={s.totals.salesTargets} />
@@ -313,9 +313,9 @@ function SettingsCard({ s }: { s: AchievementSettingsView }) {
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{t('Personal targets')}</legend>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {targetField('dailyLeadTarget', t('Leads per day'), s.assigned.dailyLeads)}
-              {targetField('weeklyLeadTarget', t('Leads per week'), s.assigned.weeklyLeads)}
-              {targetField('monthlyLeadTarget', t('Leads per month'), s.assigned.monthlyLeads)}
+              {targetField('dailyLeadTarget', t('Companies per day'), s.assigned.dailyLeads)}
+              {targetField('weeklyLeadTarget', t('Companies per week'), s.assigned.weeklyLeads)}
+              {targetField('monthlyLeadTarget', t('Companies per month'), s.assigned.monthlyLeads)}
               {targetField('monthlyRevenueTarget', t('Revenue per month'), s.assigned.monthlyRevenue, true)}
               {targetField('majorDealAmount', t('Major deal from'), null, true)}
             </div>

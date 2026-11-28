@@ -1,7 +1,7 @@
 import type { TextTable } from '../catalogue';
 
 /**
- * SampForce's own messages about connected services: workspace apps (Slack, Teams, Zoom, DocuSign, card payments,
+ * SampForce's own messages about connected services: workspace apps (DocuSign, card payments,
  * WhatsApp, SMS), mailboxes, single sign-on, billing providers, transcription, Apollo and the AI provider. Text a
  * provider sends back (carried in a placeholder) is shown as the provider wrote it.
  */
@@ -11,36 +11,9 @@ export const errorsProviders = {
   'The AI answer was not valid JSON.': ['La respuesta de la IA no era un JSON válido.', 'La réponse de l’IA n’était pas un JSON valide.', 'Die KI-Antwort war kein gültiges JSON.', 'لم تكن إجابة الذكاء الاصطناعي بصيغة JSON صالحة.'],
   'The AI provider declined this request.': ['El proveedor de IA rechazó esta solicitud.', 'Le fournisseur d’IA a refusé cette demande.', 'Der KI-Anbieter hat diese Anfrage abgelehnt.', 'رفض مزوّد الذكاء الاصطناعي هذا الطلب.'],
 
-  // Slack and Teams
-  'A workspace can add up to {max} Teams channels.': ['Un espacio de trabajo puede añadir hasta {max} canales de Teams.', 'Un espace de travail peut ajouter jusqu’à {max} canaux Teams.', 'Ein Arbeitsbereich kann bis zu {max} Teams-Kanäle hinzufügen.', 'يمكن لمساحة العمل إضافة حتى {max} من قنوات Teams.'],
-  'Choose a Slack channel for this step, or set a default channel in Integrations.': ['Elige un canal de Slack para este paso o define un canal predeterminado en Integraciones.', 'Choisissez un canal Slack pour cette étape, ou définissez un canal par défaut dans Intégrations.', 'Wählen Sie einen Slack-Kanal für diesen Schritt oder legen Sie unter Integrationen einen Standardkanal fest.', 'اختر قناة Slack لهذه الخطوة، أو عيّن قناة افتراضية من التكاملات.'],
-  'Choose a Teams channel for this step, or set a default channel in Integrations.': ['Elige un canal de Teams para este paso o define un canal predeterminado en Integraciones.', 'Choisissez un canal Teams pour cette étape, ou définissez un canal par défaut dans Intégrations.', 'Wählen Sie einen Teams-Kanal für diesen Schritt oder legen Sie unter Integrationen einen Standardkanal fest.', 'اختر قناة Teams لهذه الخطوة، أو عيّن قناة افتراضية من التكاملات.'],
-  'Choose one of the Teams channels added here.': ['Elige uno de los canales de Teams añadidos aquí.', 'Choisissez l’un des canaux Teams ajoutés ici.', 'Wählen Sie einen der hier hinzugefügten Teams-Kanäle.', 'اختر إحدى قنوات Teams المضافة هنا.'],
-  'Slack did not answer in time.': ['Slack no respondió a tiempo.', 'Slack n’a pas répondu à temps.', 'Slack hat nicht rechtzeitig geantwortet.', 'لم يستجب Slack في الوقت المحدد.'],
-  'That Teams channel was removed. Choose another channel for this step.': ['Ese canal de Teams se eliminó. Elige otro canal para este paso.', 'Ce canal Teams a été supprimé. Choisissez un autre canal pour cette étape.', 'Dieser Teams-Kanal wurde entfernt. Wählen Sie einen anderen Kanal für diesen Schritt.', 'أُزيلت قناة Teams تلك. اختر قناة أخرى لهذه الخطوة.'],
-  'That workflow URL is already added as "{name}".': ['Esa URL de flujo de trabajo ya está añadida como "{name}".', 'Cette URL de workflow est déjà ajoutée sous le nom « {name} ».', 'Diese Workflow-URL ist bereits als „{name}“ hinzugefügt.', 'رابط سير العمل هذا مضاف بالفعل باسم "{name}".'],
+  // Workspace apps
   '{app} is not connected. A workspace admin can connect it in Integrations.': ['{app} no está conectado. Un administrador del espacio de trabajo puede conectarlo en Integraciones.', '{app} n’est pas connecté. Un administrateur de l’espace de travail peut le connecter dans Intégrations.', '{app} ist nicht verbunden. Ein Administrator des Arbeitsbereichs kann es unter Integrationen verbinden.', '{app} غير مرتبط. يمكن لمسؤول مساحة العمل ربطه من التكاملات.'],
-  'Slack answered {status}.': ['Slack respondió {status}.', 'Slack a répondu {status}.', 'Slack hat mit {status} geantwortet.', 'أجاب Slack بالرمز {status}.'],
-  'Slack did not return a bot token.': ['Slack no devolvió un token de bot.', 'Slack n’a pas renvoyé de jeton de bot.', 'Slack hat kein Bot-Token zurückgegeben.', 'لم يُرجع Slack رمز البوت.'],
-  'Slack refused the request ({reason}).': ['Slack rechazó la solicitud ({reason}).', 'Slack a refusé la demande ({reason}).', 'Slack hat die Anfrage abgelehnt ({reason}).', 'رفض Slack الطلب ({reason}).'],
   'Not a valid URL': ['No es una URL válida', 'URL non valide', 'Keine gültige URL', 'رابط غير صالح'],
-  'Paste the URL from the Teams Workflows app ("Send webhook alerts to a channel"). Office 365 connector URLs are being retired by Microsoft and are not accepted.': [
-    'Pega la URL de la app Workflows de Teams ("Send webhook alerts to a channel"). Microsoft está retirando las URL de conectores de Office 365 y no se aceptan.',
-    'Collez l’URL de l’application Workflows de Teams ("Send webhook alerts to a channel"). Microsoft retire les URL de connecteurs Office 365, qui ne sont pas acceptées.',
-    'Fügen Sie die URL aus der Teams-App „Workflows“ ein ("Send webhook alerts to a channel"). Office-365-Connector-URLs werden von Microsoft eingestellt und nicht akzeptiert.',
-    'الصق الرابط من تطبيق Workflows في Teams ‏("Send webhook alerts to a channel"). تُوقف Microsoft روابط موصلات Office 365 ولا تُقبل.',
-  ],
-  'Teams answered with HTTP {status}.': ['Teams respondió con HTTP {status}.', 'Teams a répondu HTTP {status}.', 'Teams hat mit HTTP {status} geantwortet.', 'أجاب Teams برمز HTTP {status}.'],
-  'Teams could not be reached.': ['No se pudo contactar con Teams.', 'Teams est injoignable.', 'Teams ist nicht erreichbar.', 'تعذر الوصول إلى Teams.'],
-  'Teams did not answer in time.': ['Teams no respondió a tiempo.', 'Teams n’a pas répondu à temps.', 'Teams hat nicht rechtzeitig geantwortet.', 'لم يستجب Teams في الوقت المحدد.'],
-  'Teams is limiting requests. The step will be retried.': ['Teams está limitando las solicitudes. Se reintentará el paso.', 'Teams limite les requêtes. L’étape sera relancée.', 'Teams begrenzt die Anfragen. Der Schritt wird wiederholt.', 'يحدّ Teams من الطلبات. ستُعاد محاولة الخطوة.'],
-  'Teams rejected the message (HTTP {status}).': ['Teams rechazó el mensaje (HTTP {status}).', 'Teams a refusé le message (HTTP {status}).', 'Teams hat die Nachricht abgelehnt (HTTP {status}).', 'رفض Teams الرسالة (HTTP {status}).'],
-  'The Teams workflow for this channel no longer accepts messages (it was deleted, turned off or its URL changed). Add the channel again with a new URL.': [
-    'El flujo de trabajo de Teams de este canal ya no acepta mensajes (se eliminó, se desactivó o cambió su URL). Vuelve a añadir el canal con una URL nueva.',
-    'Le workflow Teams de ce canal n’accepte plus de messages (il a été supprimé, désactivé ou son URL a changé). Ajoutez de nouveau le canal avec une nouvelle URL.',
-    'Der Teams-Workflow für diesen Kanal nimmt keine Nachrichten mehr an (er wurde gelöscht, ausgeschaltet oder seine URL hat sich geändert). Fügen Sie den Kanal mit einer neuen URL erneut hinzu.',
-    'لم يعد سير عمل Teams لهذه القناة يقبل الرسائل (حُذف أو أُوقف أو تغيّر رابطه). أضف القناة مرة أخرى برابط جديد.',
-  ],
 
   // Card payments
   'Card payments in {currency} are not supported yet.': ['Los pagos con tarjeta en {currency} aún no son compatibles.', 'Les paiements par carte en {currency} ne sont pas encore pris en charge.', 'Kartenzahlungen in {currency} werden noch nicht unterstützt.', 'المدفوعات بالبطاقة بعملة {currency} غير مدعومة بعد.'],
@@ -55,7 +28,7 @@ export const errorsProviders = {
   '{provider} refused the keys.': ['{provider} rechazó las claves.', '{provider} a refusé les clés.', '{provider} hat die Schlüssel abgelehnt.', 'رفض {provider} المفاتيح.'],
   '{provider} refused the keys. {detail}': ['{provider} rechazó las claves. {detail}', '{provider} a refusé les clés. {detail}', '{provider} hat die Schlüssel abgelehnt. {detail}', 'رفض {provider} المفاتيح. {detail}'],
 
-  // DocuSign and Zoom
+  // DocuSign
   'DocuSign needs reconnecting in Integrations.': ['Hay que volver a conectar DocuSign en Integraciones.', 'DocuSign doit être reconnecté dans Intégrations.', 'DocuSign muss unter Integrationen erneut verbunden werden.', 'يجب إعادة ربط DocuSign من التكاملات.'],
   'DocuSign answered HTTP {status}.': ['DocuSign respondió HTTP {status}.', 'DocuSign a répondu HTTP {status}.', 'DocuSign hat mit HTTP {status} geantwortet.', 'أجاب DocuSign برمز HTTP {status}.'],
   'DocuSign could not be reached.': ['No se pudo contactar con DocuSign.', 'DocuSign est injoignable.', 'DocuSign ist nicht erreichbar.', 'تعذر الوصول إلى DocuSign.'],
@@ -68,29 +41,7 @@ export const errorsProviders = {
   'DocuSign returned an unexpected API address.': ['DocuSign devolvió una dirección de API inesperada.', 'DocuSign a renvoyé une adresse d’API inattendue.', 'DocuSign hat eine unerwartete API-Adresse zurückgegeben.', 'أرجع DocuSign عنوان API غير متوقع.'],
   'DocuSign: {detail}': ['DocuSign: {detail}', 'DocuSign : {detail}', 'DocuSign: {detail}', 'DocuSign: {detail}'],
   'This DocuSign user has no eSignature account.': ['Este usuario de DocuSign no tiene cuenta de eSignature.', 'Cet utilisateur DocuSign n’a pas de compte eSignature.', 'Dieser DocuSign-Benutzer hat kein eSignature-Konto.', 'لا يملك مستخدم DocuSign هذا حساب eSignature.'],
-  'Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN. Schedule without recording, or record in Zoom yourself.': [
-    'La importación de transcripciones está pendiente de configuración: un operador debe añadir ZOOM_WEBHOOK_SECRET_TOKEN. Programa sin grabación o graba tú mismo en Zoom.',
-    'L’import des transcriptions est en attente de configuration : un opérateur doit ajouter ZOOM_WEBHOOK_SECRET_TOKEN. Planifiez sans enregistrement, ou enregistrez vous-même dans Zoom.',
-    'Der Transkriptimport wartet auf Einrichtung: Ein Betreiber muss ZOOM_WEBHOOK_SECRET_TOKEN hinzufügen. Planen Sie ohne Aufzeichnung oder zeichnen Sie selbst in Zoom auf.',
-    'استيراد النصوص بانتظار الإعداد: يجب أن يضيف المشغّل ZOOM_WEBHOOK_SECRET_TOKEN. جدوِل دون تسجيل، أو سجّل بنفسك في Zoom.',
-  ],
-  'Zoom needs reconnecting in Integrations.': ['Hay que volver a conectar Zoom en Integraciones.', 'Zoom doit être reconnecté dans Intégrations.', 'Zoom muss unter Integrationen neu verbunden werden.', 'يجب إعادة ربط Zoom من التكاملات.'],
-  'Zoom’s transcript was empty.': ['La transcripción de Zoom estaba vacía.', 'La transcription de Zoom était vide.', 'Das Zoom-Transkript war leer.', 'كان نص Zoom فارغًا.'],
   'The transcript is larger than 5 MB.': ['La transcripción supera los 5 MB.', 'La transcription dépasse 5 Mo.', 'Das Transkript ist größer als 5 MB.', 'حجم النص أكبر من 5 ميغابايت.'],
-  'The transcript link is not on zoom.us.': ['El enlace de la transcripción no está en zoom.us.', 'Le lien de la transcription n’est pas sur zoom.us.', 'Der Transkript-Link liegt nicht auf zoom.us.', 'رابط النص ليس على zoom.us.'],
-  'Zoom answered HTTP {status} for the transcript.': ['Zoom respondió HTTP {status} para la transcripción.', 'Zoom a répondu HTTP {status} pour la transcription.', 'Zoom hat für das Transkript mit HTTP {status} geantwortet.', 'أجاب Zoom برمز HTTP {status} بشأن النص.'],
-  'Zoom answered HTTP {status}.': ['Zoom respondió HTTP {status}.', 'Zoom a répondu HTTP {status}.', 'Zoom hat mit HTTP {status} geantwortet.', 'أجاب Zoom برمز HTTP {status}.'],
-  'Zoom could not be reached for the transcript.': ['No se pudo contactar con Zoom para obtener la transcripción.', 'Zoom est injoignable pour la transcription.', 'Zoom war für das Transkript nicht erreichbar.', 'تعذر الوصول إلى Zoom للحصول على النص.'],
-  'Zoom could not be reached.': ['No se pudo contactar con Zoom.', 'Zoom est injoignable.', 'Zoom ist nicht erreichbar.', 'تعذر الوصول إلى Zoom.'],
-  'Zoom did not answer in time.': ['Zoom no respondió a tiempo.', 'Zoom n’a pas répondu à temps.', 'Zoom hat nicht rechtzeitig geantwortet.', 'لم يستجب Zoom في الوقت المحدد.'],
-  'Zoom is limiting requests. Try again in a minute.': ['Zoom está limitando las solicitudes. Inténtalo de nuevo en un minuto.', 'Zoom limite les requêtes. Réessayez dans une minute.', 'Zoom begrenzt die Anfragen. Versuchen Sie es in einer Minute erneut.', 'يحدّ Zoom من الطلبات. حاول مرة أخرى بعد دقيقة.'],
-  'Zoom no longer accepts the SampForce connection. Reconnect Zoom in Integrations.': ['Zoom ya no acepta la conexión de SampForce. Vuelve a conectar Zoom en Integraciones.', 'Zoom n’accepte plus la connexion SampForce. Reconnectez Zoom dans Intégrations.', 'Zoom akzeptiert die SampForce-Verbindung nicht mehr. Verbinden Sie Zoom unter Integrationen erneut.', 'لم يعد Zoom يقبل اتصال SampForce. أعد ربط Zoom من التكاملات.'],
-  'Zoom no longer allows this transcript to be downloaded (the link expired).': ['Zoom ya no permite descargar esta transcripción (el enlace caducó).', 'Zoom ne permet plus de télécharger cette transcription (le lien a expiré).', 'Zoom erlaubt den Download dieses Transkripts nicht mehr (der Link ist abgelaufen).', 'لم يعد Zoom يسمح بتنزيل هذا النص (انتهت صلاحية الرابط).'],
-  'Zoom redirected the transcript download too many times.': ['Zoom redirigió la descarga de la transcripción demasiadas veces.', 'Zoom a redirigé le téléchargement de la transcription trop de fois.', 'Zoom hat den Transkript-Download zu oft umgeleitet.', 'أعاد Zoom توجيه تنزيل النص مرات كثيرة جدًا.'],
-  'Zoom refused the access token.': ['Zoom rechazó el token de acceso.', 'Zoom a refusé le jeton d’accès.', 'Zoom hat das Zugriffstoken abgelehnt.', 'رفض Zoom رمز الوصول.'],
-  'Zoom refused the sign-in ({reason}).': ['Zoom rechazó el inicio de sesión ({reason}).', 'Zoom a refusé la connexion ({reason}).', 'Zoom hat die Anmeldung abgelehnt ({reason}).', 'رفض Zoom تسجيل الدخول ({reason}).'],
-  'Zoom: {detail}': ['Zoom: {detail}', 'Zoom : {detail}', 'Zoom: {detail}', 'Zoom: {detail}'],
-  '{email} is not a user in the connected Zoom account. Ask your Zoom admin to add them, or schedule from Zoom.': ['{email} no es usuario de la cuenta de Zoom conectada. Pide a tu administrador de Zoom que lo añada o programa desde Zoom.', '{email} n’est pas utilisateur du compte Zoom connecté. Demandez à votre administrateur Zoom de l’ajouter, ou planifiez depuis Zoom.', '{email} ist kein Benutzer des verbundenen Zoom-Kontos. Bitten Sie Ihren Zoom-Administrator, die Person hinzuzufügen, oder planen Sie in Zoom.', '{email} ليس مستخدمًا في حساب Zoom المرتبط. اطلب من مسؤول Zoom إضافته، أو جدوِل من Zoom.'],
 
   // SMS (Twilio) and WhatsApp
   'Record this contact’s SMS consent before texting them.': ['Registra el consentimiento de SMS de este contacto antes de escribirle.', 'Enregistrez le consentement SMS de ce contact avant de lui écrire.', 'Erfassen Sie die SMS-Einwilligung dieses Kontakts, bevor Sie ihm schreiben.', 'سجّل موافقة جهة الاتصال هذه على الرسائل النصية قبل مراسلتها.'],

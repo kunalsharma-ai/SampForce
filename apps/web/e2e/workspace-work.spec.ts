@@ -66,7 +66,7 @@ test('a manager assigns a task the executive sees on the dashboard, and a target
   await expect(manager.locator('[data-targets-of="North India Sales"]')).toContainText(/Handed down: 6 of 10/);
 
   // Scenario 12: the manager assigns a high-priority task to the executive.
-  await manager.goto('/app/tasks');
+  await manager.goto('/app/tasks?tab=oneoff');
   await manager.getByRole('button', { name: 'New task' }).click();
   dialog = manager.getByRole('dialog');
   await dialog.getByLabel('Title').fill('Call the five new research leads');

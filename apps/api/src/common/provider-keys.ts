@@ -22,11 +22,6 @@ export const MANAGED_KEYS = {
   MICROSOFT_CLIENT_ID: { secret: true },
   MICROSOFT_CLIENT_SECRET: { secret: true },
   MICROSOFT_TENANT: { secret: false },
-  SLACK_CLIENT_ID: { secret: true },
-  SLACK_CLIENT_SECRET: { secret: true },
-  ZOOM_CLIENT_ID: { secret: true },
-  ZOOM_CLIENT_SECRET: { secret: true },
-  ZOOM_WEBHOOK_SECRET_TOKEN: { secret: true },
   DOCUSIGN_INTEGRATION_KEY: { secret: true },
   DOCUSIGN_SECRET_KEY: { secret: true },
   DOCUSIGN_CONNECT_HMAC_KEY: { secret: true },
@@ -47,6 +42,8 @@ export const MANAGED_KEYS = {
   MAIL_FROM: { secret: false },
   ZAPIER_INVITE_URL: { secret: false },
   EXPO_ACCESS_TOKEN: { secret: true },
+  WEBSITE_API_KEY: { secret: true },
+  WEBSITE_WEBHOOK_SECRET: { secret: true },
   STRIPE_SECRET_KEY: { secret: true },
   STRIPE_WEBHOOK_SECRET: { secret: true },
   RAZORPAY_KEY_ID: { secret: true },
@@ -71,6 +68,8 @@ export const MANAGED_KEYS = {
   RAZORPAY_PLANS: { secret: false },
   PRICING_PUBLISHED: { secret: false },
   SALES_CONTACT_EMAIL: { secret: false },
+  WEBSITE_API_BASE_URL: { secret: false },
+  WEBSITE_ENQUIRY_WORKSPACE: { secret: false },
 } as const satisfies Partial<Record<keyof ApiEnv, { secret: boolean }>>;
 
 export type ManagedKeyName = keyof typeof MANAGED_KEYS;
@@ -153,7 +152,7 @@ export const ENV_IMPORT_PREFIX = 'env_import:';
  * environment is ignored, so removing a key in the console really removes it. Outside production the environment
  * stays a fallback, because local development and the test suite point providers at local stand-ins that way.
  *
- * Services read keys from the injected ApiEnv at the moment they call a provider (`this.env.SLACK_CLIENT_SECRET`).
+ * Services read keys from the injected ApiEnv at the moment they call a provider (`this.env.DOCUSIGN_SECRET_KEY`).
  * This service turns each managed name on that object into a getter: the value saved in `platform_secrets`, if any,
  * otherwise the environment variable the process started with. Saved values are decrypted into memory and reloaded
  * every PROVIDER_KEYS_REFRESH_SECONDS (default 10), and at once in the process that saved them, so the API, the worker

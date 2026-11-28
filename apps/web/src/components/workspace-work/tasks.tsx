@@ -88,7 +88,7 @@ export function TasksBoard() {
   const tasks = useAssignedTasks();
   const [tab, setTab] = useState<'forMe' | 'byMe'>('forMe');
   const [creating, setCreating] = useState(false);
-  const show = (id: string | null) => router.replace(id ? `/app/tasks?task=${id}` : '/app/tasks', { scroll: false });
+  const show = (id: string | null) => router.replace(id ? `/app/tasks?tab=oneoff&task=${id}` : '/app/tasks?tab=oneoff', { scroll: false });
 
   if (tasks.isPending) return <Skeleton className="h-64" />;
   if (tasks.error) return <ErrorText error={tasks.error} />;
@@ -154,7 +154,7 @@ export function TasksForYou() {
           <CardTitle>{t('Tasks for you')}</CardTitle>
           <CardDescription>{t('Handed down by the workspace above yours. Open one to comment or mark it done.')}</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => router.push('/app/tasks')}>
+        <Button size="sm" variant="outline" onClick={() => router.push('/app/tasks?tab=oneoff')}>
           {t('All tasks')}
         </Button>
       </CardHeader>
@@ -176,7 +176,7 @@ function NewTaskDialog({ assignable, onClose, onCreated }: { assignable: Assigne
   const ws = assignable.find((w) => w.id === f.workspaceId);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('New task')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">{t('The person is told at once, and again whenever you change the task.')}</DialogDescription>
         <form
@@ -353,7 +353,7 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
         {!d ? (
           <>
             <DialogTitle className="sr-only">{t('Task')}</DialogTitle>

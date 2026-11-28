@@ -87,24 +87,24 @@ export class MobileDashboardService {
           out.opens = can('targets');
           if (main.level === 'EXECUTIVE') {
             const d = (day as ExecutiveDay).today;
-            out.stats = [stat('Leads today', d.leads), ...(d.leadTarget !== null ? [stat('Target', d.leadTarget), stat('Still needed', d.remaining ?? 0)] : []), stat('Calls today', d.calls)];
-            if (d.leadTarget !== null) out.bars = [{ label: 'Leads', value: d.leads, percent: pct(d.leadTarget ? (d.leads / d.leadTarget) * 100 : 100) }];
-            else out.empty = 'No daily lead target is set for you.';
+            out.stats = [stat('Companies today', d.leads), ...(d.leadTarget !== null ? [stat('Target', d.leadTarget), stat('Still needed', d.remaining ?? 0)] : []), stat('Calls today', d.calls)];
+            if (d.leadTarget !== null) out.bars = [{ label: 'Companies', value: d.leads, percent: pct(d.leadTarget ? (d.leads / d.leadTarget) * 100 : 100) }];
+            else out.empty = 'No daily company target is set for you.';
           } else if (main.level === 'MANAGER') {
             const team = (main as ManagerDashboardView).team.id;
             const daily = targetRows.filter((t) => t.workspace.id === team && t.period === 'DAILY' && t.metric === 'LEADS' && running(t, now));
             const leads = (day as ManagerDashboardView).totals.leads;
             const target = daily.reduce((s, t) => s + t.amount, 0);
-            out.stats = [stat('Leads today', leads), ...(daily.length ? [stat('Target', target), stat('Still needed', Math.max(0, target - leads))] : [])];
-            if (daily.length) out.bars = [{ label: 'Leads', value: leads, percent: pct(target ? (leads / target) * 100 : 100) }];
-            else out.empty = 'No daily lead target is set for your team.';
+            out.stats = [stat('Companies today', leads), ...(daily.length ? [stat('Target', target), stat('Still needed', Math.max(0, target - leads))] : [])];
+            if (daily.length) out.bars = [{ label: 'Companies', value: leads, percent: pct(target ? (leads / target) * 100 : 100) }];
+            else out.empty = 'No daily company target is set for your team.';
           }
           break;
         }
         case 'leads_today': {
           out.opens = can('companies');
           const leads = day.level === 'EXECUTIVE' ? day.today.leads : day.totals.leads;
-          out.stats = [stat('Leads today', leads)];
+          out.stats = [stat('Companies today', leads)];
           break;
         }
         case 'pending_follow_ups': {
@@ -126,7 +126,7 @@ export class MobileDashboardService {
         }
         case 'personal_performance': {
           if (main.level !== 'EXECUTIVE') break;
-          out.stats = [stat('Leads today', main.today.leads), stat('Calls today', main.today.calls)];
+          out.stats = [stat('Companies today', main.today.leads), stat('Calls today', main.today.calls)];
           if (main.monthly) out.stats.push(stat('Monthly revenue target', main.monthly.amount, money(main.monthly.amount, currency)));
           out.targets = main.targets;
           if (!main.targets.length) out.empty = 'No targets are running for you.';
@@ -211,7 +211,7 @@ export class MobileDashboardService {
 }
 
 function totals(t: { leads: number; calls: number; dealsWon: number; revenue: number }, currency: string): MobileFigure[] {
-  return [stat('Leads', t.leads), stat('Calls', t.calls), stat('Deals won', t.dealsWon), stat('Revenue', t.revenue, money(t.revenue, currency))];
+  return [stat('Companies', t.leads), stat('Calls', t.calls), stat('Deals won', t.dealsWon), stat('Revenue', t.revenue, money(t.revenue, currency))];
 }
 
 /** Workspaces best first: by share of target, then revenue, then leads. */

@@ -109,6 +109,14 @@ export class AchievementsService implements OnModuleInit {
       this.log.warn({ err: err instanceof Error ? err.message : err, tenantId }, 'achievement detection failed');
       return;
     }
+    await this.award(tx, tenantId, found);
+  }
+
+  /**
+   * Stores achievements found elsewhere (recurring tasks, ADR 0096) with the person's settings: one row per person and
+   * dedupe key, so asking twice never celebrates twice.
+   */
+  async award(tx: TenantTx, tenantId: string, found: Candidate[]): Promise<void> {
     if (!found.length) return;
     const seen = new Set<string>();
     const rows: Prisma.AchievementCreateManyInput[] = [];

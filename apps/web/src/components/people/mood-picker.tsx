@@ -69,7 +69,7 @@ export function MoodPicker({ open, onOpenChange, current }: { open: boolean; onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[min(100vw-2rem,32rem)] overflow-y-auto p-5">
+      <DialogContent className="top-[5%] max-h-[90vh] w-[min(100vw-2rem,32rem)] overflow-y-auto p-5">
         <DialogTitle className="text-lg font-semibold">{t('How are you feeling?')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('Your mood shows on your photo, in team chat and on your profile card.')}</DialogDescription>
 

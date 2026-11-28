@@ -304,11 +304,11 @@ export const messaging = {
     'Datensätze löschen, E-Mails senden und Beträge, Phasen oder Verantwortliche ändern müssen Sie immer selbst im Datensatz erledigen.',
     'حذف السجلات وإرسال البريد وتغيير المبالغ أو المراحل أو المالكين يتطلب دائمًا أن تفعله بنفسك في السجل.',
   ],
-  'Nothing in this note looks like a task, note, lead or contact to save.': [
-    'Nada en esta nota parece una tarea, nota, lead o contacto que guardar.',
-    'Rien dans cette note ne ressemble à une tâche, une note, un prospect ou un contact à enregistrer.',
-    'Nichts in dieser Notiz sieht nach einer Aufgabe, Notiz, einem Lead oder Kontakt zum Speichern aus.',
-    'لا شيء في هذه الملاحظة يبدو مهمة أو ملاحظة أو عميلًا محتملًا أو جهة اتصال للحفظ.',
+  'Nothing in this note looks like a task, note or contact to save.': [
+    'Nada de esta nota parece una tarea, nota o contacto para guardar.',
+    'Rien dans cette note ne ressemble à une tâche, une note ou un contact à enregistrer.',
+    'Nichts in dieser Notiz sieht nach einer Aufgabe, Notiz oder einem Kontakt zum Speichern aus.',
+    'لا شيء في هذه الملاحظة يبدو كمهمة أو ملاحظة أو جهة اتصال للحفظ.',
   ],
   'Suggested actions': ['Acciones sugeridas', 'Actions suggérées', 'Vorgeschlagene Aktionen', 'الإجراءات المقترحة'],
   'Save {kind} {n}': ['Guardar {kind} {n}', 'Enregistrer {kind} {n}', '{kind} {n} speichern', 'حفظ {kind} {n}'],
@@ -344,11 +344,11 @@ export const messaging = {
     'Ihre Rolle umfasst keine KI-Funktionen (ai:use). Fragen Sie eine Administratorin oder einen Administrator des Arbeitsbereichs, wenn Sie sie brauchen.',
     'لا يشمل دورك ميزات الذكاء الاصطناعي (ai:use). اطلبها من مسؤول مساحة العمل إن احتجت إليها.',
   ],
-  'Ask about your leads, deals, contacts and tasks. Try:': [
-    'Pregunta por tus leads, oportunidades, contactos y tareas. Prueba:',
-    'Posez vos questions sur vos prospects, opportunités, contacts et tâches. Essayez :',
-    'Fragen Sie zu Ihren Leads, Verkaufschancen, Kontakten und Aufgaben. Zum Beispiel:',
-    'اسأل عن عملائك المحتملين وصفقاتك وجهات اتصالك ومهامك. جرّب:',
+  'Ask about your companies, deals, contacts and tasks. Try:': [
+    'Pregunta por tus empresas, oportunidades, contactos y tareas. Prueba:',
+    'Posez des questions sur vos entreprises, opportunités, contacts et tâches. Essayez :',
+    'Fragen Sie nach Ihren Unternehmen, Verkaufschancen, Kontakten und Aufgaben. Probieren Sie:',
+    'اسأل عن شركاتك وصفقاتك وجهات اتصالك ومهامك. جرّب:',
   ],
   'Brief me on my week: what needs attention?': ['Resúmeme mi semana: ¿qué necesita atención?', 'Faites-moi le point sur ma semaine : qu’est-ce qui demande mon attention ?', 'Briefen Sie mich zu meiner Woche: Was braucht Aufmerksamkeit?', 'لخّص لي أسبوعي: ما الذي يحتاج إلى اهتمام؟'],
   'Summarise my open pipeline.': ['Resume mi pipeline abierto.', 'Résumez mon pipeline ouvert.', 'Fassen Sie meine offene Pipeline zusammen.', 'لخّص مسار مبيعاتي المفتوح.'],

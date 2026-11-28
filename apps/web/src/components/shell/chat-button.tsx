@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChatNotices, useUnreadTitle } from '@/components/chat/chat-notices';
+import { useUnreadTitle } from '@/components/chat/chat-notices';
 import { QuickChatPanel, QuickChatTab } from '@/components/chat/quick-chat';
 import { useChatLive, useChatUnread, userRealm } from '@/lib/chat';
 import { useHasFeature } from '@/lib/features';
@@ -26,7 +26,7 @@ export function ChatLive() {
   if (!realm) return null;
   return (
     <>
-      <ChatNotices />
+      {/* New-message pop-ups appear in the on-screen stack, which the app shell mounts for everyone. */}
       <QuickChatTab realm={realm} />
       <QuickChatPanel realm={realm} />
     </>

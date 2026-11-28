@@ -42,7 +42,10 @@ const config: NextConfig = {
   async headers() {
     return [
       // Everything except hosted lead forms refuses to be framed.
-      { source: '/((?!f/).*)', headers: [...baseHeaders, { key: 'X-Frame-Options', value: 'DENY' }] },
+      { source: '/((?!f/|api/v1/learning/files/|api/v1/learning/certificates/).*)', headers: [...baseHeaders, { key: 'X-Frame-Options', value: 'DENY' }] },
+      // Learning files and certificate PDFs are shown inside the app's own pages (ADR 0097); the API answers them with
+      // X-Frame-Options SAMEORIGIN (PDFs) or a sandbox policy (everything else), so only the app itself can frame them.
+      { source: '/api/v1/learning/:kind(files|certificates)/:path*', headers: baseHeaders },
       // Hosted lead forms (/f/:token) are meant to be embedded on the customer's own site.
       { source: '/f/:path*', headers: baseHeaders },
     ];

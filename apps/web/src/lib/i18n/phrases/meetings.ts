@@ -1,6 +1,6 @@
 import type { PhraseTable } from './types';
 
-/** Meetings: the calendar list, meeting notes and their AI analysis, recording transcription, Zoom scheduling and the AI panels on records. */
+/** Meetings: the calendar list, meeting notes and their AI analysis, recording transcription and the AI panels on records. */
 export const meetings = {
   // Page and list
   Meetings: ['Reuniones', 'Réunions', 'Meetings', 'الاجتماعات'],
@@ -44,7 +44,7 @@ export const meetings = {
   'Meeting link': ['Enlace de la reunión', 'Lien de la réunion', 'Meeting-Link', 'رابط الاجتماع'],
   'Delete these meeting notes? Tasks and timeline notes already created stay.': ['¿Eliminar estas notas de reunión? Las tareas y notas de la cronología ya creadas se conservan.', 'Supprimer ces notes de réunion ? Les tâches et notes de chronologie déjà créées restent.', 'Diese Meeting-Notizen löschen? Bereits erstellte Aufgaben und Verlaufsnotizen bleiben erhalten.', 'هل تريد حذف ملاحظات الاجتماع هذه؟ تبقى المهام وملاحظات الخط الزمني التي أُنشئت.'],
   'Delete notes': ['Eliminar notas', 'Supprimer les notes', 'Notizen löschen', 'حذف الملاحظات'],
-  'Linked lead': ['Lead vinculado', 'Prospect lié', 'Verknüpfter Lead', 'العميل المحتمل المرتبط'],
+  'Linked inbound contact': ['Contacto entrante vinculado', 'Contact entrant lié', 'Verknüpfter Eingangskontakt', 'جهة الاتصال الواردة المرتبطة'],
   'Not linked to a record.': ['Sin vincular a un registro.', 'Non liées à une fiche.', 'Mit keinem Datensatz verknüpft.', 'غير مرتبطة بسجل.'],
   'Notes and transcript': ['Notas y transcripción', 'Notes et transcription', 'Notizen und Transkript', 'الملاحظات والنص المكتوب'],
   Notes: ['Notas', 'Notes', 'Notizen', 'الملاحظات'],
@@ -167,40 +167,20 @@ export const meetings = {
   'the linked record': ['el registro vinculado', 'la fiche liée', 'den verknüpften Datensatz', 'السجل المرتبط'],
   'Add summary to {target}': ['Añadir el resumen a {target}', 'Ajouter le résumé à {target}', 'Zusammenfassung zu {target} hinzufügen', 'إضافة الملخص إلى {target}'],
   'Add summary to a record': ['Añadir el resumen a un registro', 'Ajouter le résumé à une fiche', 'Zusammenfassung zu einem Datensatz hinzufügen', 'إضافة الملخص إلى سجل'],
-  'Link a deal, contact or lead above first.': ['Primero vincula arriba un negocio, contacto o lead.', 'Liez d’abord une affaire, un contact ou un prospect ci-dessus.', 'Verknüpfen Sie zuerst oben einen Deal, Kontakt oder Lead.', 'اربط أولًا صفقة أو جهة اتصال أو عميلًا محتملًا أعلاه.'],
+  'Link a deal or contact above first.': ['Vincula primero una oportunidad o un contacto arriba.', 'Liez d’abord une opportunité ou un contact ci-dessus.', 'Verknüpfen Sie zuerst oben eine Verkaufschance oder einen Kontakt.', 'اربط صفقة أو جهة اتصال أعلاه أولًا.'],
   'Write follow-up email': ['Escribir correo de seguimiento', 'Rédiger l’e-mail de suivi', 'Folge-E-Mail schreiben', 'كتابة بريد المتابعة'],
 
-  // Zoom
-  'Zoom meetings': ['Reuniones de Zoom', 'Réunions Zoom', 'Zoom-Meetings', 'اجتماعات Zoom'],
-  Schedule: ['Programar', 'Planifier', 'Planen', 'جدولة'],
-  'Zoom needs reconnecting in Integrations.': ['Hay que volver a conectar Zoom en Integraciones.', 'Zoom doit être reconnecté dans Intégrations.', 'Zoom muss unter Integrationen neu verbunden werden.', 'يجب إعادة ربط Zoom من التكاملات.'],
+  // Shared meeting fields
   Topic: ['Tema', 'Sujet', 'Thema', 'الموضوع'],
   Starts: ['Empieza', 'Début', 'Beginn', 'يبدأ'],
   Length: ['Duración', 'Durée', 'Dauer', 'المدة'],
-  'Record to the Zoom cloud and add the transcript to meeting notes': ['Grabar en la nube de Zoom y añadir la transcripción a las notas de la reunión', 'Enregistrer dans le cloud Zoom et ajouter la transcription aux notes de réunion', 'In der Zoom-Cloud aufnehmen und das Transkript zu den Meeting-Notizen hinzufügen', 'التسجيل في سحابة Zoom وإضافة النص المكتوب إلى ملاحظات الاجتماع'],
-  'Everyone in the meeting has agreed to it being recorded and transcribed. Zoom also announces the recording.': [
-    'Todos los participantes han aceptado que se grabe y transcriba. Zoom también anuncia la grabación.',
-    'Tous les participants ont accepté qu’elle soit enregistrée et transcrite. Zoom annonce aussi l’enregistrement.',
-    'Alle Teilnehmenden haben der Aufnahme und Transkription zugestimmt. Zoom kündigt die Aufnahme zusätzlich an.',
-    'وافق جميع المشاركين على تسجيل الاجتماع ونسخه. يعلن Zoom أيضًا عن التسجيل.',
-  ],
-  'The meeting is created in your Zoom user (your SampForce email) and logged on this record.': ['La reunión se crea en tu usuario de Zoom (tu correo de SampForce) y se registra en este registro.', 'La réunion est créée dans votre compte Zoom (votre e-mail SampForce) et consignée sur cette fiche.', 'Das Meeting wird in Ihrem Zoom-Konto (Ihre SampForce-E-Mail) erstellt und bei diesem Datensatz protokolliert.', 'يُنشأ الاجتماع في حسابك على Zoom (بريدك في SampForce) ويُسجَّل على هذا السجل.'],
-  'Scheduling…': ['Programando…', 'Planification…', 'Wird geplant…', 'جارٍ الجدولة…'],
-  'Schedule Zoom meeting': ['Programar reunión de Zoom', 'Planifier une réunion Zoom', 'Zoom-Meeting planen', 'جدولة اجتماع Zoom'],
-  'No Zoom meetings scheduled from SampForce for this record.': ['No hay reuniones de Zoom programadas desde SampForce para este registro.', 'Aucune réunion Zoom planifiée depuis SampForce pour cette fiche.', 'Für diesen Datensatz wurden keine Zoom-Meetings aus SampForce geplant.', 'لا توجد اجتماعات Zoom مجدولة من SampForce لهذا السجل.'],
-  'Join link': ['Enlace para unirse', 'Lien de participation', 'Teilnahmelink', 'رابط الانضمام'],
-  'Open meeting notes': ['Abrir notas de la reunión', 'Ouvrir les notes de réunion', 'Meeting-Notizen öffnen', 'فتح ملاحظات الاجتماع'],
-  'Recording: transcript after the meeting': ['Grabando: transcripción después de la reunión', 'Enregistrement : transcription après la réunion', 'Aufnahme: Transkript nach dem Meeting', 'تسجيل: النص المكتوب بعد الاجتماع'],
-  'Importing transcript': ['Importando transcripción', 'Import de la transcription', 'Transkript wird importiert', 'جارٍ استيراد النص المكتوب'],
-  'Transcript in meeting notes': ['Transcripción en las notas de la reunión', 'Transcription dans les notes de réunion', 'Transkript in den Meeting-Notizen', 'النص المكتوب في ملاحظات الاجتماع'],
-  'Transcript not imported': ['Transcripción no importada', 'Transcription non importée', 'Transkript nicht importiert', 'لم يُستورد النص المكتوب'],
 
   // AI panels on lead and deal records
   Signals: ['Señales', 'Signaux', 'Signale', 'الإشارات'],
   'AI qualification': ['Calificación con IA', 'Qualification par IA', 'KI-Qualifizierung', 'التأهيل بالذكاء الاصطناعي'],
   'Scoring…': ['Puntuando…', 'Notation…', 'Wird bewertet…', 'جارٍ التقييم…'],
   'Re-score': ['Volver a puntuar', 'Renoter', 'Neu bewerten', 'إعادة التقييم'],
-  'Score lead': ['Puntuar lead', 'Noter le prospect', 'Lead bewerten', 'تقييم العميل المحتمل'],
+  'Score contact': ['Puntuar contacto', 'Noter le contact', 'Kontakt bewerten', 'تقييم جهة الاتصال'],
   'Not scored yet. The score comes from contact details, value, source and recent activity, and each point is explained.': [
     'Aún sin puntuar. La puntuación sale de los datos de contacto, el valor, el origen y la actividad reciente, y cada punto se explica.',
     'Pas encore noté. La note vient des coordonnées, de la valeur, de la source et de l’activité récente, et chaque point est expliqué.',

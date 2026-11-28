@@ -59,8 +59,15 @@ function fill(text: string, vars: TextVars | undefined, locale: string): string 
 export class TextCatalogue {
   private readonly exact = new Map<string, TextRow>();
   private readonly patterns: Pattern[] = [];
+  private readonly renamed: { re: RegExp; names: string[]; to: string }[] = [];
 
-  constructor(tables: readonly TextTable[]) {
+  /** `renamed` maps retired English wording to its replacement, so text stored in the old wording reads in the new. */
+  constructor(tables: readonly TextTable[], renamed: Readonly<Record<string, string>> = {}) {
+    for (const [from, to] of Object.entries(renamed)) {
+      const pieces = from.split(PLACEHOLDER);
+      const source = pieces.map((p, i) => (i % 2 === 1 ? '(.+?)' : escapeRe(p))).join('');
+      this.renamed.push({ re: new RegExp(`^${source}$`), names: pieces.filter((_, i) => i % 2 === 1), to });
+    }
     for (const table of tables) {
       for (const [key, row] of Object.entries(table)) {
         this.exact.set(key, row);
@@ -105,7 +112,9 @@ export class TextCatalogue {
    * Text that matches nothing is returned unchanged, so a message without a translation still reads in English.
    */
   localize(language: LanguageCode, text: string, term?: (value: string) => string | undefined): string {
-    if (language === 'en' || !text) return text;
+    if (!text) return text;
+    text = this.rename(text);
+    if (language === 'en') return text;
     const col = COLUMN[language as Exclude<LanguageCode, 'en'>];
     const hit = this.exact.get(text);
     if (hit) return hit[col]!;
@@ -119,6 +128,18 @@ export class TextCatalogue {
         vars[name] = term?.(value) ?? this.exactIn(language, value) ?? reformatGrouped(value, language);
       });
       return fill(p.row[col]!, vars, language);
+    }
+    return text;
+  }
+
+  /** Old wording rewritten in the wording that replaced it; other text unchanged. */
+  rename(text: string): string {
+    for (const r of this.renamed) {
+      const m = r.re.exec(text);
+      if (!m) continue;
+      const vars: TextVars = {};
+      r.names.forEach((name, i) => (vars[name] = m[i + 1]!));
+      return r.to.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole));
     }
     return text;
   }

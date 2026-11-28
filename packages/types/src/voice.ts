@@ -43,7 +43,7 @@ export const voiceActionSchema = z.discriminatedUnion('type', [
 ]);
 export type VoiceAction = z.infer<typeof voiceActionSchema>;
 export type VoiceActionType = VoiceAction['type'];
-export const VOICE_ACTION_LABELS: Record<VoiceActionType, string> = { create_task: 'Task', add_note: 'Note', create_lead: 'New lead', create_contact: 'New contact' };
+export const VOICE_ACTION_LABELS: Record<VoiceActionType, string> = { create_task: 'Task', add_note: 'Note', create_lead: 'New inbound contact', create_contact: 'New contact' };
 
 /** What the model returns (validated again on the server). */
 export const voiceInterpretationSchema = z.object({

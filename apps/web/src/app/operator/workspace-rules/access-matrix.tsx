@@ -227,7 +227,7 @@ export function ClientMenuSectionsCard({ tenantId, admin }: { tenantId: string; 
   if (!q.data) return <ErrorText error={q.error} />;
   const value = draft ?? q.data;
   const rows = [
-    { key: 'leads', label: 'Show the Leads page', text: 'A separate list for inbound leads. Off: leads live with their companies and contacts.' },
+    { key: 'leads', label: 'Show the Inbound contacts page', text: 'A separate list for inbound contacts. Off: they live with their companies and contacts.' },
     { key: 'accounts', label: 'Show the Accounts page', text: 'A separate list of accounts. Off: Companies is the account list.' },
   ] as const;
   return (
@@ -235,7 +235,7 @@ export function ClientMenuSectionsCard({ tenantId, admin }: { tenantId: string; 
       <h2 id={`${id}-h`} className="font-medium">
         Hidden sections
       </h2>
-      <p className="text-sm text-muted-foreground">Leads and Accounts are hidden in every workspace of this client until switched on here.</p>
+      <p className="text-sm text-muted-foreground">Inbound contacts and Accounts are hidden in every workspace of this client until switched on here.</p>
       {rows.map((r) => (
         <label key={r.key} className="flex items-start gap-3 rounded-lg border border-border p-3">
           <input

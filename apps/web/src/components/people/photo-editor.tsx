@@ -4,9 +4,9 @@ import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@
 import { useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, RotateCw, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import * as React from 'react';
-import { ApiError } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
-import { PHOTO_SIZE, removePhoto, uploadPhoto } from '@/lib/people';
+import { PHOTO_SIZE } from '@/lib/people';
 
 /** The crop circle's size on screen. */
 const VIEW = 256;
@@ -69,7 +69,23 @@ function draw(canvas: HTMLCanvasElement, img: HTMLImageElement, c: Crop, out: nu
  * Choose, crop and save a profile photo (ADR 0072, 0087): drop or pick a picture, drag it into place, zoom and turn
  * it, see it as teammates will, and save a 512-pixel square. Also removes the photo.
  */
-export function PhotoEditor({ open, onOpenChange, hasPhoto }: { open: boolean; onOpenChange: (open: boolean) => void; hasPhoto: boolean }) {
+export function PhotoEditor({
+  open,
+  onOpenChange,
+  hasPhoto,
+  endpoint = '/me/photo',
+  invalidate = [['me'], ['people']],
+  description,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  hasPhoto: boolean;
+  /** Where the photo is saved (PUT) and removed (DELETE): the workspace account by default, or the Console operator. */
+  endpoint?: string;
+  /** The queries to refresh once the photo changes. */
+  invalidate?: readonly (readonly unknown[])[];
+  description?: string;
+}) {
   const t = useT();
   const qc = useQueryClient();
   const input = React.useRef<HTMLInputElement>(null);
@@ -118,7 +134,7 @@ export function PhotoEditor({ open, onOpenChange, hasPhoto }: { open: boolean; o
     setError(null);
     try {
       await fn();
-      await Promise.all([qc.invalidateQueries({ queryKey: ['me'] }), qc.invalidateQueries({ queryKey: ['people'] })]);
+      await Promise.all(invalidate.map((queryKey) => qc.invalidateQueries({ queryKey: [...queryKey] })));
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('That picture could not be read. Try a PNG or JPEG photo.'));
@@ -133,14 +149,14 @@ export function PhotoEditor({ open, onOpenChange, hasPhoto }: { open: boolean; o
       const canvas = document.createElement('canvas');
       draw(canvas, img, crop, Math.min(PHOTO_SIZE, Math.max(64, Math.round(Math.min(img.naturalWidth, img.naturalHeight) / crop.zoom))));
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('unreadable'))), 'image/jpeg', 0.88));
-      await uploadPhoto(blob);
+      await api(endpoint, { method: 'PUT', body: blob, headers: { 'content-type': 'image/jpeg' } });
     });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(100vw-2rem,30rem)] p-5">
         <DialogTitle className="text-lg font-semibold">{t('Your profile photo')}</DialogTitle>
-        <DialogDescription className="mb-4 text-sm text-muted-foreground">{img ? t('Drag the picture to place it, and zoom in or out.') : t('People in your organisation see it next to your name everywhere in SampForce.')}</DialogDescription>
+        <DialogDescription className="mb-4 text-sm text-muted-foreground">{img ? t('Drag the picture to place it, and zoom in or out.') : (description ?? t('People in your organisation see it next to your name everywhere in SampForce.'))}</DialogDescription>
         <input
           ref={input}
           type="file"
@@ -232,7 +248,7 @@ export function PhotoEditor({ open, onOpenChange, hasPhoto }: { open: boolean; o
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
             {hasPhoto && (
-              <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void run(removePhoto)}>
+              <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void run(() => api(endpoint, { method: 'DELETE' }))}>
                 <Trash2 aria-hidden /> {t('Remove photo')}
               </Button>
             )}

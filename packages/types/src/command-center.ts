@@ -191,7 +191,7 @@ export type FunnelStage = (typeof FUNNEL_STAGES)[number];
 
 /** Where the starter company statuses sit in the funnel; a renamed or new status falls back to its meaning. */
 export const STATUS_FUNNEL_BY_NAME: Record<string, FunnelStage> = {
-  'New Lead': 'NEW',
+  'New inbound contact': 'NEW',
   'Discussion Phase': 'DISCUSSION',
   'Revert Soon': 'INTERESTED',
   'Call Scheduled': 'INTERESTED',
@@ -480,7 +480,7 @@ export const leadTransferDecisionSchema = z
     instructions: z.string().trim().max(2000).nullable().optional(),
   })
   .strict()
-  .refine((d) => d.action !== 'REASSIGN' || !!d.toUserId, { message: 'Choose who takes the lead', path: ['toUserId'] });
+  .refine((d) => d.action !== 'REASSIGN' || !!d.toUserId, { message: 'Choose who takes the company', path: ['toUserId'] });
 export type LeadTransferDecision = z.input<typeof leadTransferDecisionSchema>;
 
 export const leadTransferListSchema = z.object({

@@ -9,6 +9,9 @@ import {
   type MeetingRecordUpdate,
   type TranscriptionStatus,
   type TranscriptSegment,
+  type BulkActionResult,
+  type DeleteAllInput,
+  z,
 } from '@dealflow/types';
 import { AgentOutputError, AgentsService } from '../ai/agents.service';
 import { PermissionDenied, RecordContextBuilder, type RecordType } from '../ai/record-context';
@@ -16,10 +19,17 @@ import { untrusted } from '../ai/redact';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { ActivitiesService } from '../crm/activities.service';
 import { assertRefs, notFound, ownerRefs } from '../crm/crm-helpers';
 import { TasksService } from '../crm/tasks.service';
 import { DeepgramClient, TranscriptionError } from './deepgram';
+
+/** The meeting notes list's query (GET /meeting-records), also used to find every note to delete at once. */
+export const meetingRecordListQuerySchema = z.object({ dealId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() });
+function meetingListWhere(auth: AuthContext, q: z.infer<typeof meetingRecordListQuerySchema>): Prisma.MeetingRecordWhereInput {
+  return { tenantId: auth.tenantId, ...(q.dealId ? { dealId: q.dealId } : {}), ...(q.contactId ? { contactId: q.contactId } : {}), ...(q.leadId ? { leadId: q.leadId } : {}) };
+}
 
 const DAY = 86_400_000;
 /** Enough for a long meeting; longer transcripts are cut for the AI (the full text stays stored). */
@@ -72,7 +82,7 @@ export class MeetingRecordsService {
   list(auth: AuthContext, q: { dealId?: string; contactId?: string; leadId?: string }): Promise<MeetingRecordRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.meetingRecord.findMany({
-        where: { tenantId: auth.tenantId, ...(q.dealId ? { dealId: q.dealId } : {}), ...(q.contactId ? { contactId: q.contactId } : {}), ...(q.leadId ? { leadId: q.leadId } : {}) },
+        where: meetingListWhere(auth, q),
         include,
         orderBy: { occurredAt: 'desc' },
         take: 100,
@@ -143,6 +153,17 @@ export class MeetingRecordsService {
       });
       return this.full(tx, row);
     });
+  }
+
+  /** Every meeting note the list shows for this query (no 100 cap), then each one deleted (ADR 0096). */
+  async matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(meetingRecordListQuerySchema, query);
+    const ids = await this.prisma.run(auth, async (tx) => (await tx.meetingRecord.findMany({ where: meetingListWhere(auth, q), select: { id: true } })).map((r) => r.id));
+    return ids;
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'meeting-records', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   async remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
@@ -266,7 +287,7 @@ export class MeetingRecordsService {
     const a = r.analysis as unknown as MeetingAnalysis | null;
     if (!a) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Analyse the meeting first.' });
     if (!r.reviewedAt) throw new ConflictException({ code: 'REVIEW_REQUIRED', message: 'Review and save the meeting summary before adding it to the record.' });
-    if (!r.dealId && !r.contactId && !r.leadId) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the meeting to a deal, contact or lead first.' });
+    if (!r.dealId && !r.contactId && !r.leadId) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Link the meeting to a deal or contact first.' });
     if (r.activityId) throw new ConflictException({ code: 'ALREADY_SAVED', message: 'This meeting summary is already on the record.' });
     const list = (title: string, xs: string[]) => (xs.length ? `\n\n${title}:\n${xs.map((x) => `- ${x}`).join('\n')}` : '');
     const body = [

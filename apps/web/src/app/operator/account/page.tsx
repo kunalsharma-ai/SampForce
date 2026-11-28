@@ -3,10 +3,13 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@dealflow/ui';
 import type { OperatorLoginEventRow, OperatorSessionRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldAlert } from 'lucide-react';
+import { Camera, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
 import { TwoStepCard } from '@/app/app/account/security/two-step-card';
 import { ConsoleLoading } from '@/components/console/console-states';
 import { PageHeader } from '@/components/page-header';
+import { PhotoEditor } from '@/components/people/photo-editor';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useOperator } from '../operator-shell';
@@ -19,6 +22,7 @@ import { LoginTable, SessionList } from '../security-ui';
 export default function OperatorAccountPage() {
   const me = useOperator();
   const qc = useQueryClient();
+  const [photoOpen, setPhotoOpen] = useState(false);
   const sessions = useQuery({ enabled: !!me.data, queryKey: ['operator', 'me', 'sessions'], queryFn: () => api<OperatorSessionRow[]>('/operator/me/sessions') });
   const logins = useQuery({ enabled: !!me.data, queryKey: ['operator', 'me', 'logins'], queryFn: () => api<OperatorLoginEventRow[]>('/operator/me/logins') });
   const endOthers = useMutation({
@@ -46,7 +50,22 @@ export default function OperatorAccountPage() {
               <CardTitle>Profile</CardTitle>
               <CardDescription>Ask a Super Admin to change your role.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4" data-operator-photo={me.data.photoUrl ? 'photo' : 'none'}>
+                <UserAvatar name={me.data.name || me.data.email} photoUrl={me.data.photoUrl ?? null} showMood={false} tone="from-primary to-accent" className="size-16 text-lg" />
+                <div className="space-y-1.5">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setPhotoOpen(true)}>
+                    <Camera aria-hidden /> {me.data.photoUrl ? 'Change photo' : 'Add a photo'}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    {ownPhoto(me.data.photoUrl)
+                      ? 'Your Console photo.'
+                      : me.data.photoUrl
+                        ? 'From your SampForce profile, because the email matches.'
+                        : 'Shown next to your name across the Console.'}
+                  </p>
+                </div>
+              </div>
               <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Name</dt>
                 <dd>{me.data.name}</dd>
@@ -59,6 +78,14 @@ export default function OperatorAccountPage() {
               </dl>
             </CardContent>
           </Card>
+          <PhotoEditor
+            open={photoOpen}
+            onOpenChange={setPhotoOpen}
+            hasPhoto={ownPhoto(me.data.photoUrl)}
+            endpoint="/operator/me/photo"
+            invalidate={[['operator']]}
+            description="Operators see it next to your name across the Console. Without one, the Console uses your SampForce profile photo."
+          />
           <TwoStepCard base="/operator/me/mfa" />
         </div>
         <div className="space-y-6">
@@ -88,4 +115,9 @@ export default function OperatorAccountPage() {
       </div>
     </>
   );
+}
+
+/** A photo address the operator set in the Console (rather than one from their SampForce profile). */
+function ownPhoto(url: string | null | undefined): boolean {
+  return !!url && /[?&]v=o/.test(url);
 }

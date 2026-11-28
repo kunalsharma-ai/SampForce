@@ -81,7 +81,7 @@ function CloseCompanyFlow({ company, onClose }: { company: string; onClose: () =
                 <div>
                   <dt className="font-medium">{t('Data that is erased after 30 days')}</dt>
                   <dd className="text-muted-foreground" data-close-records>
-                    {t('{companies} companies, {contacts} contacts, {leads} leads, {deals} deals and {tasks} open tasks', { companies: r!.companies, contacts: r!.contacts, leads: r!.leads, deals: r!.deals, tasks: r!.openTasks })}
+                    {t('{companies} companies, {contacts} contacts, {leads} inbound contacts, {deals} deals and {tasks} open tasks', { companies: r!.companies, contacts: r!.contacts, leads: r!.leads, deals: r!.deals, tasks: r!.openTasks })}
                   </dd>
                 </div>
                 <div>

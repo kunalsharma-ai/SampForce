@@ -22,6 +22,7 @@ import {
   visibleFields,
 } from '../lib/records';
 import { useApi, useController, useSignedIn, useTheme } from '../lib/session';
+import { type ApprovalNeeded, approvalNeededOf, AskManagerCard } from './approvals';
 import { Body, Button, Card, ErrorNote, Field, Loading, Row, Screen, SectionLabel } from './ui';
 
 /*
@@ -153,7 +154,7 @@ function CompanyPicker({ label, value, name, onChange }: { label: string; value:
     );
   return (
     <View style={{ gap: 6 }}>
-      <Field label={label} value={q} onChangeText={setQ} placeholder={t('Type a lead name')} autoCapitalize="none" />
+      <Field label={label} value={q} onChangeText={setQ} placeholder={t('Type a company name')} autoCapitalize="none" />
       {found.map((r) => (
         <Row key={r.id} icon="business-outline" label={String(r.name ?? '')} detail={subtitle('companies', r)} onPress={() => onChange(r.id, String(r.name ?? ''))} />
       ))}
@@ -321,7 +322,7 @@ export function RecordList({ module }: { module: MobileLiveRecordModule }) {
   );
 }
 
-const SINGULAR: Record<MobileLiveRecordModule, string> = { companies: 'Lead', contacts: 'Contact', follow_ups: 'Follow-up', tasks: 'Task' };
+const SINGULAR: Record<MobileLiveRecordModule, string> = { companies: 'Company', contacts: 'Contact', follow_ups: 'Follow-up', tasks: 'Task' };
 
 /** One record: its fields for this person, phone actions, and what they may do with it. */
 export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
@@ -337,6 +338,7 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [password, setPassword] = useState('');
+  const [askManager, setAskManager] = useState<ApprovalNeeded | null>(null);
   const [completing, setCompleting] = useState(false);
   const [outcome, setOutcome] = useState('');
 
@@ -376,7 +378,18 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
   const patch = (body: Record<string, unknown>) => act('status', async () => setRecord(await c.api.patch<MobileRecord>(`${BASE}/${module}/${id}`, body)));
   const remove = () =>
     act('delete', async () => {
-      await c.api.deleteConfirmed(`${BASE}/${module}/${id}`, password);
+      const path = `${BASE}/${module}/${id}`;
+      try {
+        await c.api.deleteConfirmed(path, password);
+      } catch (e) {
+        // An Executive Workspace asks its manager first (ADR 0098): nothing is deleted, the request goes instead.
+        const need = approvalNeededOf(e, 'DELETE', path);
+        if (!need) throw e;
+        setConfirmDelete(false);
+        setPassword('');
+        setAskManager(need);
+        return;
+      }
       router.back();
     });
 
@@ -436,7 +449,8 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
 
       {module === 'companies' ? <CompanyRelated company={record} /> : null}
 
-      {m.delete && module !== 'follow_ups' ? (
+      {askManager ? <AskManagerCard need={askManager} onDone={() => setAskManager(null)} /> : null}
+      {m.delete && module !== 'follow_ups' && !askManager ? (
         confirmDelete ? (
           <Card>
             <Body>{t('Delete this record? This cannot be undone on the phone.')}</Body>
@@ -508,6 +522,7 @@ export function RecordForm({ module }: { module: MobileLiveRecordModule }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [askManager, setAskManager] = useState<ApprovalNeeded | null>(null);
 
   const all = useMemo(() => visibleFields(s.config, module, options.data?.customFields[module]), [s.config, module, options.data]);
   const fields = useMemo(() => formFields(all, editing ? 'edit' : 'create'), [all, editing]);
@@ -562,6 +577,9 @@ export function RecordForm({ module }: { module: MobileLiveRecordModule }) {
       else router.replace(`/${module}/${saved.id}`);
     } catch (e) {
       if (c.report(e)) return;
+      // When the Super Workspace asks executives to get edits approved (ADR 0098), the change goes to the manager.
+      const need = editing ? approvalNeededOf(e, 'PATCH', `${BASE}/${module}/${params.id}`, body) : null;
+      if (need) return setAskManager(need);
       if (e instanceof ApiError && e.details.length) setFieldErrors(Object.fromEntries(e.details.map((d) => [d.path.replace(/^customFields\./, 'cf.'), d.message])));
       setError(e instanceof Error ? e.message : t('Something went wrong. Try again.'));
     } finally {
@@ -580,7 +598,8 @@ export function RecordForm({ module }: { module: MobileLiveRecordModule }) {
       {!fields.length ? <Body muted>{t('Your workspace does not let you change any fields here.')}</Body> : null}
       {missing.length ? <Body muted>{t('Fill in the fields marked *.')}</Body> : null}
       {error ? <ErrorNote message={error} /> : null}
-      <Button label={editing ? t('Save changes') : t('Save')} busy={busy} disabled={missing.length > 0 || !fields.length} onPress={() => void save()} />
+      {askManager ? <AskManagerCard need={askManager} onDone={() => setAskManager(null)} /> : null}
+      {!askManager ? <Button label={editing ? t('Save changes') : t('Save')} busy={busy} disabled={missing.length > 0 || !fields.length} onPress={() => void save()} /> : null}
     </Screen>
   );
 }

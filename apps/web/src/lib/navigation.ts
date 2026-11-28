@@ -4,8 +4,10 @@ import {
   Bot,
   Briefcase,
   Building2,
+  Landmark,
   PhoneCall,
   CalendarCheck,
+  ClipboardCheck,
   CalendarDays,
   ContactRound,
   CreditCard,
@@ -13,11 +15,11 @@ import {
   FileSignature,
   FileSpreadsheet,
   FileText,
-  Globe,
   ListChecks,
   ListTodo,
   MessagesSquare,
   Handshake,
+  Inbox,
   HeartHandshake,
   KanbanSquare,
   LayoutDashboard,
@@ -35,10 +37,13 @@ import {
   Target,
   TrendingUp,
   Trophy,
+  Award,
+  Medal,
   UserCheck,
   UserPlus,
   Users,
   Workflow,
+  GraduationCap,
 } from 'lucide-react';
 
 export type ModuleStatus = 'available' | 'planned';
@@ -55,8 +60,9 @@ export interface ModuleDef {
   /** Planned capabilities, shown on the module page until it ships. */
   capabilities: string[];
   /**
-   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section). The pages, data
-   * and links from records stay, and the command palette still finds them.
+   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section, and on 2026-11-27
+   * the Sales Gamification section). The pages, data and links from records stay, and the command palette still
+   * finds them.
    */
   inMenu?: false;
 }
@@ -68,6 +74,9 @@ export const LATER = 10;
 export const MODULES: ModuleDef[] = [
   { slug: '', label: 'Dashboard', icon: LayoutDashboard, group: 'Workspace', status: 'available', phase: 1,
     summary: 'Live KPIs, pipeline health and team activity in one view.', capabilities: [] },
+  { slug: 'website-enquiries', label: 'Website Enquiry', icon: Inbox, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Every enquiry, download form, live chat enquiry, newsletter sign-up and review from your company website, as it arrives.',
+    capabilities: ['Signed webhook and a pull sync every few minutes', 'New-enquiry highlights and counts by form, type and category', 'Convert into a company and employee', 'Status sent back to the website'] },
   { slug: 'companies', label: 'Companies', icon: Building2, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Organisations, parent-child hierarchies and buying committees.',
     capabilities: ['Account hierarchy', 'Buying committee and stakeholder mapping', 'Relationship health scoring', 'AI account briefings (later phase)'] },
@@ -81,7 +90,7 @@ export const MODULES: ModuleDef[] = [
     summary: 'Multiple configurable pipelines with stage probabilities.',
     capabilities: ['Custom stages and probabilities', 'Stage-based automation (Phase 3)', 'Plan-based pipeline limits'] },
   { slug: 'follow-ups', label: 'Follow-ups', icon: CalendarCheck, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'Follow-ups with company leads: due today, upcoming, overdue, rescheduled, completed and cancelled.',
+    summary: 'Follow-ups with companies: due today, upcoming, overdue, rescheduled, completed and cancelled.',
     capabilities: ['Due-today and overdue indicators', 'Quick complete and reschedule', 'Team view for managers'] },
   { slug: 'calls', label: 'Calls', icon: PhoneCall, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Call companies and employees through your own dialer, with the call card, remarks, history and next calls.', capabilities: [] },
@@ -89,6 +98,12 @@ export const MODULES: ModuleDef[] = [
     summary: 'Tasks handed down from the workspace above, with priority, due date, comments and history.', capabilities: [] },
   { slug: 'targets', label: 'Targets', icon: Target, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Sales targets for each workspace and how much of them is reached.', capabilities: [] },
+  { slug: 'approvals', label: 'Approvals', icon: ClipboardCheck, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Ask your manager before deleting, decide what your team asks for, and bring back deleted items.', capabilities: [] },
+  { slug: 'performance', label: 'Performance', icon: Medal, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Rankings of managers and executives by a score whose measures and weights the Super Workspace chooses.', capabilities: [] },
+  { slug: 'recognition', label: 'Recognition', icon: Award, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Employee of the Month targets and winners, and performance improvement plans, counted from the records.', capabilities: [] },
   { slug: 'rfqs', label: 'RFQs', icon: FileSpreadsheet, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Requests for quotation with LOI, IR and CPI pricing, deadlines, outcomes and reports.',
     capabilities: ['RFQ numbers and statuses', 'Company, employee and executive reports', 'Conversion to deals'] },
@@ -96,12 +111,14 @@ export const MODULES: ModuleDef[] = [
     summary: 'Direct messages, channels and the support line to super admins, served by your own SampForce server.',
     capabilities: ['Works on an office network without internet', 'Messages wait on your device while offline', 'Read receipts, files, search and record links'] },
   { slug: 'achievements', label: 'My achievements', icon: Trophy, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'Your achievements, lead and sales target progress, badges and celebration settings.', capabilities: [] },
+    summary: 'Your achievements, company and sales target progress, badges and celebration settings.', capabilities: [] },
+  { slug: 'learning', label: 'Learning & Development', icon: GraduationCap, group: 'Workspace', status: 'available', phase: 6,
+    summary: 'Learning modules with videos, documents and written lessons, assessments, scores, achievements and certificates.', capabilities: [] },
   { slug: 'team-status', label: 'Team status', icon: UserCheck, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Who is working, on a break, away or checked out, with today’s check-in times (redesign R1).', capabilities: [] },
-  { slug: 'leads', label: 'Leads', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,
-    summary: 'Capture, deduplicate, score, route and convert leads.',
-    capabilities: ['Web form, CSV/Excel and API capture', 'Duplicate detection and merge', 'Territory, round-robin and workload routing', 'BANT and MEDDICC qualification frameworks', 'Lead lifecycle and conversion analytics'] },
+  { slug: 'leads', label: 'Inbound contacts', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Capture, deduplicate, score, route and convert inbound contacts.',
+    capabilities: ['Web form, CSV/Excel and API capture', 'Duplicate detection and merge', 'Territory, round-robin and workload routing', 'BANT and MEDDICC qualification frameworks', 'Contact lifecycle and conversion analytics'] },
   { slug: 'accounts', label: 'Accounts', icon: Briefcase, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Customer accounts with ownership, segmentation and account-level forecasting.',
     capabilities: ['Account ownership and segmentation', 'Account-based selling views', 'Document storage'] },
@@ -109,7 +126,7 @@ export const MODULES: ModuleDef[] = [
     summary: 'Calls, emails, meetings, notes and tasks.',
     capabilities: ['Task management with reminders', 'Activity logging from any record', 'Team activity reporting'] },
   { slug: 'communication', label: 'Email & Communication', icon: Mail, group: 'Engage', status: 'available', phase: 3,
-    summary: 'Email with your contacts and leads, synced from Gmail or Microsoft 365.',
+    summary: 'Email with your contacts, synced from Gmail or Microsoft 365.',
     capabilities: ['Gmail and Microsoft 365 sync (requires OAuth app credentials)', 'Send from your own mailbox', 'Templates and sequences (see Email Sequences)', 'Shared inboxes (later phase)'] },
   { slug: 'sequences', label: 'Email Sequences', icon: Mails, group: 'Engage', status: 'available', phase: 9,
     summary: 'Personal email sequences from your own mailbox, with templates and rules for replies, opens, clicks and bounces.',
@@ -120,9 +137,6 @@ export const MODULES: ModuleDef[] = [
   { slug: 'prospects', label: 'Prospect Lists', icon: ListChecks, group: 'Engage', status: 'available', phase: 9,
     summary: 'Lists of people to contact, from files, the browser extension or Apollo.io, kept out of the CRM until you add them.',
     capabilities: ['CSV and Excel import with column mapping', 'Filters by industry, country, size and title', 'Duplicate removal, move and copy', 'Send a list to a sequence and track results'] },
-  { slug: 'website-visitors', label: 'Website Visitors', icon: Globe, group: 'Engage', status: 'available', phase: 3,
-    summary: 'Consent-aware website tracking: important pages, repeat visits, campaigns and enquiries linked to leads and contacts.',
-    capabilities: ['First-party tracking script with consent modes', 'Enquiries create or update leads', 'Intent signals and high-intent workflows', 'Retention controls'] },
   { slug: 'meetings', label: 'Meetings', icon: CalendarDays, group: 'Engage', status: 'available', phase: 3,
     summary: 'Customer meetings synced from Google Calendar or Outlook.',
     capabilities: ['Google and Microsoft calendar sync', 'Scheduling links (later phase)', 'AI summaries of pasted meeting notes'] },
@@ -133,11 +147,11 @@ export const MODULES: ModuleDef[] = [
     summary: 'Visual workflow builder with simulation, versioning and approvals.',
     capabilities: ['Triggers, conditions and actions', 'Branching and delays', 'Simulation mode and execution logs', 'AI workflow builder'] },
   { slug: 'marketing', label: 'Marketing', icon: Megaphone, group: 'Engage', status: 'available', phase: 5,
-    summary: 'Segments and hosted lead forms with recorded consent, connected to sales records.',
-    capabilities: ['Segment builder with consent-aware export', 'Hosted, embeddable lead forms', 'Visual journeys and email sending (later phase)'] },
+    summary: 'Segments and hosted contact forms with recorded consent, connected to sales records.',
+    capabilities: ['Segment builder with consent-aware export', 'Hosted, embeddable contact forms', 'Visual journeys and email sending (later phase)'] },
   { slug: 'campaigns', label: 'Campaigns', icon: Send, group: 'Engage', status: 'available', phase: 5,
-    summary: 'Campaign tracking with first-touch attribution to leads, deals and revenue.',
-    capabilities: ['First-touch attribution', 'Cost per lead and won ÷ budget', 'A/B testing (later phase)'] },
+    summary: 'Campaign tracking with first-touch attribution to contacts, deals and revenue.',
+    capabilities: ['First-touch attribution', 'Cost per contact and won ÷ budget', 'A/B testing (later phase)'] },
   { slug: 'quotes', label: 'Quotes & Proposals', icon: FileText, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Catalogue, price books and versioned quotes with discount approvals and PDFs.',
     capabilities: ['Price books per currency', 'Discount approvals (no self-approval)', 'Quote versions and PDF download'], inMenu: false },
@@ -161,7 +175,9 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Report builder over eight record types', 'Custom dashboards', 'CSV export (audited)', '3D views with 2D fallbacks', 'Scheduled exports (later phase)'] },
   { slug: 'gamification', label: 'Sales Gamification', icon: Trophy, group: 'Intelligence', status: 'available', phase: 3,
     summary: 'Configurable points, leaderboards, badges, competitions and team challenges from CRM records.',
-    capabilities: ['Admin-chosen scoring rules with daily limits', 'Personal and team leaderboards', 'Badges and target progress', 'Competitions and team challenges'] },
+    capabilities: ['Admin-chosen scoring rules with daily limits', 'Personal and team leaderboards', 'Badges and target progress', 'Competitions and team challenges'], inMenu: false },
+  { slug: 'my-organization', label: 'My Organization', icon: Landmark, group: 'Organization', status: 'available', phase: 1,
+    summary: 'Your own company profile, documents, credentials and the links you share with clients.', capabilities: [] },
   { slug: 'team', label: 'Team Management', icon: Users, group: 'Organization', status: 'available', phase: 1,
     summary: 'Members, roles and permissions.', capabilities: [] },
   { slug: 'integrations', label: 'Integrations', icon: Plug, group: 'Organization', status: 'available', phase: 1,
@@ -186,7 +202,7 @@ export const PHASE_NAMES: Record<number, string> = {
   6: 'SaaS Commercialization',
   7: 'Immersive Experience',
   8: 'Enterprise Readiness',
-  9: 'Email Outreach and Lead Capture',
+  9: 'Email Outreach and Contact Capture',
 };
 
 /** How a module's planned phase reads in badges: "Phase 5", or "After launch" for unscheduled work. */

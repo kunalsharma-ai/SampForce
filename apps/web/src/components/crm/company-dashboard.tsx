@@ -1,6 +1,6 @@
 'use client';
 
-import type { CompanyEmployeeRow, CompanyRow } from '@dealflow/types';
+import type { BulkActionResult, CompanyEmployeeRow, CompanyRow } from '@dealflow/types';
 import { Button, Card, CardContent, CardHeader, CardTitle, cn, Input, Skeleton } from '@dealflow/ui';
 import {
   ArrowDown,
@@ -40,6 +40,7 @@ import {
   Link2,
   UserMinus,
   UserSearch,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
@@ -49,7 +50,7 @@ import { InfoTip } from '@/components/info-tip';
 import { personLabel } from '@/lib/company-leads';
 import { formatMoneyList, useCompanyDashboard, useCompanyEmployees } from '@/lib/company-work';
 import { formatDate } from '@/lib/crm';
-import { useHasFeature } from '@/lib/features';
+import { ENTITY_FEATURE, useCanDelete, useHasFeature } from '@/lib/features';
 import { CallButton } from '@/components/calls/call-button';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
@@ -114,8 +115,8 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
   const place = [c.city, c.state, country].filter(Boolean).join(', ');
   const fullAddress = [c.address, c.city, c.state, c.postalCode, country].filter(Boolean).join(', ');
   const people: [MessageKey, string][] = [
-    ['Lead creator', personLabel(c.createdBy)],
-    ['Lead owner', personLabel(c.ownerPerson) || c.owner?.name || ''],
+    ['Company creator', personLabel(c.createdBy)],
+    ['Company owner', personLabel(c.ownerPerson) || c.owner?.name || ''],
     ['Assigned manager', personLabel(c.manager)],
   ];
   return (
@@ -132,7 +133,7 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
           <CompanyLogoEditor company={c} />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              {c.leadNumber && <span aria-label={t('Lead number')} className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
+              {c.leadNumber && <span aria-label={t('Company number')} className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
               <StatusChip status={c.status} className="px-2.5 text-xs" />
               {c.statusChangedAt && <span className="text-xs text-muted-foreground">{t('Since {date}', { date: formatDate(c.statusChangedAt) })}</span>}
             </div>
@@ -370,7 +371,8 @@ type SortKey = 'name' | 'status' | 'emailsSent' | 'responsesReceived' | 'lastUpd
 /** The employee directory (section 7.3): every employee with their numbers, sortable and filterable. */
 /**
  * The company's employees / POCs with everything to manage them in place (ADR 0066): add a new one, add an existing
- * contact, edit, or take one off the company. Each is a contact record; nothing here deletes one.
+ * contact, edit, or take one off the company. Each is a contact record. Deleting (ADR 0097) removes the contact itself:
+ * the ticked rows or every employee shown (or one person from its Edit window), with the password asked once.
  */
 export function CompanyEmployeeDirectory({ company, compact = false }: { company: CompanyRow; compact?: boolean }) {
   const t = useT();
@@ -394,10 +396,44 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
       setRemoveError(err instanceof Error ? err.message : t('Could not save.'));
     }
   };
+  // Deleting employees (ADR 0097): the contact record goes, not only its link to this company.
+  const mayDelete = useCanDelete(ENTITY_FEATURE.contacts);
+  const canDelete = canWrite && mayDelete;
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = React.useState<string[] | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteNote, setDeleteNote] = React.useState<{ text: string; error: boolean } | null>(null);
+  const deleteEmployees = async (ids: string[]) => {
+    setDeleting(true);
+    setDeleteNote(null);
+    try {
+      let updated = 0;
+      const failed: BulkActionResult['failed'] = [];
+      for (let i = 0; i < ids.length; i += 1000) {
+        const r = await api<BulkActionResult>('/records/bulk', { method: 'POST', json: { entity: 'contacts', ids: ids.slice(i, i + 1000), action: 'delete' } });
+        updated += r.updated;
+        failed.push(...r.failed);
+      }
+      const more = failed.length ? ` ${t('{count} could not be changed: {reason}', { count: failed.length, reason: failed[0]!.message })}` : '';
+      setDeleteNote({ text: `${t('Deleted {count}.', { count: updated })}${more}`, error: failed.length > 0 });
+      setSelected(new Set());
+      setConfirmDelete(null);
+    } catch (err) {
+      // Cancelling the password, or sending the request to a manager for approval, is not a failure.
+      const code = (err as { code?: string }).code;
+      const quiet = code === 'CONFIRMATION_CANCELLED' || code === 'APPROVAL_REQUESTED' || code === 'APPROVAL_NOT_REQUESTED';
+      setDeleteNote({ text: err instanceof Error ? t.maybe(err.message) : t('Could not delete this record.'), error: !quiet });
+      setConfirmDelete(null);
+    } finally {
+      setDeleting(false);
+      await Promise.all(['company-employees', 'contacts', 'company-dashboard', 'companies'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
+    }
+  };
   const [q, setQ] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [sort, setSort] = React.useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false });
   useCompanyAction('addEmployee', canWrite ? () => setAdding(true) : null);
+  useCompanyAction('findPeople', canWrite && enrichment ? () => setFinding(true) : null);
   const statuses = [...new Map((rows.data ?? []).filter((r) => r.status).map((r) => [r.status!.id, r.status!])).values()];
   const list = React.useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -411,6 +447,17 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
       return (x < y ? -1 : x > y ? 1 : 0) * (sort.desc ? -1 : 1);
     });
   }, [rows.data, q, status, sort]);
+  // Only rows still shown can stay ticked.
+  const shownIds = list.map((r) => r.id);
+  const ticked = shownIds.filter((id) => selected.has(id));
+  const allTicked = shownIds.length > 0 && ticked.length === shownIds.length;
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const header = (key: SortKey, label: MessageKey, className?: string) => {
     const active = sort.key === key;
     const Icon = sort.desc ? ArrowDown : ArrowUp;
@@ -458,17 +505,71 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
                 </option>
               ))}
             </select>
+            {canDelete && (
+              <div className="ms-auto flex flex-wrap items-center gap-2">
+                {ticked.length > 0 && (
+                  <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(ticked)}>
+                    <Trash2 aria-hidden /> {t('Delete selected ({count})', { count: ticked.length })}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="text-critical" onClick={() => setConfirmDelete(shownIds)} disabled={!shownIds.length}>
+                  <Trash2 aria-hidden /> {q || status ? t('Delete all {count} shown', { count: shownIds.length }) : t('Delete all employees')}
+                </Button>
+              </div>
+            )}
           </div>
+        )}
+        {confirmDelete && (
+          <div role="alertdialog" aria-label={t('Delete employees?')} className="space-y-2 rounded-md border border-critical/40 bg-critical/5 p-3 text-sm">
+            <p className="font-medium">{confirmDelete.length === 1 ? t('Delete this employee?') : t('Delete {count} employees?', { count: confirmDelete.length })}</p>
+            <p className="text-muted-foreground">
+              {t('This deletes the contact records themselves, with their details. To keep a person but take them off this company, use Remove from company instead.')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="destructive" disabled={deleting} onClick={() => void deleteEmployees(confirmDelete)}>
+                <Trash2 aria-hidden /> {deleting ? t('Deleting…') : confirmDelete.length === 1 ? t('Delete') : t('Delete {count}', { count: confirmDelete.length })}
+              </Button>
+              <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(null)}>
+                {t('Cancel')}
+              </Button>
+            </div>
+          </div>
+        )}
+        {deleteNote && (
+          <p role={deleteNote.error ? 'alert' : 'status'} className={cn('text-sm', deleteNote.error ? 'text-critical' : 'text-muted-foreground')}>
+            {deleteNote.text}
+          </p>
         )}
         {rows.isPending ? (
           <Skeleton className="h-16" />
         ) : !rows.data?.length ? (
-          <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
+            {canWrite && enrichment && (
+              <Button size="sm" variant="outline" onClick={() => setFinding(true)}>
+                <UserSearch aria-hidden /> {t('Find people on their website')}
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="relative -mx-2 overflow-x-auto">
             <table className={cn('w-full text-sm', compact ? 'min-w-[760px]' : 'min-w-[960px]')} aria-label={t('Employees / POCs')}>
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
+                  {canDelete && (
+                    <th scope="col" className="w-8 px-2 py-2">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-primary"
+                        aria-label={t('Select all employees')}
+                        checked={allTicked}
+                        ref={(el) => {
+                          if (el) el.indeterminate = ticked.length > 0 && !allTicked;
+                        }}
+                        onChange={() => setSelected(allTicked ? new Set() : new Set(shownIds))}
+                      />
+                    </th>
+                  )}
                   {header('name', 'Employee')}
                   {header('status', 'Status')}
                   <th scope="col" className="px-2 py-2 text-start font-medium">
@@ -495,7 +596,12 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
               </thead>
               <tbody className="divide-y divide-border">
                 {list.map((r) => (
-                  <tr key={r.id} className="align-top hover:bg-muted/40">
+                  <tr key={r.id} className={cn('align-top hover:bg-muted/40', selected.has(r.id) && 'bg-primary/5')}>
+                    {canDelete && (
+                      <td className="px-2 py-2">
+                        <input type="checkbox" className="size-4 accent-primary" aria-label={t('Select {name}', { name: r.name })} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
+                      </td>
+                    )}
                     <td className="px-2 py-2">
                       <Link href={`/app/contacts/${r.id}`} className="inline-flex min-h-6 items-center font-medium text-primary hover:underline">
                         {r.name}

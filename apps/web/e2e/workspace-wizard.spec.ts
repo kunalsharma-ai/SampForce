@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, perWorkspaceDelete } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -26,6 +26,8 @@ async function axe(page: Page) {
 test('creates an Executive Workspace with the wizard, refusing an email that already has a role', async ({ page }) => {
   test.setTimeout(150_000);
   await signUp(page, 'Wizard Traders');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   const managerEmail = `rahul.${Date.now()}@example.com`;
   const north = await page.request.post('/api/v1/workspaces', { data: { level: 'MANAGER', name: 'North India', person: { inviteEmail: managerEmail, name: 'Rahul Sharma' } }, headers: ORIGIN });
   expect(north.ok(), await north.text()).toBe(true);

@@ -1,10 +1,21 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@dealflow/database';
-import type { ActivityInput, ActivityRow, ActivityUpdate, Page } from '@dealflow/types';
+import { type ActivityInput, type ActivityRow, type ActivityUpdate, type BulkActionResult, type DeleteAllInput, type Page, z } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { allPages, deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { assertRefs, notFound, ownerRefs } from './crm-helpers';
+
+/** The activity list's query (GET /activities), also used to find every activity to delete at once. */
+export const activityListQuerySchema = z.object({
+  leadId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  companyId: z.string().uuid().optional(),
+  opportunityId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 export interface ActivityListQuery {
   leadId?: string;
@@ -54,7 +65,7 @@ export class ActivitiesService {
     if (!input.leadId && !input.contactId && !input.companyId && !input.opportunityId) {
       throw new BadRequestException({
         code: 'VALIDATION_FAILED',
-        message: 'Link the activity to a lead, contact, company or deal.',
+        message: 'Link the activity to a company, contact or deal.',
         details: [{ path: 'leadId', message: 'at least one related record is required' }],
       });
     }
@@ -128,6 +139,17 @@ export class ActivitiesService {
       }
       return toActivityRow(row, await ownerRefs(tx, [row.ownerId]));
     });
+  }
+
+  /** Every activity the list shows for this query, on every page, then each one deleted (ADR 0096). */
+  async matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(activityListQuerySchema, { ...query, page: '1', pageSize: '100' });
+    const ids = await allPages((page) => this.list(auth, { ...q, page }));
+    return ids;
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'activities', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

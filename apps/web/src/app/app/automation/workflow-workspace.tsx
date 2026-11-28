@@ -181,7 +181,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
         <CardContent className="grid gap-3 p-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="wf-name">{t('Name')}</Label>
-            <Input id="wf-name" value={name} maxLength={120} onChange={(e) => (setName(e.target.value), setDirty(true))} placeholder={t('e.g. Follow up on high-value leads')} />
+            <Input id="wf-name" value={name} maxLength={120} onChange={(e) => (setName(e.target.value), setDirty(true))} placeholder={t('e.g. Follow up on high-value contacts')} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="wf-desc">{t('Description')}</Label>
@@ -233,10 +233,10 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
 }
 
 const PICKER_ENTITY = { lead: 'leads', contact: 'contacts', company: 'companies', deal: 'deals' } as const;
-const SEARCH_PLACEHOLDER = { leads: 'Search leads…', contacts: 'Search contacts…', companies: 'Search companies…', deals: 'Search deals…' } as const;
-const ENTITY_LABEL: Record<string, string> = { lead: 'Lead', contact: 'Contact', company: 'Company', deal: 'Deal', activity: 'Activity', person: 'Person', task: 'Task' };
+const SEARCH_PLACEHOLDER = { leads: 'Search inbound contacts…', contacts: 'Search contacts…', companies: 'Search companies…', deals: 'Search deals…' } as const;
+const ENTITY_LABEL: Record<string, string> = { lead: 'Inbound contact', contact: 'Contact', company: 'Company', deal: 'Deal', activity: 'Activity', person: 'Person', task: 'Task' };
 const NODE_LABEL: Record<string, string> = { action: 'Action', condition: 'If / else', delay: 'Wait', approval: 'Approval' };
-const OPEN_RECORD: Record<string, string> = { lead: 'Open the lead', contact: 'Open the contact', company: 'Open the company', deal: 'Open the deal' };
+const OPEN_RECORD: Record<string, string> = { lead: 'Open the inbound contact', contact: 'Open the contact', company: 'Open the company', deal: 'Open the deal' };
 const STEP_STATUS: Record<string, string> = { succeeded: 'Succeeded', failed: 'Failed', waiting: 'Waiting', awaiting_approval: 'Awaiting approval', simulated: 'Simulated' };
 
 function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; valid: boolean }) {
@@ -246,7 +246,7 @@ function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; 
   const [record, setRecord] = useState<PickerValue | null>(null);
   const sim = useMutation({ mutationFn: () => api<SimulationResult>('/workflows/simulate', { method: 'POST', json: { definition, recordId: record!.id } }) });
   if (!pickerEntity) {
-    return <p className="text-sm text-muted-foreground">{t('Simulation works with lead, contact, company and deal triggers. This trigger starts from a record of this kind: {entity}.', { entity: inSentence(t, t.maybe(ENTITY_LABEL[entity] ?? entity)) })}</p>;
+    return <p className="text-sm text-muted-foreground">{t('Simulation works with inbound contact, contact, company and deal triggers. This trigger starts from a record of this kind: {entity}.', { entity: inSentence(t, t.maybe(ENTITY_LABEL[entity] ?? entity)) })}</p>;
   }
   return (
     <Card>

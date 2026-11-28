@@ -5,6 +5,10 @@ import type { TextTable } from '../catalogue';
  * language at hand) and translated when the person opens their notifications (ADR 0052).
  */
 export const notifications = {
+  // Bulk sends to SampBidx (ADR 0099)
+  'SampBidx send finished with {failed} failed': ['El envío a SampBidx terminó con {failed} fallidos', 'L’envoi à SampBidx s’est terminé avec {failed} échecs', 'Senden an SampBidx mit {failed} Fehlern beendet', 'انتهى الإرسال إلى SampBidx مع {failed} فاشلة'],
+  'SampBidx confirmed {sent} of {total}': ['SampBidx confirmó {sent} de {total}', 'SampBidx a confirmé {sent} sur {total}', 'SampBidx hat {sent} von {total} bestätigt', 'أكد SampBidx استلام {sent} من {total}'],
+  'Sent {sent}, failed {failed}, skipped {skipped}.': ['Enviados {sent}, fallidos {failed}, omitidos {skipped}.', 'Envoyés {sent}, en échec {failed}, ignorés {skipped}.', 'Gesendet {sent}, fehlgeschlagen {failed}, übersprungen {skipped}.', 'أُرسل {sent}، فشل {failed}، تم تخطي {skipped}.'],
   // Help Center support tickets (ADR 0073)
   'SampForce support replied to query #{number}': [
     'El soporte de SampForce respondió a la consulta n.º {number}',
@@ -23,6 +27,12 @@ export const notifications = {
   'Your query #{number} is waiting for your reply': ['Tu consulta n.º {number} espera tu respuesta', 'Votre demande n° {number} attend votre réponse', 'Ihre Anfrage #{number} wartet auf Ihre Antwort', 'استفسارك رقم {number} بانتظار ردك'],
   'Your query #{number} is resolved': ['Tu consulta n.º {number} está resuelta', 'Votre demande n° {number} est résolue', 'Ihre Anfrage #{number} ist gelöst', 'تم حل استفسارك رقم {number}'],
   'Your query #{number} was opened again': ['Tu consulta n.º {number} se ha vuelto a abrir', 'Votre demande n° {number} a été rouverte', 'Ihre Anfrage #{number} wurde wieder geöffnet', 'أُعيد فتح استفسارك رقم {number}'],
+  // Website Enquiry (ADR 0095)
+  'New website enquiry from {name}': ['Nueva consulta del sitio web de {name}', 'Nouvelle demande du site web de {name}', 'Neue Website-Anfrage von {name}', 'استفسار جديد من الموقع من {name}'],
+  'New review from {name}': ['Nueva reseña de {name}', 'Nouvel avis de {name}', 'Neue Bewertung von {name}', 'مراجعة جديدة من {name}'],
+  'New newsletter sign-up from {name}': ['Nueva suscripción al boletín de {name}', 'Nouvelle inscription à la newsletter de {name}', 'Neue Newsletter-Anmeldung von {name}', 'اشتراك جديد في النشرة من {name}'],
+  'New live chat enquiry from {name}': ['Nueva consulta del chat en vivo de {name}', 'Nouvelle demande du chat en direct de {name}', 'Neue Live-Chat-Anfrage von {name}', 'استفسار جديد من الدردشة المباشرة من {name}'],
+  'New download from {name}': ['Nueva descarga de {name}', 'Nouveau téléchargement de {name}', 'Neuer Download von {name}', 'تنزيل جديد من {name}'],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
@@ -178,7 +188,7 @@ export const notifications = {
   'A webhook was switched off': ['Se desactivó un webhook', 'Un webhook a été désactivé', 'Ein Webhook wurde ausgeschaltet', 'أُوقف خطاف ويب'],
   '{url} failed {n} times in a row.': ['{url} falló {n} veces seguidas.', '{url} a échoué {n} fois d’affilée.', '{url} ist {n}-mal hintereinander fehlgeschlagen.', 'فشل {url} {n} مرات متتالية.'],
 
-  // Deal and customer health, visitors
+  // Deal and customer health
   '{deal} is at high risk': ['{deal} está en riesgo alto', '{deal} présente un risque élevé', '{deal} hat ein hohes Risiko', '{deal} في خطر مرتفع'],
   'Health {score}/100: {signals}.': ['Salud {score}/100: {signals}.', 'Santé {score}/100 : {signals}.', 'Zustand {score}/100: {signals}.', 'الصحة {score}/100: {signals}.'],
   '{company} is at risk': ['{company} está en riesgo', '{company} est à risque', '{company} ist gefährdet', '{company} معرّض للخطر'],
@@ -186,8 +196,6 @@ export const notifications = {
   'medium escalation: {company}': ['escalado medio: {company}', 'escalade moyenne : {company}', 'mittlere Eskalation: {company}', 'تصعيد متوسط: {company}'],
   'high escalation: {company}': ['escalado alto: {company}', 'escalade élevée : {company}', 'hohe Eskalation: {company}', 'تصعيد مرتفع: {company}'],
   'critical escalation: {company}': ['escalado crítico: {company}', 'escalade critique : {company}', 'kritische Eskalation: {company}', 'تصعيد حرج: {company}'],
-  '{name} is showing high intent on your website': ['{name} muestra una intención alta en tu sitio web', '{name} montre une forte intention sur votre site', '{name} zeigt hohes Kaufinteresse auf Ihrer Website', 'يُظهر {name} نية شراء عالية على موقعك'],
-  'Intent score {score}/100.': ['Puntuación de intención {score}/100.', 'Score d’intention {score}/100.', 'Interessenwert {score}/100.', 'درجة النية {score}/100.'],
 
   // Client portal
   'Portal request {ref} assigned to you': ['Solicitud del portal {ref} asignada a ti', 'Demande du portail {ref} qui vous est attribuée', 'Portalanfrage {ref} wurde Ihnen zugewiesen', 'طلب البوابة {ref} مسند إليك'],
@@ -209,16 +217,16 @@ export const notifications = {
   '{email} bounced': ['{email} rebotó', '{email} a été rejeté', '{email} ist unzustellbar', 'ارتدّ {email}'],
   '{email} unsubscribed': ['{email} se dio de baja', '{email} s’est désabonné', '{email} hat sich abgemeldet', 'ألغى {email} الاشتراك'],
   // Company leads (ADR 0060)
-  'Lead assigned to you: {lead}': ['Lead asignado a ti: {lead}', 'Prospect qui vous est attribué : {lead}', 'Ihnen zugewiesener Lead: {lead}', 'عميل محتمل أُسند إليك: {lead}'],
+  'Company assigned to you: {lead}': ['Empresa asignada a ti: {lead}', 'Entreprise qui vous est attribuée : {lead}', 'Ihnen zugewiesenes Unternehmen: {lead}', 'شركة مسندة إليك: {lead}'],
   'Assigned by {name}.': ['Asignado por {name}.', 'Attribué par {name}.', 'Zugewiesen von {name}.', 'أسنده {name}.'],
   // Company work (ADR 0060, Phase 3)
   'Follow-up assigned to you: {title}': ['Seguimiento asignado a ti: {title}', 'Relance qui vous est attribuée : {title}', 'Ihnen zugewiesene Nachverfolgung: {title}', 'متابعة أُسندت إليك: {title}'],
   'RFQ assigned to you: {rfq}': ['RFQ asignada a ti: {rfq}', 'RFQ qui vous est attribuée : {rfq}', 'Ihnen zugewiesene RFQ: {rfq}', 'طلب عرض سعر أُسند إليك: {rfq}'],
   // Lead transfers (ADR 0063, Phase 4)
-  'Lead transfer request: {lead}': ['Solicitud de traspaso de lead: {lead}', 'Demande de transfert de prospect : {lead}', 'Anfrage zur Lead-Übergabe: {lead}', 'طلب نقل عميل محتمل: {lead}'],
+  'Company transfer request: {lead}': ['Solicitud de transferencia de empresa: {lead}', 'Demande de transfert d’entreprise : {lead}', 'Anfrage zur Unternehmensübertragung: {lead}', 'طلب نقل شركة: {lead}'],
   'Requested by {name}.': ['Solicitado por {name}.', 'Demandé par {name}.', 'Angefragt von {name}.', 'طلبه {name}.'],
-  'Lead transfer approved: {lead}': ['Traspaso de lead aprobado: {lead}', 'Transfert de prospect approuvé : {lead}', 'Lead-Übergabe genehmigt: {lead}', 'تمت الموافقة على نقل العميل المحتمل: {lead}'],
-  'Lead transfer rejected: {lead}': ['Traspaso de lead rechazado: {lead}', 'Transfert de prospect refusé : {lead}', 'Lead-Übergabe abgelehnt: {lead}', 'رُفض نقل العميل المحتمل: {lead}'],
+  'Company transfer approved: {lead}': ['Transferencia de empresa aprobada: {lead}', 'Transfert d’entreprise approuvé : {lead}', 'Unternehmensübertragung genehmigt: {lead}', 'تمت الموافقة على نقل الشركة: {lead}'],
+  'Company transfer rejected: {lead}': ['Transferencia de empresa rechazada: {lead}', 'Transfert d’entreprise rejeté : {lead}', 'Unternehmensübertragung abgelehnt: {lead}', 'رُفض نقل الشركة: {lead}'],
   'Decided by {name}.': ['Decidido por {name}.', 'Décidé par {name}.', 'Entschieden von {name}.', 'قرّره {name}.'],
   "Client concern: {lead}": ["Inquietud del cliente: {lead}", "Préoccupation client : {lead}", "Kundenanliegen: {lead}", "ملاحظة عميل: {lead}"],
   "Client concern escalated: {lead}": ["Inquietud del cliente escalada: {lead}", "Préoccupation client remontée : {lead}", "Kundenanliegen eskaliert: {lead}", "صُعِّدت ملاحظة عميل: {lead}"],
@@ -238,7 +246,7 @@ export const notifications = {
   // Edit everywhere (ADR 0065)
   'Instruction updated by {name}': ['Instrucción actualizada por {name}', 'Instruction modifiée par {name}', 'Anweisung geändert von {name}', 'عدّل {name} التعليمات'],
   'Remark updated by {name}': ['Observación actualizada por {name}', 'Remarque modifiée par {name}', 'Bemerkung geändert von {name}', 'عدّل {name} الملاحظة'],
-  'Lead transfer request updated: {lead}': ['Solicitud de traspaso de lead actualizada: {lead}', 'Demande de transfert de prospect modifiée : {lead}', 'Anfrage zur Lead-Übergabe geändert: {lead}', 'عُدّل طلب نقل العميل المحتمل: {lead}'],
+  'Company transfer request updated: {lead}': ['Solicitud de transferencia de empresa actualizada: {lead}', 'Demande de transfert d’entreprise mise à jour : {lead}', 'Anfrage zur Unternehmensübertragung aktualisiert: {lead}', 'تم تحديث طلب نقل الشركة: {lead}'],
   'Updated by {name}.': ['Actualizado por {name}.', 'Modifié par {name}.', 'Geändert von {name}.', 'عدّله {name}.'],
   // Targets and tasks (ADR 0071, part 4)
   'You have a new target': ['Tienes un nuevo objetivo', 'Vous avez un nouvel objectif', 'Sie haben ein neues Ziel', 'لديك هدف جديد'],
@@ -252,6 +260,29 @@ export const notifications = {
   'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
   'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
   '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
+  // Recurring tasks and target changes (ADR 0096)
+  'Your target changed': ['Tu objetivo ha cambiado', 'Votre objectif a changé', 'Ihr Ziel wurde geändert', 'تغيّر هدفك'],
+  'New recurring task: {title}': ['Nueva tarea recurrente: {title}', 'Nouvelle tâche récurrente : {title}', 'Neue wiederkehrende Aufgabe: {title}', 'مهمة متكررة جديدة: {title}'],
+  'From {start} to {end}.': ['Del {start} al {end}.', 'Du {start} au {end}.', 'Vom {start} bis {end}.', 'من {start} إلى {end}.'],
+  'Recurring task changed: {title}': ['Tarea recurrente modificada: {title}', 'Tâche récurrente modifiée : {title}', 'Wiederkehrende Aufgabe geändert: {title}', 'تم تغيير المهمة المتكررة: {title}'],
+  'The change applies from now on. Finished days keep their numbers.': ['El cambio se aplica desde ahora. Los días terminados conservan sus cifras.', 'Le changement s’applique dès maintenant. Les jours terminés gardent leurs chiffres.', 'Die Änderung gilt ab jetzt. Abgeschlossene Tage behalten ihre Zahlen.', 'يسري التغيير من الآن. تحتفظ الأيام المنتهية بأرقامها.'],
+  'You are no longer on this task.': ['Ya no participas en esta tarea.', 'Vous ne faites plus partie de cette tâche.', 'Sie sind nicht mehr Teil dieser Aufgabe.', 'لم تعد ضمن هذه المهمة.'],
+  'Recurring task paused: {title}': ['Tarea recurrente en pausa: {title}', 'Tâche récurrente en pause : {title}', 'Wiederkehrende Aufgabe pausiert: {title}', 'تم إيقاف المهمة المتكررة مؤقتًا: {title}'],
+  'Recurring task resumed: {title}': ['Tarea recurrente reanudada: {title}', 'Tâche récurrente reprise : {title}', 'Wiederkehrende Aufgabe fortgesetzt: {title}', 'تم استئناف المهمة المتكررة: {title}'],
+  'Recurring task cancelled: {title}': ['Tarea recurrente cancelada: {title}', 'Tâche récurrente annulée : {title}', 'Wiederkehrende Aufgabe abgebrochen: {title}', 'تم إلغاء المهمة المتكررة: {title}'],
+  'Today’s task: {title}': ['Tarea de hoy: {title}', 'Tâche du jour : {title}', 'Heutige Aufgabe: {title}', 'مهمة اليوم: {title}'],
+  'Keep going: {title} is {percent}% done': ['Sigue así: {title} va al {percent} %', 'Continuez : {title} est à {percent} %', 'Weiter so: {title} ist zu {percent} % erledigt', 'واصل: أُنجز {percent}% من {title}'],
+  'The day ends soon: {title} is {percent}% done': ['El día termina pronto: {title} va al {percent} %', 'La journée se termine bientôt : {title} est à {percent} %', 'Der Tag endet bald: {title} ist zu {percent} % erledigt', 'اليوم يوشك على الانتهاء: أُنجز {percent}% من {title}'],
+  'Last day for {title}: {percent}% done': ['Último día para {title}: {percent} % hecho', 'Dernier jour pour {title} : {percent} % fait', 'Letzter Tag für {title}: {percent} % erledigt', 'آخر يوم لـ {title}: أُنجز {percent}%'],
+  'Progress counts by itself from the records you add.': ['El progreso se cuenta solo a partir de los registros que añades.', 'La progression se compte toute seule à partir de vos enregistrements.', 'Der Fortschritt zählt sich selbst aus den Datensätzen, die Sie anlegen.', 'يُحتسب التقدم تلقائيًا من السجلات التي تضيفها.'],
+  'Halfway there: {title}': ['A mitad de camino: {title}', 'À mi-chemin : {title}', 'Halbzeit: {title}', 'في منتصف الطريق: {title}'],
+  'Keep going. Every record you add counts by itself.': ['Sigue así. Cada registro que añades cuenta solo.', 'Continuez. Chaque enregistrement compte tout seul.', 'Weiter so. Jeder Datensatz zählt von selbst.', 'واصل. كل سجل تضيفه يُحتسب تلقائيًا.'],
+  '{name} is halfway through {title}': ['{name} va por la mitad de {title}', '{name} est à mi-chemin de {title}', '{name} hat {title} zur Hälfte erledigt', 'أنجز {name} نصف {title}'],
+  'Completed: {title}': ['Completada: {title}', 'Terminée : {title}', 'Erledigt: {title}', 'اكتملت: {title}'],
+  'Great work! Everything this task asked for is done.': ['¡Buen trabajo! Todo lo que pedía esta tarea está hecho.', 'Beau travail ! Tout ce que demandait cette tâche est fait.', 'Großartig! Alles, was diese Aufgabe verlangt hat, ist erledigt.', 'عمل رائع! أُنجز كل ما طلبته هذه المهمة.'],
+  '{name} completed {title}': ['{name} completó {title}', '{name} a terminé {title}', '{name} hat {title} erledigt', 'أكمل {name} {title}'],
+  'Not completed: {title} ({percent}%)': ['No completada: {title} ({percent} %)', 'Non terminée : {title} ({percent} %)', 'Nicht erledigt: {title} ({percent} %)', 'لم تكتمل: {title} ({percent}%)'],
+  '{name} did not complete {title} ({percent}%)': ['{name} no completó {title} ({percent} %)', '{name} n’a pas terminé {title} ({percent} %)', '{name} hat {title} nicht erledigt ({percent} %)', 'لم يُكمل {name} {title} ({percent}%)'],
   // Working status (ADR 0081)
   '{name} checked in': ['{name} ha fichado la entrada', '{name} a pointé son arrivée', '{name} hat eingecheckt', 'سجّل {name} الحضور'],
   '{name} is on a break': ['{name} está en una pausa', '{name} est en pause', '{name} macht eine Pause', '{name} في استراحة'],
@@ -260,4 +291,20 @@ export const notifications = {
   '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
   '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
   '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
+  // Team approvals (ADR 0098)
+  '{name} asks for approval: {request}': ['{name} pide aprobación: {request}', '{name} demande une approbation : {request}', '{name} bittet um Genehmigung: {request}', 'يطلب {name} الموافقة: {request}'],
+  'Approved: {request}': ['Aprobado: {request}', 'Approuvé : {request}', 'Genehmigt: {request}', 'تمت الموافقة: {request}'],
+  'Not approved: {request}': ['No aprobado: {request}', 'Non approuvé : {request}', 'Nicht genehmigt: {request}', 'لم تتم الموافقة: {request}'],
+  'Done: {request}': ['Hecho: {request}', 'Terminé : {request}', 'Erledigt: {request}', 'تم: {request}'],
+  'Expired: {request}': ['Caducado: {request}', 'Expiré : {request}', 'Abgelaufen: {request}', 'انتهت الصلاحية: {request}'],
+  'Waiting for a decision: {request}': ['Esperando una decisión: {request}', 'En attente d’une décision : {request}', 'Wartet auf eine Entscheidung: {request}', 'بانتظار قرار: {request}'],
+  'Not decided within {hours} hours, so it moved to you.': ['No se decidió en {hours} horas, así que pasó a ti.', 'Non décidé en {hours} heures, la demande vous a donc été transmise.', 'Nicht innerhalb von {hours} Stunden entschieden, daher liegt es jetzt bei Ihnen.', 'لم يُبتّ فيه خلال {hours} ساعة، لذا انتقل إليك.'],
+  'The approval was not used in time. Ask again if you still need it.': ['La aprobación no se usó a tiempo. Vuelve a pedirla si aún la necesitas.', 'L’approbation n’a pas été utilisée à temps. Redemandez-la si vous en avez encore besoin.', 'Die Genehmigung wurde nicht rechtzeitig verwendet. Fragen Sie erneut, falls Sie sie noch brauchen.', 'لم تُستخدم الموافقة في الوقت المحدد. اطلبها مجددًا إن كنت لا تزال بحاجة إليها.'],
+  'Nobody decided in time. Ask again if you still need it.': ['Nadie decidió a tiempo. Vuelve a pedirlo si aún lo necesitas.', 'Personne n’a décidé à temps. Redemandez si vous en avez encore besoin.', 'Niemand hat rechtzeitig entschieden. Fragen Sie erneut, falls Sie es noch brauchen.', 'لم يبتّ أحد في الوقت المحدد. اطلب مجددًا إن كنت لا تزال بحاجة إليه.'],
+  'Open Approvals to carry it out.': ['Abre Aprobaciones para llevarlo a cabo.', 'Ouvrez Approbations pour l’effectuer.', 'Öffnen Sie Genehmigungen, um es auszuführen.', 'افتح الموافقات لتنفيذه.'],
+  // On-screen notifications (spec section 9): the team's new records and finished calls.
+  '{name} added the company {company}': ['{name} añadió la empresa {company}', '{name} a ajouté l’entreprise {company}', '{name} hat das Unternehmen {company} hinzugefügt', 'أضاف {name} الشركة {company}'],
+  '{name} added the contact {contact}': ['{name} añadió el contacto {contact}', '{name} a ajouté le contact {contact}', '{name} hat den Kontakt {contact} hinzugefügt', 'أضاف {name} جهة الاتصال {contact}'],
+  '{name} created the deal {deal}': ['{name} creó la oportunidad {deal}', '{name} a créé l’opportunité {deal}', '{name} hat die Verkaufschance {deal} erstellt', 'أنشأ {name} الصفقة {deal}'],
+  '{name} called {who}: {outcome}': ['{name} llamó a {who}: {outcome}', '{name} a appelé {who} : {outcome}', '{name} hat {who} angerufen: {outcome}', 'اتصل {name} بـ{who}: {outcome}'],
 } satisfies TextTable;

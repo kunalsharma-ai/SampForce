@@ -126,7 +126,7 @@ export const rules: Handler = (b) => {
       else if (/note that/.test(l)) actions.push({ type: 'add_note', body: s.replace(/^.*?note that\s*/i, '').replace(/^./, (c: string) => c.toUpperCase()) });
       else if (/add (a )?(new )?lead/.test(l)) {
         const m = s.match(/lead,?\s+([A-Z][a-z]+(?: [A-Z][a-z]+)?)(?: from ([A-Z][\w ]+?))?(?:[,.]|$)/);
-        actions.push({ type: 'create_lead', name: m?.[1] ?? 'New lead', company: m?.[2]?.trim() ?? null, email: s.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0]?.replace(/\.$/, '') ?? null, phone: null });
+        actions.push({ type: 'create_lead', name: m?.[1] ?? 'New inbound contact', company: m?.[2]?.trim() ?? null, email: s.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0]?.replace(/\.$/, '') ?? null, phone: null });
       } else if (/add (a )?(new )?contact/.test(l)) {
         const m = s.match(/contact,?\s+([A-Z][a-z]+)(?: ([A-Z][a-z]+))?/);
         actions.push({ type: 'create_contact', firstName: m?.[1] ?? 'New', lastName: m?.[2] ?? null, jobTitle: null, email: null, phone: null });

@@ -264,8 +264,8 @@ export const revenue = {
   ],
   '({n}× the gap)': ['({n}× la diferencia)', '({n}× l’écart)', '({n}× die Lücke)', '({n}× الفجوة)'],
   'Won by month': ['Ganado por mes', 'Gagné par mois', 'Gewonnen pro Monat', 'المكسوب حسب الشهر'],
-  'Lead funnel': ['Embudo de leads', 'Entonnoir de prospects', 'Lead-Trichter', 'مسار العملاء المحتملين'],
-  'Leads created this quarter': ['Leads creados este trimestre', 'Prospects créés ce trimestre', 'In diesem Quartal erstellte Leads', 'العملاء المحتملون المنشؤون هذا الربع'],
+  'Contact funnel': ['Embudo de contactos', 'Entonnoir des contacts', 'Kontakttrichter', 'مسار تحويل جهات الاتصال'],
+  'Inbound contacts created this quarter': ['Contactos entrantes creados este trimestre', 'Contacts entrants créés ce trimestre', 'Dieses Quartal angelegte Eingangskontakte', 'جهات الاتصال الواردة المُنشأة هذا الربع'],
   'Qualified or converted': ['Calificados o convertidos', 'Qualifiés ou convertis', 'Qualifiziert oder konvertiert', 'مؤهلون أو محوَّلون'],
   'Became won deals': ['Se convirtieron en negocios ganados', 'Devenus des affaires gagnées', 'Wurden zu gewonnenen Deals', 'أصبحوا صفقات مكسوبة'],
   'Sales velocity: {velocity} ({deals})': [
@@ -283,7 +283,7 @@ export const revenue = {
     'Keine abgeschlossenen Deals oder Ziele in diesem Quartal.',
     'لا توجد صفقات مغلقة أو أهداف هذا الربع.',
   ],
-  'By lead source': ['Por origen del lead', 'Par source de prospect', 'Nach Lead-Quelle', 'حسب مصدر العميل المحتمل'],
+  'By contact source': ['Por fuente del contacto', 'Par source du contact', 'Nach Kontaktquelle', 'حسب مصدر جهة الاتصال'],
   'No won deals.': ['No hay negocios ganados.', 'Aucune affaire gagnée.', 'Keine gewonnenen Deals.', 'لا توجد صفقات مكسوبة.'],
   'By product (accepted quotes)': ['Por producto (presupuestos aceptados)', 'Par produit (devis acceptés)', 'Nach Produkt (angenommene Angebote)', 'حسب المنتج (عروض الأسعار المقبولة)'],
   'No accepted quotes on won deals.': [

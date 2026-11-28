@@ -116,7 +116,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               )}
               {turns.length === 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">{tr('Ask about your leads, deals, contacts and tasks. Try:')}</p>
+                  <p className="text-sm text-muted-foreground">{tr('Ask about your companies, deals, contacts and tasks. Try:')}</p>
                   <ul className="space-y-2">
                     {EXAMPLES.map((e) => (
                       <li key={e}>

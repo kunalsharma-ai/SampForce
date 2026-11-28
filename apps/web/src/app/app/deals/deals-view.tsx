@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Columns2, GanttChart, HeartPulse, KanbanSquare, LineChart, List, MapPinned, Sparkles } from 'lucide-react';
+import { Archive, CalendarDays, Columns2, GanttChart, HeartPulse, KanbanSquare, LayoutDashboard, LineChart, List, MapPinned, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
@@ -8,6 +8,8 @@ import { DealsBoard } from '@/components/crm/deals-board';
 import { RecordList } from '@/components/crm/record-list';
 import { Select } from '@/components/crm/select';
 import { DealSheet } from '@/components/deals/deal-panel';
+import { DealBulkBar } from '@/components/deals/deal-bulk-bar';
+import { DealsDashboard, DealsKpiStrip } from '@/components/deals/deals-dashboard';
 import { CalendarView, ForecastView, PriorityView, SplitView, TerritoryView, TimelineView } from '@/components/deals/views';
 import { usePipelines } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
@@ -16,6 +18,7 @@ import { replaceQuery } from '@/lib/url-query';
 import { useIsPhone } from '@/lib/use-is-phone';
 
 const VIEWS = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'board', label: 'Board', icon: KanbanSquare },
   { key: 'list', label: 'Table', icon: List },
   { key: 'split', label: 'Split', icon: Columns2 },
@@ -38,6 +41,8 @@ export function DealsView() {
   const dealId = params.get('deal');
   const pipelineId = params.get('pipeline') ?? undefined;
   const mine = params.get('owner') === 'me';
+  // The table can list archived deals instead of active ones (ADR 0096).
+  const archived = view === 'list' && params.get('archived') === 'true';
 
   const setParams = replaceQuery;
 
@@ -58,21 +63,21 @@ export function DealsView() {
     } catch {
       /* storage unavailable */
     }
-    setParams({ view: v === 'board' ? null : v, ...(v === 'split' ? {} : { deal: null }) });
+    setParams({ view: v === 'board' ? null : v, ...(v === 'split' ? {} : { deal: null }), ...(v === 'list' ? {} : { archived: null }) });
   };
 
   const open = (id: string) => setParams({ deal: id });
   const filter = { pipelineId, ownerId: mine ? session?.user.id : undefined };
 
   const toggle = (
-    <div role="group" aria-label={t('View')} className="inline-flex flex-wrap rounded-md border border-border p-0.5">
+    <div role="group" aria-label={t('View')} className="sf-views inline-flex max-w-full flex-wrap gap-0.5 p-0.5">
       {VIEWS.map(({ key, label, icon: Icon }) => (
         <button
           key={key}
           type="button"
           aria-pressed={view === key}
           onClick={() => choose(key)}
-          className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded px-2.5 text-xs font-medium text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[0.7rem] px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Icon className="size-3.5" aria-hidden /> {t(label)}
         </button>
@@ -98,7 +103,7 @@ export function DealsView() {
             </Select>
           </>
         )}
-        {view !== 'board' && (
+        {view !== 'board' && view !== 'dashboard' && (
           <>
             <label htmlFor="deals-owner" className="text-xs font-medium text-muted-foreground">
               {t('Owner')}
@@ -126,8 +131,20 @@ export function DealsView() {
           </>
         }
         hideTable={view !== 'list'}
+        extraParams={archived ? { archived: 'true' } : undefined}
+        bulkExtra={(ids, clear) => <DealBulkBar compact ids={ids} archived={archived} onClear={clear} />}
+        filtersExtra={
+          view === 'list' ? (
+            <label className="inline-flex h-control items-center gap-2 rounded-md border border-border px-2.5 text-xs font-medium">
+              <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={archived} onChange={(e) => setParams({ archived: e.target.checked ? 'true' : null })} />
+              <Archive aria-hidden className="size-3.5" /> {t('Archived deals')}
+            </label>
+          ) : undefined
+        }
       />
       {filters}
+      {view !== 'dashboard' && view !== 'list' && <DealsKpiStrip filter={filter} onOpenDashboard={() => choose('dashboard')} />}
+      {view === 'dashboard' && <DealsDashboard filter={filter} onOpen={open} />}
       {view === 'board' && <DealsBoard pipelineId={pipelineId} onOpen={open} />}
       {view === 'split' && <SplitView filter={filter} selected={dealId} onOpen={open} />}
       {view === 'timeline' && <TimelineView filter={filter} onOpen={open} />}

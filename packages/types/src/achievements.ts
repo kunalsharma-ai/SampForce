@@ -11,16 +11,17 @@ export const ACHIEVEMENT_LEVELS = ['ROUTINE', 'DAILY', 'MAJOR', 'EXCEPTIONAL'] a
 export type AchievementLevel = (typeof ACHIEVEMENT_LEVELS)[number];
 
 /** What a person can switch off, one category at a time. */
-export const ACHIEVEMENT_CATEGORIES = ['deals', 'rfqs', 'tasks', 'leads', 'sales', 'consistency'] as const;
+export const ACHIEVEMENT_CATEGORIES = ['deals', 'rfqs', 'tasks', 'leads', 'sales', 'consistency', 'recognition'] as const;
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 
 export const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
   deals: 'Companies converted into deals',
   rfqs: 'RFQs submitted',
   tasks: 'Tasks and follow-ups',
-  leads: 'Lead targets',
+  leads: 'Company targets',
   sales: 'Sales targets and milestones',
   consistency: 'Consistency',
+  recognition: 'Employee of the Month and improvement plans',
 };
 
 export const ACHIEVEMENT_KINDS = [
@@ -46,6 +47,16 @@ export const ACHIEVEMENT_KINDS = [
   'MAJOR_DEAL',
   /** A steady working day: checked in and out, no unplanned interruption, every task due today done. */
   'CONSISTENCY',
+  /** Every requirement of a recurring task instance (today's, this week's or this month's) was reached (ADR 0096). */
+  'TASK_PLAN_DONE',
+  /** Half of everything a recurring task instance asks for is done (ADR 0096). */
+  'TASK_PLAN_HALF',
+  /** Named Employee of the Month (ADR 0102), for the organisation or the person's team. */
+  'EMPLOYEE_OF_THE_MONTH',
+  /** Every Employee of the Month condition is met: eligible, not yet selected (ADR 0102). */
+  'RECOGNITION_ELIGIBLE',
+  /** An improvement plan was confirmed as successfully completed (ADR 0102). */
+  'PIP_COMPLETED',
 ] as const;
 export type AchievementKind = (typeof ACHIEVEMENT_KINDS)[number];
 
@@ -61,6 +72,11 @@ export const ACHIEVEMENT_CATEGORY_OF: Record<AchievementKind, AchievementCategor
   DEALS_WON_MILESTONE: 'sales',
   MAJOR_DEAL: 'sales',
   CONSISTENCY: 'consistency',
+  TASK_PLAN_DONE: 'tasks',
+  TASK_PLAN_HALF: 'tasks',
+  EMPLOYEE_OF_THE_MONTH: 'recognition',
+  RECOGNITION_ELIGIBLE: 'recognition',
+  PIP_COMPLETED: 'recognition',
 };
 
 /** Percentages of the daily lead target that get a small celebration before the target itself. */
@@ -115,6 +131,18 @@ export interface AchievementDetails {
   workedMinutes?: number;
   breakMinutes?: number;
   breaks?: number;
+  /** Recurring tasks (ADR 0096): the cadence of the instance, what it asked and what was done, and the streak. */
+  cadence?: 'DAY' | 'WEEK' | 'MONTH';
+  items?: { metric: string; amount: number; done: number }[];
+  streak?: number;
+  /** Employee of the Month and plans (ADR 0102): the month (YYYY-MM), the award's scope, score and the plan. */
+  month?: string;
+  scope?: 'ORGANISATION' | 'TEAM';
+  teamName?: string | null;
+  score?: number;
+  reward?: string | null;
+  planNumber?: string;
+  planTitle?: string;
 }
 
 export interface AchievementRow {

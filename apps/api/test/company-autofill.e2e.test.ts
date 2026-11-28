@@ -7,7 +7,7 @@ import { CompanyLogosService } from '../src/crm/company-logos.service';
 import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
 import { startFinderFixture } from './fixtures/finder-fixture';
 import { type LogoFixture, startLogoFixture } from './fixtures/logo-fixture';
-import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
+import { api, asTenant, inviteMember, ownerClient, registerUser, startApp, type TestUser } from './helpers';
 
 function setEnv(vars: Record<string, string | undefined>): () => void {
   const saved = Object.fromEntries(Object.keys(vars).map((k) => [k, process.env[k]]));
@@ -45,6 +45,12 @@ describe('company auto-fill', () => {
     logos = app.get(CompanyLogosService);
     owner = await registerUser(app, 'Autofill Org');
     http = api(owner);
+    // Other suites share this database and leave auto-fill runs queued for companies with made-up websites. The
+    // worker here would pick them up first and wait up to a minute on each, timing the first test out in CI, so
+    // they are closed before this suite starts.
+    const db = ownerClient();
+    await db.companyEnrichment.updateMany({ where: { status: 'PENDING', tenantId: { not: owner.tenantId } }, data: { status: 'FAILED', error: 'Closed by the auto-fill test suite.' } });
+    await db.$disconnect();
   });
 
   afterAll(async () => {
@@ -132,7 +138,9 @@ describe('company auto-fill', () => {
     // A few look-ups a minute per person.
     for (let i = 0; i < 4; i++) await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(200);
     await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(429);
-  });
+    // Six look-ups, each trying the site in a plain request and then in the hidden browser, can pass 20 seconds on a
+    // busy CI runner.
+  }, 60_000);
 
   describe('sites that hide their details (ADR 0079)', () => {
     let finder: ReturnType<typeof api>;

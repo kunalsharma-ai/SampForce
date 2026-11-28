@@ -171,7 +171,7 @@ export function TeamChart({ data }: { data: DashboardCharts }) {
       description={t('Won revenue in the period and open pipeline, by owner.')}
       summary={
         rows[0]
-          ? t('Grouped bar chart for {people} people; {name} leads with {won} won.', { people: rows.length, name: rows[0].name, won: money(rows[0].won) })
+          ? t('Grouped bar chart for {people} people; {name} has the most companies with {won} won.', { people: rows.length, name: rows[0].name, won: money(rows[0].won) })
           : t('Grouped bar chart for {people} people.', { people: rows.length })
       }
       filename="team-performance.csv"

@@ -170,6 +170,14 @@ model UserProfile {
   moodSetAt     DateTime? @map("mood_set_at")
   /// The mood clears itself after this time; null keeps it until it is changed.
   moodExpiresAt DateTime? @map("mood_expires_at")
+  /// Date of birth: day and month, and the year only if the person gives it.
+  birthDay          Int?    @map("birth_day")
+  birthMonth        Int?    @map("birth_month")
+  birthYear         Int?    @map("birth_year")
+  /// Whether teammates may see the year (and so the age). Off by default: only the day and month show.
+  birthYearVisible  Boolean @default(false) @map("birth_year_visible")
+  /// Whether the birthday shows to teammates and is celebrated on their dashboards.
+  celebrateBirthday Boolean @default(true) @map("celebrate_birthday")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -197,6 +205,10 @@ model NotificationPreference {
   volume     Int      @default(40)
   mutedSound String[] @map("muted_sound")
   desktop    Boolean  @default(false)
+  /// On-screen pop-ups (optional: rows saved before they existed have none of these fields).
+  popups       Boolean?
+  popupSeconds Int?     @map("popup_seconds")
+  mutedPopups  String[] @map("muted_popups")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -556,16 +568,13 @@ model Tenant {
   gamificationBadges     GamificationBadge[]
   gamificationAwards     GamificationAward[]
   gamificationContests   GamificationCompetition[]
-  visitorSettings        VisitorSettings?
-  webVisitors            WebVisitor[]
+  websiteEnquiries       WebsiteEnquiry[]
   prospectLists          ProspectList[]
   prospects              Prospect[]
   prospectOutreach       ProspectOutreach[]
   prospectImports        ProspectImport[]
   providerUsage          ProviderUsage[]
   prospectSettings       ProspectSettings?
-  webSessions            WebSession[]
-  webEvents              WebEvent[]
   companyHealthDays      CompanyHealthDaily[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
@@ -593,7 +602,6 @@ model Tenant {
   meetingRecords         MeetingRecord[]
   appConnections         AppConnection[]
   appEvents              AppEvent[]
-  zoomMeetings           ZoomMeeting[]
   signatureEnvelopes     SignatureEnvelope[]
   quotePayments          QuotePayment[]
   whatsappMessages       WhatsappMessage[]
@@ -613,6 +621,7 @@ model Tenant {
   sampbidxAttachments    SampbidxAttachment[]
   contactStageChanges    ContactStageChange[]
   sampbidxClients        SampbidxClient[]
+  sampbidxBatches        SampbidxBatch[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
@@ -792,6 +801,11 @@ model WorkspaceNode {
   /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
+  /// Field access the workspace above set (ADR 0096): record fields (FIELD_ACCESS_CATALOGUE ids such as
+  /// `company.primaryEmail`) this workspace and everything below it never see, and fields it sees but cannot change.
+  /// Added to what the Console withholds from the level and to what the parent has hidden or locked.
+  hiddenFields         String[]  @map("hidden_fields")
+  lockedFields         String[]  @map("locked_fields")
   createdById          String?   @map("created_by_id")
   /// Wizard details (W5): the team or department, a short description, and for a Manager Workspace whose records it
   /// sees: TEAM (its own and its executives'; null means TEAM) or OWN (only its own people's).
@@ -830,9 +844,9 @@ model WorkspaceTarget {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
   workspaceNodeId String    @map("workspace_node_id")
-  /// LEADS, CALLS, DEALS_WON or REVENUE.
+  /// TARGET_METRICS in packages/types/src/workspace-work.ts (LEADS = companies created).
   metric          String
-  /// DAILY, WEEKLY, MONTHLY, QUARTERLY or CUSTOM.
+  /// DAILY, WEEKLY, MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY or CUSTOM.
   period          String
   startsAt        DateTime  @map("starts_at")
   /// The day after the last day (periods are [startsAt, endsAt)).
@@ -851,6 +865,254 @@ model WorkspaceTarget {
   @@index([tenantId, workspaceNodeId])
   @@index([tenantId, parentTargetId])
   @@map("workspace_targets")
+}
+
+/// A recurring task (ADR 0096): what to reach per day, week or month, for whom, from when to when. SampForce makes the
+/// instances itself and counts them from real records.
+model TaskPlan {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  title           String
+  note            String?
+  /// [{ metric, amount, per: DAY | WEEK | MONTH }]
+  requirements    Json
+  /// ONE_DAY, TWO_DAYS, ONE_WEEK, ONE_MONTH, ONE_QUARTER, SIX_MONTHS, ONE_YEAR or CUSTOM.
+  duration        String
+  /// First and last day (both included), YYYY-MM-DD in the organisation's time zone.
+  startsOn        String    @map("starts_on")
+  endsOn          String    @map("ends_on")
+  /// ISO weekdays with a daily instance (1 = Monday).
+  workingDays     Int[]     @map("working_days")
+  /// Holidays: no daily instance on these days.
+  skipDates       String[]  @map("skip_dates")
+  assigneeIds     String[]  @map("assignee_ids")
+  /// ACTIVE, PAUSED or CANCELLED (ENDED is worked out from endsOn).
+  status          String    @default("ACTIVE")
+  pausedAt        DateTime? @map("paused_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancelReason    String?   @map("cancel_reason")
+  createdById     String    @map("created_by_id")
+  createdByNodeId String?   @map("created_by_node_id")
+  /// Every change: [{ at, byId, kind, changes: [{ field, from, to }] }], newest last.
+  revisions       Json      @default("[]")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@index([tenantId, assigneeIds])
+  @@map("task_plans")
+}
+
+/// One day, week or month of a recurring task for one person (ADR 0096). It keeps the numbers it was measured against,
+/// so a later change to the task never rewrites history.
+model TaskPlanInstance {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  planId       String    @map("plan_id")
+  userId       String    @map("user_id")
+  /// DAY, WEEK or MONTH.
+  cadence      String
+  /// The first day of the period, YYYY-MM-DD.
+  periodKey    String    @map("period_key")
+  startsAt     DateTime  @map("starts_at")
+  /// Exclusive.
+  endsAt       DateTime  @map("ends_at")
+  /// [{ metric, amount, done }]
+  requirements Json
+  percent      Float     @default(0)
+  /// OPEN while its period runs (unless completed), then COMPLETED, PARTIALLY_COMPLETED, NOT_COMPLETED or CANCELLED.
+  status       String    @default("OPEN")
+  completedAt  DateTime? @map("completed_at")
+  finalizedAt  DateTime? @map("finalized_at")
+  /// Notifications already sent for it (today, r12, r16, half, done, missed), so none is sent twice.
+  notified     String[]
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([planId, userId, cadence, periodKey])
+  @@index([tenantId, userId, endsAt])
+  @@index([tenantId, status, endsAt])
+  @@map("task_plan_instances")
+}
+
+/// Organisation-wide settings for rankings and task notices (ADR 0096), set by the Super Workspace.
+model PerformanceSettings {
+  id               String   @id @default(uuid()) @map("_id")
+  tenantId         String   @unique @map("tenant_id")
+  weights          Json     @default("{}")
+  showTeamPosition Boolean  @default(true) @map("show_team_position")
+  /// ALL, MISSED_ONLY or OFF.
+  superTaskNotices String   @default("ALL") @map("super_task_notices")
+  updatedById      String?  @map("updated_by_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("performance_settings")
+}
+
+/// Employee of the Month and improvement-plan rules of an organisation (ADR 0102), set by the Super Workspace.
+model RecognitionPolicy {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @unique @map("tenant_id")
+  /// RecognitionPolicy in packages/types/src/recognition.ts.
+  policy      Json     @default("{}")
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("recognition_policies")
+}
+
+/// One person's Employee of the Month target for one month (ADR 0102): goals counted from the records, the rule that
+/// makes them eligible, and every change made to it.
+model RecognitionTarget {
+  id                    String    @id @default(uuid()) @map("_id")
+  tenantId              String    @map("tenant_id")
+  userId                String    @map("user_id")
+  /// YYYY-MM.
+  month                 String
+  name                  String
+  /// First and last day (both included) in the organisation's time zone, and the instants they cover ([start, end)).
+  startsOn              String    @map("starts_on")
+  endsOn                String    @map("ends_on")
+  startsAt              DateTime  @map("starts_at")
+  endsAt                DateTime  @map("ends_at")
+  /// [{ id, measure, amount, per, label }]
+  goals                 Json
+  /// EVERY_GOAL or OVERALL.
+  eligibility           String    @default("EVERY_GOAL")
+  minAchievementPercent Float     @default(100) @map("min_achievement_percent")
+  minScore              Float?    @map("min_score")
+  conditions            String?
+  description           String?
+  reward                String?
+  /// ACTIVE, ELIGIBLE, AWARDED, NOT_SELECTED, CLOSED or CANCELLED, kept up to date as it is counted.
+  status                String    @default("ACTIVE")
+  achievementPercent    Float     @default(0) @map("achievement_percent")
+  score                 Float     @default(0)
+  eligibleAt            DateTime? @map("eligible_at")
+  /// Notifications already sent (m50, m75, eligible...) so none is sent twice.
+  notified              String[]
+  setById               String    @map("set_by_id")
+  /// SUPER or MANAGER.
+  setByLevel            String    @map("set_by_level")
+  cancelledAt           DateTime? @map("cancelled_at")
+  /// [{ at, byId, changes: string[] }], newest last.
+  revisions             Json      @default("[]")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, month])
+  @@index([tenantId, userId, month])
+  @@index([tenantId, status])
+  @@map("recognition_targets")
+}
+
+/// An Employee of the Month award (ADR 0102): for the organisation or one manager's team, with the figures it was
+/// decided on. A revoked award stays for the record.
+model RecognitionAward {
+  id                 String    @id @default(uuid()) @map("_id")
+  tenantId           String    @map("tenant_id")
+  month              String
+  /// ORGANISATION or TEAM.
+  scope              String
+  teamNodeId         String?   @map("team_node_id")
+  /// "<month>|<scope key>" while the award stands, "revoked:<id>" after: one standing award per month and scope.
+  liveKey            String    @map("live_key")
+  userId             String    @map("user_id")
+  targetId           String    @map("target_id")
+  /// AUTOMATIC or MANUAL.
+  method             String
+  achievementPercent Float     @map("achievement_percent")
+  score              Float
+  /// [{ label, required, done, unit }] as they stood when awarded.
+  goals              Json
+  criteria           String
+  reward             String?
+  note               String?
+  selectedById       String?   @map("selected_by_id")
+  awardedAt          DateTime  @default(now()) @map("awarded_at")
+  revokedAt          DateTime? @map("revoked_at")
+  revokedById        String?   @map("revoked_by_id")
+  revokeReason       String?   @map("revoke_reason")
+
+  @@unique([tenantId, liveKey])
+  @@index([tenantId, month])
+  @@index([tenantId, userId, awardedAt(sort: Desc)])
+  @@map("recognition_awards")
+}
+
+/// A Performance Improvement Plan (ADR 0102): why, what to improve, goals counted from records (or evaluated by the
+/// manager), dates, reviews and the decision that closes it.
+model PerformancePlan {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  /// PIP-0001, PIP-0002... per organisation.
+  number          String
+  title           String
+  userId          String    @map("user_id")
+  employeeCode    String?   @map("employee_code")
+  reason          String
+  areas           String[]
+  currentLevel    String?   @map("current_level")
+  requiredLevel   String?   @map("required_level")
+  /// [{ id, measure, amount, per, label }]
+  goals           Json
+  /// [{ id, goalId, score, comments, evaluatorId, at }], newest last.
+  evaluations     Json      @default("[]")
+  requiredPercent Float     @default(100) @map("required_percent")
+  startsOn        String    @map("starts_on")
+  endsOn          String    @map("ends_on")
+  originalEndsOn  String    @map("original_ends_on")
+  startsAt        DateTime  @map("starts_at")
+  endsAt          DateTime  @map("ends_at")
+  /// WEEKLY, FORTNIGHTLY, MONTHLY or CUSTOM.
+  reviewFrequency String    @map("review_frequency")
+  reviewDates     String[]  @map("review_dates")
+  /// PIP_STATUSES in packages/types/src/recognition.ts.
+  status          String    @default("ACTIVE")
+  percent         Float     @default(0)
+  goalsMet        Int       @default(0) @map("goals_met")
+  notified        String[]
+  managerComments String?   @map("manager_comments")
+  documents       Json      @default("[]")
+  assignedById    String    @map("assigned_by_id")
+  /// SUPER or MANAGER.
+  assignedByLevel String    @map("assigned_by_level")
+  activatedAt     DateTime? @map("activated_at")
+  acknowledgedAt  DateTime? @map("acknowledged_at")
+  readyAt         DateTime? @map("ready_at")
+  completedAt     DateTime? @map("completed_at")
+  closedAt        DateTime? @map("closed_at")
+  closedById      String?   @map("closed_by_id")
+  closingComment  String?   @map("closing_comment")
+  /// When the person closed the "plan completed" message on their dashboard.
+  completionSeenAt DateTime? @map("completion_seen_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, userId, status])
+  @@index([tenantId, status])
+  @@map("performance_plans")
+}
+
+/// The history of a plan (ADR 0102): every change, comment, evaluation, review and decision. Never edited.
+model PerformancePlanEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  planId    String   @map("plan_id")
+  kind      String
+  actorId   String?  @map("actor_id")
+  /// EMPLOYEE, MANAGER or SYSTEM.
+  actorRole String   @map("actor_role")
+  body      String?
+  changes   String[]
+  documents Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, planId, createdAt])
+  @@map("performance_plan_events")
 }
 
 model Team {
@@ -999,6 +1261,11 @@ model Company {
   /// Normalised keys for duplicate checks, kept by the API: lower-case name without legal suffixes, domains,
   /// lower-case emails, last ten phone digits, LinkedIn paths.
   nameKey           String?   @map("name_key")
+  /// Calls (ADR 0101): the last call, how many, and the company number flagged for checking (wrong number).
+  lastCallAt        DateTime? @map("last_call_at")
+  lastCallOutcome   String?   @map("last_call_outcome")
+  callCount         Int       @default(0) @map("call_count")
+  phoneFlaggedAt    DateTime? @map("phone_flagged_at")
   matchKeys         String[]  @map("match_keys")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -1085,8 +1352,19 @@ model Contact {
   rfqContributorById String?         @map("rfq_contributor_by_id")
   /// The follow-up cadence (ADR 0083): when the first email reached the employee, and when and why it stopped.
   initialEmailAt     DateTime?       @map("initial_email_at")
+  /// Calls (ADR 0101): the last call, how many, a number flagged for checking (wrong number), and not interested from a call.
+  lastCallAt         DateTime?       @map("last_call_at")
+  lastCallOutcome    String?         @map("last_call_outcome")
+  callCount          Int             @default(0) @map("call_count")
+  phoneFlaggedAt     DateTime?       @map("phone_flagged_at")
+  notInterestedAt    DateTime?       @map("not_interested_at")
   cadenceStoppedAt   DateTime?       @map("cadence_stopped_at")
   cadenceStopReason  String?         @map("cadence_stop_reason")
+  /// How the first email was confirmed (ADR 0096): SENT, MAILBOX, LOGGED or MANUAL (INITIAL_EMAIL_SOURCES).
+  initialEmailSource String?         @map("initial_email_source")
+  /// While the contact waits after the first email: when follow-up 1 is created and it moves into Follow-ups (ADR 0096).
+  /// Cleared when it moves or the cadence stops.
+  cadenceMovesAt     DateTime?       @map("cadence_moves_at")
   createdById       String?          @map("created_by_id")
   updatedById       String?          @map("updated_by_id")
   /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
@@ -1104,7 +1382,6 @@ model Contact {
   tasks         Task[]
 
   portalUsers      PortalUser[]
-  webVisitors      WebVisitor[]
   prospects        Prospect[]
   whatsappMessages WhatsappMessage[]
   whatsappConsents WhatsappConsent[]
@@ -1117,6 +1394,8 @@ model Contact {
   @@index([tenantId, phoneIntl])
   @@index([tenantId, companyId])
   @@index([tenantId, matchKeys])
+  @@index([cadenceMovesAt])
+  @@index([tenantId, createdAt])
   @@index([tenantId, statusId])
   @@index([tenantId, stageId])
   /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
@@ -1277,6 +1556,10 @@ model SampbidxTransfer {
   title           String
   rfqId           String?   @map("rfq_id")
   companyId       String?   @map("company_id")
+  /// The deal sent (kind DEAL, ADR 0095).
+  dealId          String?   @map("deal_id")
+  /// The bulk send it belongs to, if any (sampbidx_batches).
+  batchId         String?   @map("batch_id")
   emailMessageId  String?   @map("email_message_id")
   emailFrom       String?   @map("email_from")
   emailDate       DateTime? @map("email_date")
@@ -1327,6 +1610,8 @@ model SampbidxTransfer {
   @@index([tenantId, emailMessageId])
   @@index([tenantId, remoteId])
   @@index([tenantId, emailTextHash])
+  @@index([tenantId, dealId])
+  @@index([tenantId, batchId])
   @@map("sampbidx_transfers")
 }
 
@@ -1371,6 +1656,29 @@ model SampbidxClient {
 
   @@unique([tenantId, companyId])
   @@map("sampbidx_clients")
+}
+
+/// A bulk send of deals or won companies to SampBidx (ADR 0095): one row per press of "Send", with every record's
+/// outcome (pending, sent, failed with SampBidx's reason, or skipped with why), so progress and history survive reloads.
+model SampbidxBatch {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  /// DEALS or WON_COMPANIES.
+  kind        String
+  /// RUNNING or DONE.
+  status      String    @default("RUNNING")
+  resend      Boolean   @default(false)
+  /// [{ recordId, label, sub, outcome, reason, warnings, remoteId, remoteUrl, transferIds }]
+  items       Json      @default("[]")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  finishedAt  DateTime? @map("finished_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("sampbidx_batches")
 }
 
 /// A file added next to pasted RFQ email text, kept so the send (and any retry) carries it to SampBidx (ADR 0061).
@@ -1593,7 +1901,6 @@ model Lead {
   campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   activities  Activity[]
   tasks       Task[]
-  webVisitors WebVisitor[]
   prospects   Prospect[]
 
   @@index([tenantId, status])
@@ -1696,6 +2003,14 @@ model Opportunity {
   managerId         String?           @map("manager_id")
   leadCreatorId     String?           @map("lead_creator_id")
   supportingUserIds String[]          @map("supporting_user_ids")
+  /// Where the deal came from (DEAL_SOURCES or the team's own words), the products or services it covers, and
+  /// free notes (Deals redesign, ADR 0096).
+  source            String?
+  products          String[]
+  notes             String?
+  /// Archived deals leave the board, the list and the dashboard but are kept, and can be brought back.
+  archivedAt        DateTime?         @map("archived_at")
+  archivedById      String?           @map("archived_by_id")
   customFields      Json              @default("{}") @map("custom_fields")
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -1717,6 +2032,7 @@ model Opportunity {
   meetingRecords MeetingRecord[]
 
   @@unique([tenantId, dealNumber])
+  @@index([tenantId, archivedAt])
   @@index([tenantId, status])
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
@@ -2784,7 +3100,6 @@ model Campaign {
   leads          Lead[]
   forms          LeadForm[]
   emailTemplates EmailTemplate[]
-  webVisitors    WebVisitor[]
 
   @@unique([tenantId, name])
   @@map("campaigns")
@@ -3092,12 +3407,29 @@ model PlatformOperator {
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
   auditLogs PlatformAuditLog[]
+  photo     OperatorPhoto?
 
   notifications     OperatorNotification[]
   notificationPrefs OperatorNotificationPref[]
 
   @@index([consoleRole])
   @@map("platform_operators")
+}
+
+/// An operator's own profile photo in the Console (ADR 0087). Without one, the Console shows the photo of the
+/// SampForce account with the same email, if it has one, so a person's chosen photo follows them everywhere.
+model OperatorPhoto {
+  operatorId  String   @id @map("_id")
+  contentType String   @map("content_type")
+  data        Bytes
+  sizeBytes   Int      @map("size_bytes")
+  width       Int
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("operator_photos")
 }
 
 /// One-time recovery codes for an operator's two-step verification; only hashes are kept.
@@ -3286,7 +3618,7 @@ model PlatformSetting {
 /// Provider keys entered in the operator console (ADR 0051). Values are sealed with ENCRYPTION_KEY (SecretBox) and
 /// override the environment variable of the same name; clearing a row falls back to that variable.
 model PlatformSecret {
-  /// The environment variable name, e.g. SLACK_CLIENT_SECRET.
+  /// The environment variable name, e.g. DOCUSIGN_SECRET_KEY.
   name        String   @id @map("_id")
   valueEnc    String   @map("value_enc")
   /// What the console shows after saving: the last four characters of a secret, or the full non-secret value.
@@ -4088,106 +4420,91 @@ model GamificationCompetition {
   @@map("gamification_competitions")
 }
 
-model VisitorSettings {
-  tenantId           String   @id @map("_id")
-  enabled            Boolean  @default(false)
-  siteKey            String   @unique @map("site_key")
-  consentMode        String   @default("opt_in") @map("consent_mode")
-  allowedDomains     String[] @default([]) @map("allowed_domains")
-  retentionDays      Int      @default(180) @map("retention_days")
-  createLeads        Boolean  @default(true) @map("create_leads")
-  enquiryConsentText String?  @map("enquiry_consent_text")
-  highIntentScore    Int      @default(50) @map("high_intent_score")
-  importantPages     Json     @map("important_pages")
-  updatedById        String?  @map("updated_by_id")
-  updatedAt          DateTime @default(now()) @map("updated_at")
+// ───────────── Website Enquiry (ADR 0095) ─────────────
+
+/// One enquiry, download, live chat lead, newsletter sign-up or review sent on the company website, received from the
+/// website's "Sampforce API" by its signed webhook or the pull sync. Upserted by (tenant, record, external id), so the
+/// same lead arriving both ways is one row. The website's own fields are kept as sent; the SampForce fields (who
+/// opened it, the sales status, the company or employee it became) are this workspace's own.
+model WebsiteEnquiry {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  /// lead, contact (newsletter sign-ups) or review: the website's `object`.
+  record            String
+  /// The website's id: l_... for leads, r_... for reviews, the email address for contacts.
+  externalId        String    @map("external_id")
+  /// enquiry, download, resource-download, case-study-download, chat, careers, newsletter or review.
+  type              String
+  /// service, rfq, partnership, contact, download, chat, careers, other, newsletter or review.
+  category          String
+  /// new, contacted, qualified, won, lost or spam. Reviews and sign-ups start as new too.
+  status            String    @default("new")
+  /// The status on the website (for reviews: published, pending or hidden; for contacts: subscribed or unsubscribed).
+  websiteStatus     String?   @map("website_status")
+  formKey           String?   @map("form_key")
+  formName          String?   @map("form_name")
+  name              String?
+  email             String?
+  phone             String?
+  country           String?
+  company           String?
+  designation       String?
+  service           String?
+  timeline          String?
+  message           String?
+  /// The resource, case study or title asked for on a download form, or the interest of a chat lead.
+  resource          String?
+  rating            Int?
+  page              String?
+  consent           Boolean   @default(false)
+  /// Newsletter: still subscribed (false = unsubscribed from marketing email).
+  subscribed        Boolean?
+  /// Extra and other form fields, label to value.
+  fields            Json?
+  /// Who the lead is assigned to on the website, and the website team's note.
+  websiteOwner      String?   @map("website_owner")
+  websiteNote       String?   @map("website_note")
+  /// The whole record as the website last sent it, so nothing is lost.
+  raw               Json
+  /// Lower-case text of name, email, company, phone, country, service, message and form, for search.
+  searchText        String    @map("search_text")
+  submittedAt       DateTime  @map("submitted_at")
+  websiteUpdatedAt  DateTime  @map("website_updated_at")
+  receivedAt        DateTime  @default(now()) @map("received_at")
+  lastSyncedAt      DateTime  @default(now()) @map("last_synced_at")
+  /// webhook or pull: how it first arrived.
+  source            String
+  backfill          Boolean   @default(false)
+  /// First opened in SampForce; until then it is highlighted as new.
+  seenAt            DateTime? @map("seen_at")
+  seenById          String?   @map("seen_by_id")
+  starred           Boolean   @default(false)
+  assigneeId        String?   @map("assignee_id")
+  stage             String?
+  note              String?
+  /// The company and employee this enquiry became or was linked to.
+  companyId         String?   @map("company_id")
+  contactId         String?   @map("contact_id")
+  convertedAt       DateTime? @map("converted_at")
+  convertedById     String?   @map("converted_by_id")
+  /// Status, stage, owner and note waiting to be sent back to the website (PATCH /leads/:id); null when nothing waits.
+  writeBackAt       DateTime? @map("write_back_at")
+  writeBackTries    Int       @default(0) @map("write_back_tries")
+  writeBackError    String?   @map("write_back_error")
+  writtenBackAt     DateTime? @map("written_back_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@map("visitor_settings")
-}
-
-model WebVisitor {
-  id             String    @id @default(uuid()) @map("_id")
-  tenantId       String    @map("tenant_id")
-  clientId       String    @map("client_id")
-  firstSeenAt    DateTime  @default(now()) @map("first_seen_at")
-  lastSeenAt     DateTime  @default(now()) @map("last_seen_at")
-  visits         Int       @default(0)
-  pageViews      Int       @default(0) @map("page_views")
-  engagedSeconds Int       @default(0) @map("engaged_seconds")
-  enquiries      Int       @default(0)
-  leadId         String?   @map("lead_id")
-  contactId      String?   @map("contact_id")
-  identifiedAt   DateTime? @map("identified_at")
-  identifiedVia  String?   @map("identified_via")
-  firstTouch     Json?     @map("first_touch")
-  campaignId     String?   @map("campaign_id")
-  intentScore    Int       @default(0) @map("intent_score")
-  highIntentAt   DateTime? @map("high_intent_at")
-
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  lead     Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  contact  Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  campaign Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  sessions WebSession[]
-  events   WebEvent[]
-
-  @@unique([tenantId, clientId])
-  @@index([tenantId, lastSeenAt])
-  @@index([tenantId, leadId])
+  @@unique([tenantId, record, externalId])
+  @@index([tenantId, submittedAt])
+  @@index([tenantId, status])
+  @@index([tenantId, seenAt])
+  @@index([tenantId, email])
   @@index([tenantId, contactId])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([leadId])
-  @@index([contactId])
-  @@index([campaignId])
-  @@map("web_visitors")
-}
-
-model WebSession {
-  id             String   @id @default(uuid()) @map("_id")
-  tenantId       String   @map("tenant_id")
-  visitorId      String   @map("visitor_id")
-  clientId       String   @map("client_id")
-  startedAt      DateTime @default(now()) @map("started_at")
-  lastAt         DateTime @default(now()) @map("last_at")
-  landingPath    String?  @map("landing_path")
-  referrerHost   String?  @map("referrer_host")
-  utm            Json?
-  pageViews      Int      @default(0) @map("page_views")
-  engagedSeconds Int      @default(0) @map("engaged_seconds")
-
-  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  visitor WebVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  events  WebEvent[]
-
-  @@unique([tenantId, clientId])
-  @@index([tenantId, startedAt])
-  @@index([visitorId])
-  @@map("web_sessions")
-}
-
-model WebEvent {
-  id         String   @id @default(uuid()) @map("_id")
-  tenantId   String   @map("tenant_id")
-  visitorId  String   @map("visitor_id")
-  sessionId  String?  @map("session_id")
-  type       String
-  path       String?
-  title      String?
-  name       String?
-  data       Json?
-  occurredAt DateTime @default(now()) @map("occurred_at")
-
-  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  visitor WebVisitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  session WebSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([tenantId, occurredAt])
-  @@index([visitorId])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([sessionId])
-  @@map("web_events")
+  @@index([tenantId, companyId])
+  @@index([writeBackAt])
+  @@map("website_enquiries")
 }
 
 // ───────────── Enhancement Part 2: Prospect Lists and prospect discovery ─────────────
@@ -4333,9 +4650,6 @@ model ProspectSettings {
 }
 
 enum AppProvider {
-  SLACK
-  TEAMS
-  ZOOM
   DOCUSIGN
   /// Card payments on quotes, into the workspace's own Stripe or Razorpay account.
   PAYMENTS
@@ -4357,7 +4671,7 @@ model AppConnection {
   id                   String           @id @default(uuid()) @map("_id")
   tenantId             String           @map("tenant_id")
   provider             AppProvider
-  /// The provider's id for the connected account (Slack team id), used to route inbound events.
+  /// The provider's id for the connected account (e.g. the DocuSign account id), used to route inbound events.
   externalAccountId    String           @map("external_account_id")
   accountName          String           @map("account_name")
   scopes               String[]
@@ -4372,7 +4686,6 @@ model AppConnection {
 
   tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   events           AppEvent[]
-  zoomMeetings     ZoomMeeting[]
   envelopes        SignatureEnvelope[]
   payments         QuotePayment[]
   whatsappMessages WhatsappMessage[]
@@ -4408,46 +4721,6 @@ model AppEvent {
   /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
   @@index([connectionId])
   @@map("app_events")
-}
-
-/// A Zoom meeting scheduled from SampForce. Only these meetings' transcripts are ever imported.
-model ZoomMeeting {
-  id                 String   @id @default(uuid()) @map("_id")
-  tenantId           String   @map("tenant_id")
-  connectionId       String?  @map("connection_id")
-  /// Zoom's numeric meeting id, as text.
-  zoomMeetingId      String   @map("zoom_meeting_id")
-  hostEmail          String   @map("host_email")
-  topic              String
-  startsAt           DateTime @map("starts_at")
-  durationMinutes    Int      @map("duration_minutes")
-  joinUrl            String   @map("join_url")
-  /// The organiser chose cloud recording with the transcript imported afterwards.
-  recordToCloud      Boolean  @default(false) @map("record_to_cloud")
-  leadId             String?  @map("lead_id")
-  contactId          String?  @map("contact_id")
-  dealId             String?  @map("deal_id")
-  createdById        String   @map("created_by_id")
-  activityId         String?  @map("activity_id")
-  meetingRecordId    String?  @map("meeting_record_id")
-  /// none, waiting (recording on), ready (Zoom sent the transcript), imported, failed
-  transcriptStatus   String   @default("none") @map("transcript_status")
-  transcriptError    String?  @map("transcript_error")
-  /// Sealed {url, token} from Zoom's recording.transcript_completed event, cleared after import.
-  transcriptSource   String?  @map("transcript_source")
-  transcriptAttempts Int      @default(0) @map("transcript_attempts")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@unique([tenantId, zoomMeetingId])
-  @@index([tenantId, startsAt])
-  @@index([transcriptStatus])
-  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
-  @@index([connectionId])
-  @@map("zoom_meetings")
 }
 
 /// A contract sent for e-signature through DocuSign. Status follows DocuSign Connect events.
@@ -4866,6 +5139,8 @@ model CrmSettings {
   followUpCadence   Json?    @map("follow_up_cadence")
   /// Journey stage names, colours and hidden flags set by the Super Workspace (ADR 0085).
   journeyStages     Json?    @map("journey_stages")
+  /// The company's own special days shown on the home dashboards: [{ id, title, emoji, date, yearly, note }].
+  companyEvents     Json?    @map("company_events")
   updatedById       String?  @map("updated_by_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -5608,14 +5883,31 @@ model Dialer {
   tenantId               String    @map("tenant_id")
   userId                 String    @map("user_id")
   name                   String
-  /// LINK or TWILIO
+  /// LINK, API, TWILIO, SIP or SIM (ADR 0101)
   kind                   String
+  /// The DIALER_PROVIDERS key it was set up from (phone, exotel, api, sip-browser...).
+  provider               String?
   urlTemplate            String?   @map("url_template")
   webhookUrl             String?   @map("webhook_url")
   /// HMAC-SHA256 key for the webhook's X-SampForce-Signature, sealed with ENCRYPTION_KEY.
   webhookSecretEncrypted String?   @map("webhook_secret_encrypted")
-  /// TWILIO: the person's own phone, rung first.
+  /// TWILIO and API: the person's own phone, rung first.
   agentPhone             String?   @map("agent_phone")
+  /// The non-secret settings (DialerConfig in packages/types/src/calls.ts).
+  config                 Json      @default("{}")
+  /// The secret settings (API secret, client secret, tokens, SIP password) as JSON, sealed with ENCRYPTION_KEY.
+  secretsEncrypted       String?   @map("secrets_encrypted")
+  /// An OAuth access token fetched with the client id and secret, sealed, and when it runs out.
+  oauthTokenEncrypted    String?   @map("oauth_token_encrypted")
+  oauthExpiresAt         DateTime? @map("oauth_expires_at")
+  /// The public part of the events address the provider posts status and recordings to, and its secret part (sealed).
+  eventsHookId           String?   @map("events_hook_id")
+  eventsTokenEncrypted   String?   @map("events_token_encrypted")
+  /// UNTESTED, CONNECTED, FAILED or NOT_TESTABLE, from the last test or call.
+  status                 String    @default("UNTESTED")
+  statusAt               DateTime? @map("status_at")
+  statusMessage          String?   @map("status_message")
+  active                 Boolean   @default(true)
   isDefault              Boolean   @default(false) @map("is_default")
   lastUsedAt             DateTime? @map("last_used_at")
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -5623,6 +5915,7 @@ model Dialer {
   deletedAt              DateTime? @map("deleted_at")
 
   @@index([tenantId, userId])
+  @@index([eventsHookId])
   @@map("dialers")
 }
 
@@ -5635,15 +5928,20 @@ model PhoneCall {
   userId        String    @map("user_id")
   companyId     String?   @map("company_id")
   contactId     String?   @map("contact_id")
+  dealId        String?   @map("deal_id")
+  /// OUTGOING or INCOMING
+  direction     String    @default("OUTGOING")
   /// The number as dialled, and EMPLOYEE, COMPANY or OTHER (typed on the keypad).
   number        String
   numberSource  String    @map("number_source")
+  callerId      String?   @map("caller_id")
   dialerId      String?   @map("dialer_id")
   dialerName    String    @map("dialer_name")
   dialerKind    String    @map("dialer_kind")
-  /// OPEN, RINGING, IN_PROGRESS, ENDED, FAILED or LOGGED
+  dialerProvider String?  @map("dialer_provider")
+  /// CALL_STATUSES in packages/types/src/calls.ts
   status        String
-  /// CALL_OUTCOMES in packages/types/src/calls.ts; null until logged.
+  /// An outcome key (CALL_OUTCOMES or a workspace's CUSTOM_ one); null until logged.
   outcome       String?
   /// The details handed to the dialer: { companyName, companyPhone, employeeName, designation, email, employeePhone }.
   details       Json
@@ -5661,9 +5959,14 @@ model PhoneCall {
   webhookStatus String?   @map("webhook_status")
   webhookAt     DateTime? @map("webhook_at")
   webhookError  String?   @map("webhook_error")
-  /// Twilio's call SID and its last status (queued, ringing, in-progress, completed, busy, no-answer, failed, canceled).
-  twilioSid     String?   @map("twilio_sid")
-  twilioStatus  String?   @map("twilio_status")
+  /// The provider's call id (Twilio's call SID, Exotel's Sid...) and its last status as the provider wrote it.
+  providerCallId String?  @map("twilio_sid")
+  providerStatus String?  @map("twilio_status")
+  muted          Boolean  @default(false)
+  onHold         Boolean  @default(false) @map("on_hold")
+  recordingActive Boolean @default(false) @map("recording_active")
+  /// The caller confirmed the other person agreed to be recorded.
+  recordingConsent Boolean @default(false) @map("recording_consent")
   error         String?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -5673,6 +5976,699 @@ model PhoneCall {
   @@index([tenantId, startedAt(sort: Desc)])
   @@index([tenantId, contactId, startedAt(sort: Desc)])
   @@index([tenantId, companyId, startedAt(sort: Desc)])
-  @@index([tenantId, twilioSid])
+  @@index([tenantId, providerCallId])
   @@map("phone_calls")
+}
+
+/// Team approvals (ADR 0098): an Executive Workspace asks its manager before deleting (and, when the Super Workspace
+/// switches them on, before other guarded changes); free-form requests about tasks, targets and data use the same
+/// inbox. A guarded request is tied to the exact action (method, path, body hash) and, for one record or a list of
+/// ids, to a fingerprint of the records as they were when the request was made.
+model TeamApproval {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  /// Readable number per organisation (APR-12).
+  number            Int
+  /// delete, record_edit, task_change, target_change or other.
+  category          String
+  /// PENDING, APPROVED, REJECTED, CANCELLED, EXPIRED or COMPLETED.
+  status            String    @default("PENDING")
+  requesterId       String    @map("requester_id")
+  /// The requester's workspace (null = Super Workspace).
+  requesterNodeId   String?   @map("requester_node_id")
+  /// The workspace that decides (null = the Super Workspace).
+  approverNodeId    String?   @map("approver_node_id")
+  escalationLevel   Int       @default(0) @map("escalation_level")
+  escalatedAt       DateTime? @map("escalated_at")
+  recordType        String?   @map("record_type")
+  recordName        String?   @map("record_name")
+  recordId          String?   @map("record_id")
+  recordCount       Int?      @map("record_count")
+  recordFingerprint String?   @map("record_fingerprint")
+  method            String?
+  path              String?
+  body              Json?
+  bodyHash          String?   @map("body_hash")
+  title             String?
+  reason            String
+  decisionNote      String?   @map("decision_note")
+  decidedById       String?   @map("decided_by_id")
+  decidedAt         DateTime? @map("decided_at")
+  cancelledAt       DateTime? @map("cancelled_at")
+  /// An approved guarded request can be carried out until then.
+  approvedUntil     DateTime? @map("approved_until")
+  /// Set while the approved action runs, so it runs once.
+  claimedAt         DateTime? @map("claimed_at")
+  completedAt       DateTime? @map("completed_at")
+  /// The deleted-items batch the approved delete made, for restoring it.
+  recycleBatchId    String?   @map("recycle_batch_id")
+  expiresAt         DateTime  @map("expires_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, requesterId, createdAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@map("team_approvals")
+}
+
+/// The Super Workspace's approval rules (ADR 0098). One row per organisation; missing = the defaults.
+model TeamApprovalSettings {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @unique @map("tenant_id")
+  settings    Json     @default("{}")
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("team_approval_settings")
+}
+
+/// Deleted items (ADR 0098): what one delete request removed, so it can be restored until purgeAfter.
+model RecycleBatch {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  actorUserId  String    @map("actor_user_id")
+  actorNodeId  String?   @map("actor_node_id")
+  method       String
+  path         String
+  /// The main kind of record removed (company, deal...) and its name, or a count for a bulk delete.
+  recordType   String    @map("record_type")
+  label        String
+  count        Int
+  /// { model: count } of everything the request removed, follow-on records included.
+  models       Json      @default("{}")
+  /// True when the request removed more than the bin keeps; those extra records cannot come back.
+  partial      Boolean   @default(false)
+  approvalId   String?   @map("approval_id")
+  restoredAt   DateTime? @map("restored_at")
+  restoredById String?   @map("restored_by_id")
+  /// Records that could not be put back (a unique value taken again meanwhile).
+  restoreFailed Int      @default(0) @map("restore_failed")
+  purgeAfter   DateTime  @map("purge_after")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([purgeAfter])
+  @@map("recycle_batches")
+}
+
+/// One record removed by a RecycleBatch: SOFT (its deletedAt was set; restoring clears it) or HARD (the document
+/// itself, restored by inserting it again).
+model RecycleEntry {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  batchId   String   @map("batch_id")
+  seq       Int
+  model     String
+  recordId  String   @map("record_id")
+  kind      String
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([batchId, seq])
+  @@map("recycle_entries")
+}
+
+/// A call's recording (ADR 0101): fetched from the provider, uploaded, or recorded in the browser. Audio is kept here
+/// (like company files) or, for a provider that keeps it, fetched from the provider when played.
+model CallRecording {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  callId       String    @map("call_id")
+  /// The caller (the call's userId), for history visibility.
+  userId       String    @map("user_id")
+  /// PROVIDER, UPLOAD or BROWSER
+  source       String
+  /// PROVIDER: where the provider keeps it (fetched with the dialer's keys when played and stored on first play).
+  providerUrl  String?   @map("provider_url")
+  contentType  String?   @map("content_type")
+  sizeBytes    Int?      @map("size_bytes")
+  data         Bytes?
+  durationSec  Int?      @map("duration_sec")
+  notes        String?
+  createdById  String?   @map("created_by_id")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@index([tenantId, callId])
+  @@index([tenantId, userId, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("call_recordings")
+}
+
+/// A dialer's integration log: tests, calls placed and ended, events received, recordings fetched (ADR 0101).
+model DialerLog {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  dialerId    String   @map("dialer_id")
+  callId      String?  @map("call_id")
+  /// TEST, PLACE, HANGUP, EVENT, RECORDING, WEBHOOK or TOKEN
+  action      String
+  ok          Boolean
+  httpStatus  Int?     @map("http_status")
+  message     String
+  attempt     Int      @default(1)
+  durationMs  Int?     @map("duration_ms")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, dialerId, createdAt(sort: Desc)])
+  @@map("dialer_logs")
+}
+
+/// A workspace's call outcomes: changes to SampForce's (by key) and its own (custom, CUSTOM_ keys).
+model CallOutcomeSetting {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  key               String
+  label             String
+  icon              String
+  color             String
+  tone              String
+  reached           Boolean
+  action            String
+  followUpInMinutes Int?      @map("follow_up_in_minutes")
+  custom            Boolean   @default(false)
+  active            Boolean   @default(true)
+  sortOrder         Int       @default(0) @map("sort_order")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key])
+  @@map("call_outcome_settings")
+}
+
+/// A person's favourite numbers on the Calls page.
+model CallFavorite {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  companyId String?  @map("company_id")
+  contactId String?  @map("contact_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, userId])
+  @@map("call_favorites")
+}
+
+/// The workspace's call rules: the recording policy (RecordingPolicy in packages/types/src/calls.ts).
+model CallSettings {
+  id              String   @id @default(uuid()) @map("_id")
+  tenantId        String   @unique @map("tenant_id")
+  recordingPolicy Json     @default("{}") @map("recording_policy")
+  updatedById     String?  @map("updated_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("call_settings")
+}
+
+// ───────────────────────────── My Organization (ADR 0100) ─────────────────────────────
+
+/// The organisation's own company record: one per organisation, shared by every workspace (never copied per workspace).
+model OrgProfile {
+  id                   String    @id @default(uuid()) @map("_id")
+  tenantId             String    @unique @map("tenant_id")
+  /// The name people know the company by; legalName is the registered name.
+  brandName            String    @map("brand_name")
+  legalName            String?   @map("legal_name")
+  tagline              String?
+  description          String?
+  businessActivities   String?   @map("business_activities")
+  services             String[]
+  products             String[]
+  industriesServed     String[]  @map("industries_served")
+  certifications       String[]
+  companyType          String?   @map("company_type")
+  companySize          String?   @map("company_size")
+  employeeCount        Int?      @map("employee_count")
+  foundedYear          Int?      @map("founded_year")
+  /// Incorporation: YYYY-MM-DD, the country and the body that registered the company.
+  incorporationDate    String?   @map("incorporation_date")
+  incorporationCountry String?   @map("incorporation_country")
+  registrationNumber   String?   @map("registration_number")
+  registrationAuthority String?  @map("registration_authority")
+  /// [{ label, value }]: GST, VAT, PAN, EIN...
+  taxIds               Json      @default("[]") @map("tax_ids")
+  /// The registered office { country, state, city, address, postalCode }.
+  registeredAddress    Json?     @map("registered_address")
+  /// Other offices: [{ label, country, state, city, address, postalCode }].
+  offices              Json      @default("[]")
+  /// [{ value, label }]
+  phones               Json      @default("[]")
+  emails               Json      @default("[]")
+  website              String?
+  /// Further pages of the website and other sites: [{ label, url }].
+  websiteLinks         Json      @default("[]") @map("website_links")
+  /// [{ platform, url }], the same shape as a company's (ADR 0076).
+  socialLinks          Json      @default("[]") @map("social_links")
+  /// [{ name, designation, email, phone, department }].
+  keyContacts          Json      @default("[]") @map("key_contacts")
+  /// [{ label, value }]
+  moreDetails          Json      @default("[]") @map("more_details")
+  brandColors          String[]  @map("brand_colors")
+  /// Profile sections approved for clients (ORG_SHARE_SECTIONS); the rest stay inside the organisation.
+  sharedSections       String[]  @map("shared_sections")
+  logoData             Bytes?    @map("logo_data")
+  logoContentType      String?   @map("logo_content_type")
+  logoUpdatedAt        DateTime? @map("logo_updated_at")
+  createdById          String?   @map("created_by_id")
+  updatedById          String?   @map("updated_by_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("org_profiles")
+}
+
+/// A document of the organisation (certificate, registration, presentation...). The file lives in its versions.
+model OrgDocument {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  title            String
+  /// ORG_DOCUMENT_CATEGORIES
+  category         String
+  description      String?
+  issuer           String?
+  referenceNumber  String?   @map("reference_number")
+  /// YYYY-MM-DD
+  issueDate        String?   @map("issue_date")
+  expiryDate       String?   @map("expiry_date")
+  tags             String[]
+  /// ALL (every workspace), MANAGERS (Super and Manager Workspaces) or SUPER.
+  visibility       String    @default("ALL")
+  /// Approved for sharing with clients. Never set on its own: a person with edit rights approves it.
+  clientShareable  Boolean   @default(false) @map("client_shareable")
+  approvedById     String?   @map("approved_by_id")
+  approvedAt       DateTime? @map("approved_at")
+  currentVersion   Int       @default(1) @map("current_version")
+  /// The expiry date the last reminder was sent for, and which one (30 days, 7 days, expired).
+  remindedFor      String?   @map("reminded_for")
+  createdById      String?   @map("created_by_id")
+  updatedById      String?   @map("updated_by_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  versions OrgDocumentVersion[]
+
+  @@index([tenantId, category])
+  @@index([tenantId, expiryDate])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_documents")
+}
+
+/// One uploaded file of an organisation document. Replacing a document adds a version; older ones are kept.
+model OrgDocumentVersion {
+  id           String   @id @default(uuid()) @map("_id")
+  tenantId     String   @map("tenant_id")
+  documentId   String   @map("document_id")
+  version      Int
+  fileName     String   @map("file_name")
+  contentType  String   @map("content_type")
+  sizeBytes    Int      @map("size_bytes")
+  data         Bytes
+  sha256       String
+  note         String?
+  uploadedById String?  @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document OrgDocument @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([documentId, version])
+  @@index([tenantId, documentId])
+  /// Relation lookups match on this field alone, so it needs its own index.
+  @@index([documentId])
+  @@map("org_document_versions")
+}
+
+/// A login, licence or membership number of the organisation. The secret is sealed (AES-256-GCM) and never shared with clients.
+model OrgCredential {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  label        String
+  /// ORG_CREDENTIAL_KINDS
+  kind         String
+  url          String?
+  username     String?
+  secretSealed String?   @map("secret_sealed")
+  notesSealed  String?   @map("notes_sealed")
+  /// SUPER (Super Workspace only) or MANAGERS (Super and Manager Workspaces).
+  access       String    @default("SUPER")
+  lastRevealedAt DateTime? @map("last_revealed_at")
+  createdById  String?   @map("created_by_id")
+  updatedById  String?   @map("updated_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_credentials")
+}
+
+/// A link that shows a client the approved profile and chosen approved documents, until it expires or is revoked.
+model OrgShare {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  documentIds    String[]  @map("document_ids")
+  includeProfile Boolean   @default(true) @map("include_profile")
+  recipientName  String?   @map("recipient_name")
+  recipientEmail String?   @map("recipient_email")
+  companyId      String?   @map("company_id")
+  message        String?
+  expiresAt      DateTime  @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  revokedById    String?   @map("revoked_by_id")
+  views          Int       @default(0)
+  lastViewedAt   DateTime? @map("last_viewed_at")
+  createdById    String    @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("org_shares")
+}
+
+// ───────────── Learning & Development (ADR 0097) ─────────────
+
+/// A learning category (Sales, Communication...). The Super Workspace manages them for the whole organisation.
+model LearningCategory {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  name       String
+  nameKey    String    @map("name_key")
+  color      String    @default("#2563eb")
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@unique([tenantId, nameKey])
+  @@map("learning_categories")
+}
+
+/// A learning module: lessons, an assessment and the rules for passing it.
+model LearningModule {
+  id                 String    @id @default(uuid()) @map("_id")
+  tenantId           String    @map("tenant_id")
+  /// Per organisation, shown as LRN-0001.
+  number             Int
+  title              String
+  categoryId         String?   @map("category_id")
+  description        String?
+  objectives         String[]
+  keyPoints          String[]  @map("key_points")
+  instructions       String?
+  /// BEGINNER, INTERMEDIATE or ADVANCED.
+  level              String    @default("BEGINNER")
+  /// Set by the author; otherwise worked out from the lessons and questions.
+  estimatedMinutes   Int?      @map("estimated_minutes")
+  mandatory          Boolean   @default(true)
+  /// ASSIGNED (only the people it is assigned to) or OPEN (anyone in the owner's branch may take it).
+  visibility         String    @default("ASSIGNED")
+  passingScore       Int       @default(80) @map("passing_score")
+  maxAttempts        Int       @default(3) @map("max_attempts")
+  timeLimitMinutes   Int?      @map("time_limit_minutes")
+  dueAt              DateTime? @map("due_at")
+  dueInDays          Int?      @map("due_in_days")
+  certificate        Boolean   @default(true)
+  showAnswers        Boolean   @default(true) @map("show_answers")
+  shuffleQuestions   Boolean   @default(false) @map("shuffle_questions")
+  /// DRAFT, PUBLISHED or ARCHIVED.
+  status             String    @default("DRAFT")
+  createdById        String    @map("created_by_id")
+  /// The workspace that owns it: null for the Super Workspace, else the Manager Workspace whose manager made it.
+  ownerNodeId        String?   @map("owner_node_id")
+  responsibleUserId  String?   @map("responsible_user_id")
+  reminderDaysBefore Int[]     @map("reminder_days_before")
+  remindOnDueDay     Boolean   @default(true) @map("remind_on_due_day")
+  overdueEveryDays   Int?      @map("overdue_every_days")
+  publishedAt        DateTime? @map("published_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, updatedAt(sort: Desc)])
+  @@map("learning_modules")
+}
+
+/// One lesson (chapter) of a module: a video, a file, or written text.
+model LearningLesson {
+  id             String   @id @default(uuid()) @map("_id")
+  tenantId       String   @map("tenant_id")
+  moduleId       String   @map("module_id")
+  position       Int
+  title          String
+  /// VIDEO, AUDIO, DOCUMENT, PRESENTATION, SPREADSHEET, IMAGE, TEXT or FILE.
+  kind           String
+  body           String?
+  videoUrl       String?  @map("video_url")
+  /// The video's provider details (VideoInfo) found when the link was pasted.
+  video          Json?
+  fileId         String?  @map("file_id")
+  captionsFileId String?  @map("captions_file_id")
+  transcript     String?
+  objectives     String[]
+  minutes        Int?
+  required       Boolean  @default(true)
+  allowDownload  Boolean  @default(true) @map("allow_download")
+  /// NONE, READY or UNREADABLE: whether SampForce could read the lesson's text.
+  textStatus     String   @default("NONE") @map("text_status")
+  /// DOCUMENT, OCR, CAPTIONS, TRANSCRIPT or WRITTEN.
+  textSource     String?  @map("text_source")
+  /// The readable text (headings as "# " lines), for the reading view and question drafting.
+  text           String?
+  textParts      Int?     @map("text_parts")
+  textNote       String?  @map("text_note")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, moduleId, position])
+  @@index([moduleId])
+  @@map("learning_lessons")
+}
+
+/// An uploaded learning file. The bytes are kept in parts (LearningFilePart) so videos can be larger than a document.
+model LearningFile {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  name         String
+  contentType  String    @map("content_type")
+  sizeBytes    Int       @map("size_bytes")
+  parts        Int
+  /// Parts received so far; the file is usable once all have arrived.
+  received     Int       @default(0)
+  sha256       String?
+  uploadedById String    @map("uploaded_by_id")
+  /// Set when it belongs to a learner's answer (a file-upload question) rather than to a lesson.
+  attemptId    String?   @map("attempt_id")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, uploadedById, createdAt(sort: Desc)])
+  @@map("learning_files")
+}
+
+model LearningFilePart {
+  id       String @id @default(uuid()) @map("_id")
+  tenantId String @map("tenant_id")
+  fileId   String @map("file_id")
+  index    Int
+  data     Bytes
+
+  @@unique([fileId, index])
+  @@index([tenantId, fileId])
+  @@map("learning_file_parts")
+}
+
+/// An assessment question of a module, or a question kept in the organisation's question bank (moduleId null).
+model LearningQuestion {
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @map("tenant_id")
+  moduleId          String?  @map("module_id")
+  position          Int
+  /// MCQ, MULTI, TRUE_FALSE, FILL_BLANK, MATCHING, SHORT, LONG, SCENARIO, PRACTICAL or FILE_UPLOAD.
+  type              String
+  text              String
+  instructions      String?
+  /// [{ id, text }]
+  options           Json     @default("[]")
+  correctOptionIds  String[] @map("correct_option_ids")
+  correctBoolean    Boolean? @map("correct_boolean")
+  /// For each blank, the accepted answers.
+  blanks            Json     @default("[]")
+  /// [{ id, left, right }]
+  pairs             Json     @default("[]")
+  acceptedAnswers   String[] @map("accepted_answers")
+  rubric            String?
+  marks             Float    @default(1)
+  difficulty        String   @default("MEDIUM")
+  explanation       String?
+  required          Boolean  @default(true)
+  lessonId          String?  @map("lesson_id")
+  /// MANUAL, GENERATED, BANK or AI.
+  source            String   @default("MANUAL")
+  sourceExcerpt     String?  @map("source_excerpt")
+  approved          Boolean  @default(true)
+  categoryId        String?  @map("category_id")
+  createdById       String   @map("created_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, moduleId, position])
+  @@index([moduleId])
+  @@map("learning_questions")
+}
+
+/// A module assigned to one person (or taken by them from the open modules), with their progress.
+model LearningAssignment {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  moduleId         String    @map("module_id")
+  userId           String    @map("user_id")
+  /// The person's workspace when it was assigned (null = Super Workspace).
+  workspaceNodeId  String?   @map("workspace_node_id")
+  assignedById     String    @map("assigned_by_id")
+  assignedAt       DateTime  @default(now()) @map("assigned_at")
+  dueAt            DateTime? @map("due_at")
+  mandatory        Boolean   @default(true)
+  note             String?
+  /// NOT_STARTED, IN_PROGRESS, AWAITING_MARKING, COMPLETED or FAILED.
+  status           String    @default("NOT_STARTED")
+  startedAt        DateTime? @map("started_at")
+  openedAt         DateTime? @map("opened_at")
+  completedAt      DateTime? @map("completed_at")
+  /// { [lessonId]: { percent, positionSeconds, doneAt, seconds } }
+  lessonProgress   Json      @default("{}") @map("lesson_progress")
+  lastLessonId     String?   @map("last_lesson_id")
+  progress         Int       @default(0)
+  secondsSpent     Int       @default(0) @map("seconds_spent")
+  attemptsUsed     Int       @default(0) @map("attempts_used")
+  extraAttempts    Int       @default(0) @map("extra_attempts")
+  bestScore        Float?    @map("best_score")
+  lastScore        Float?    @map("last_score")
+  passed           Boolean?
+  certificateId    String?   @map("certificate_id")
+  /// Reminder keys already sent ("before:3:2026-12-01", "due:2026-12-01", "overdue:2026-12-04").
+  remindersSent    String[]  @map("reminders_sent")
+  removedAt        DateTime? @map("removed_at")
+  /// Days the person learned something, YYYY-MM-DD in the workspace time zone (for the streak).
+  activeDays       String[]  @map("active_days")
+
+  @@unique([moduleId, userId])
+  @@index([tenantId, userId, status])
+  @@index([tenantId, moduleId])
+  @@index([tenantId, status, dueAt])
+  @@map("learning_assignments")
+}
+
+/// One go at a module's assessment, with the questions as they were then, the answers and the marks.
+model LearningAttempt {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  assignmentId String    @map("assignment_id")
+  moduleId     String    @map("module_id")
+  userId       String    @map("user_id")
+  number       Int
+  /// IN_PROGRESS, AWAITING_MARKING or MARKED.
+  status       String    @default("IN_PROGRESS")
+  /// The questions with their answer key when the attempt started, so later edits never change a result.
+  questions    Json
+  answers      Json      @default("{}")
+  /// [{ questionId, marks, maxMarks, correct, feedback }]
+  results      Json?
+  score        Float?
+  autoScore    Float     @default(0) @map("auto_score")
+  maxScore     Float     @map("max_score")
+  percent      Float?
+  passed       Boolean?
+  feedback     String?
+  markedById   String?   @map("marked_by_id")
+  markedAt     DateTime? @map("marked_at")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  expiresAt    DateTime? @map("expires_at")
+  submittedAt  DateTime? @map("submitted_at")
+
+  @@unique([assignmentId, number])
+  @@index([tenantId, status, submittedAt])
+  @@index([tenantId, userId, submittedAt(sort: Desc)])
+  @@index([assignmentId])
+  @@map("learning_attempts")
+}
+
+/// A learner's note or bookmark in a module.
+model LearningNote {
+  id              String   @id @default(uuid()) @map("_id")
+  tenantId        String   @map("tenant_id")
+  userId          String   @map("user_id")
+  moduleId        String   @map("module_id")
+  lessonId        String?  @map("lesson_id")
+  body            String?
+  bookmark        Boolean  @default(false)
+  positionSeconds Float?   @map("position_seconds")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, userId, moduleId, createdAt(sort: Desc)])
+  @@map("learning_notes")
+}
+
+/// A certificate issued for a completed module. One per assignment; the code verifies it on the public page.
+model LearningCertificate {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  /// SF-2026-000123 style, per organisation.
+  number         String
+  /// The verification code printed on it and in its QR code.
+  code           String    @unique
+  userId         String    @map("user_id")
+  moduleId       String    @map("module_id")
+  assignmentId   String    @unique @map("assignment_id")
+  attemptId      String?   @map("attempt_id")
+  recipientName  String    @map("recipient_name")
+  moduleTitle    String    @map("module_title")
+  category       String?
+  score          Float
+  completedAt    DateTime  @map("completed_at")
+  issuedAt       DateTime  @default(now()) @map("issued_at")
+  issuerName     String    @map("issuer_name")
+  signatoryName  String?   @map("signatory_name")
+  signatoryTitle String?   @map("signatory_title")
+  template       String    @default("CLASSIC")
+  accentColor    String    @default("#2563eb") @map("accent_color")
+  revokedAt      DateTime? @map("revoked_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, userId, issuedAt(sort: Desc)])
+  @@map("learning_certificates")
+}
+
+/// Changes to a module, for its history (who changed what, when).
+model LearningModuleEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  moduleId  String   @map("module_id")
+  actorId   String?  @map("actor_id")
+  kind      String
+  summary   String
+  at        DateTime @default(now())
+
+  @@index([tenantId, moduleId, at(sort: Desc)])
+  @@map("learning_module_events")
+}
+
+/// The organisation's learning settings: certificate look and signatory, defaults and reminders.
+model LearningSettings {
+  id                  String  @id @default(uuid()) @map("_id")
+  tenantId            String  @unique @map("tenant_id")
+  issuerName          String? @map("issuer_name")
+  signatoryName       String? @map("signatory_name")
+  signatoryTitle      String? @map("signatory_title")
+  template            String  @default("CLASSIC")
+  accentColor         String  @default("#2563eb") @map("accent_color")
+  defaultPassingScore Int     @default(80) @map("default_passing_score")
+  defaultMaxAttempts  Int     @default(3) @map("default_max_attempts")
+  reminderDaysBefore  Int[]   @map("reminder_days_before")
+  remindOnDueDay      Boolean @default(true) @map("remind_on_due_day")
+  overdueEveryDays    Int?    @default(2) @map("overdue_every_days")
+  managersCreate      Boolean @default(true) @map("managers_create")
+  moduleCounter       Int     @default(0) @map("module_counter")
+  certificateCounter  Int     @default(0) @map("certificate_counter")
+
+  @@map("learning_settings")
 }

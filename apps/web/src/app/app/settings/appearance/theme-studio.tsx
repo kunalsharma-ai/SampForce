@@ -464,7 +464,7 @@ function Preview({ paint, dark }: { paint: ReturnType<typeof computePaint>; dark
         <nav aria-label={t('Preview navigation')} className="df-sidebar hidden w-32 shrink-0 space-y-1 border-e border-border p-2 text-xs sm:block">
           {[
             { icon: LayoutDashboard, label: t('Command') },
-            { icon: Users, label: t('Leads') },
+            { icon: Users, label: t('Companies') },
             { icon: KanbanSquare, label: t('Deals'), active: true },
             { icon: Mail, label: t('Inbox') },
           ].map((n) => (

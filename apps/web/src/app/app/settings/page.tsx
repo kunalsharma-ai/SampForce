@@ -84,8 +84,8 @@ const SECTIONS: SettingsSection[] = [
     title: 'Data Management',
     text: 'How your CRM records are shaped, and how data comes in.',
     links: [
-      { href: '/app/settings/crm', icon: SlidersHorizontal, title: 'CRM configuration', text: 'Lead numbers, company and employee statuses, departments and designations.' },
-      { href: '/app/settings/crm?section=fields', icon: ListPlus, title: 'Custom fields', text: 'Add fields to companies, employees, leads, deals, follow-ups and RFQs.' },
+      { href: '/app/settings/crm', icon: SlidersHorizontal, title: 'CRM configuration', text: 'Company numbers, company and employee statuses, departments and designations.' },
+      { href: '/app/settings/crm?section=fields', icon: ListPlus, title: 'Custom fields', text: 'Add fields to companies, employees, inbound contacts, deals, follow-ups and RFQs.' },
       { href: '/app/settings/import', icon: Upload, title: 'Import data', text: 'Bring in records from a CSV file, with a check before anything is saved.' },
       { href: '/app/settings/territories', icon: MapPinned, title: 'Territories', text: 'Sales territories by country.' },
     ],
@@ -103,7 +103,7 @@ const SECTIONS: SettingsSection[] = [
     id: 'integrations',
     title: 'Integrations',
     text: 'The apps and services SampForce connects to, and the keys other systems use.',
-    links: [{ href: '/app/integrations', icon: Blocks, title: 'Apps and connections', text: 'Slack, Teams, email servers, the browser extension and API keys.' }],
+    links: [{ href: '/app/integrations', icon: Blocks, title: 'Apps and connections', text: 'DocuSign, WhatsApp, email servers, the browser extension and API keys.' }],
   },
   {
     id: 'audit',

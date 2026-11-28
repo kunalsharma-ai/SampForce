@@ -473,10 +473,10 @@ function Performance({
   const t = useT();
   const p = data.performance;
   const tiles: { label: string; value: string; open?: () => void }[] = [
-    { label: t('Leads this month'), value: count(p.leads.month) },
-    { label: t('Leads this quarter'), value: count(p.leads.quarter) },
-    { label: t('Leads this half-year'), value: count(p.leads.half) },
-    { label: t('Leads this year'), value: count(p.leads.year) },
+    { label: t('Companies this month'), value: count(p.leads.month) },
+    { label: t('Companies this quarter'), value: count(p.leads.quarter) },
+    { label: t('Companies this half-year'), value: count(p.leads.half) },
+    { label: t('Companies this year'), value: count(p.leads.year) },
     { label: t('RFQs received'), value: count(p.rfqsReceived), open: () => onOpen('rfqsReceived') },
     {
       label: t('RFQs submitted'),
@@ -492,13 +492,13 @@ function Performance({
     },
     { label: t('Target'), value: money(p.target, data.currency) },
     { label: t('Target achievement'), value: pct(p.achievement) },
-    { label: t('Lead conversion rate'), value: pct(p.leadConversion) },
+    { label: t('Contact conversion rate'), value: pct(p.leadConversion) },
     { label: t('Average deal value'), value: money(p.averageDealValue, data.currency) },
   ];
   return (
     <Card className="p-4">
       <p className="mb-3 text-xs text-muted-foreground">
-        {t('Leads by calendar period; everything else for {period}.', {
+        {t('Companies by calendar period; everything else for {period}.', {
           period: t(PERIOD_LABEL[data.range.period]),
         })}
       </p>

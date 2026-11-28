@@ -69,7 +69,7 @@ describe('company leads', () => {
     expect(history).toHaveLength(1);
     expect(history[0]).toMatchObject({ from: null, to: { id: rep.userId }, by: { id: ownerId } });
     const notes = (await api(rep).get('/notifications').expect(200)).body.items as Array<{ type: string; title: string; link: string }>;
-    expect(notes.find((n) => n.type === 'company.assigned')).toMatchObject({ title: 'Lead assigned to you: FRFS01 Acme Panels', link: `/app/companies/${c.id}` });
+    expect(notes.find((n) => n.type === 'company.assigned')).toMatchObject({ title: 'Company assigned to you: FRFS01 Acme Panels', link: `/app/companies/${c.id}` });
   });
 
   it('saves nothing when any part of the lead is invalid', async () => {

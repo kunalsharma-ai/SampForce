@@ -5,11 +5,11 @@ export const auth = {
   // Layout
   'Close smarter. Grow faster.': ['Cierra mejor. Crece más rápido.', 'Concluez mieux. Grandissez plus vite.', 'Klüger abschließen. Schneller wachsen.', 'أغلق صفقاتك بذكاء. وانمُ أسرع.'],
   'Sell. Close. Grow.': ['Vende. Cierra. Crece.', 'Vendez. Concluez. Grandissez.', 'Verkaufen. Abschließen. Wachsen.', 'بِع. أغلِق. انمُ.'],
-  'One workspace for leads, deals, automation and revenue intelligence, with AI that shows its reasoning and asks before it acts.': [
-    'Un solo espacio para leads, oportunidades, automatización e inteligencia de ingresos, con una IA que explica su razonamiento y pregunta antes de actuar.',
-    'Un seul espace pour les prospects, les opportunités, l’automatisation et l’intelligence commerciale, avec une IA qui explique son raisonnement et demande avant d’agir.',
-    'Ein Arbeitsbereich für Leads, Verkaufschancen, Automatisierung und Umsatzanalysen, mit einer KI, die ihre Begründung zeigt und fragt, bevor sie handelt.',
-    'مساحة عمل واحدة للعملاء المحتملين والصفقات والأتمتة وذكاء الإيرادات، مع ذكاء اصطناعي يوضح أسبابه ويستأذن قبل أن يتصرف.',
+  'One workspace for companies, contacts, deals, automation and revenue intelligence, with AI that shows its reasoning and asks before it acts.': [
+    'Un espacio de trabajo para empresas, contactos, oportunidades, automatización e inteligencia de ingresos, con una IA que muestra su razonamiento y pregunta antes de actuar.',
+    'Un espace de travail pour les entreprises, contacts, opportunités, l’automatisation et l’intelligence commerciale, avec une IA qui montre son raisonnement et demande avant d’agir.',
+    'Ein Arbeitsbereich für Unternehmen, Kontakte, Verkaufschancen, Automatisierung und Umsatzanalyse, mit KI, die ihre Begründung zeigt und fragt, bevor sie handelt.',
+    'مساحة عمل واحدة للشركات وجهات الاتصال والصفقات والأتمتة وذكاء الإيرادات، مع ذكاء اصطناعي يعرض منطقه ويسأل قبل أن يتصرف.',
   ],
 
   // Sign in

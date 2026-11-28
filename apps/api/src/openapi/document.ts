@@ -17,7 +17,9 @@ import {
   badgeInputSchema,
   competitionInputSchema,
   gamificationSettingsSchema,
-  visitorSettingsSchema,
+  enquiryListQuerySchema,
+  enquiryUpdateSchema,
+  enquiryConvertSchema,
   prospectListInputSchema,
   prospectAddSchema,
   prospectImportCommitSchema,
@@ -28,8 +30,6 @@ import {
   prospectSettingsSchema,
   providerSearchSchema,
   providerAddSchema,
-  collectSchema,
-  enquirySchema,
   teamInputSchema,
   voiceApplySchema,
   voiceInterpretSchema,
@@ -160,6 +160,7 @@ import {
   workflowInputSchema,
   assignSchema,
   bulkDealUpdateSchema,
+  dealsSummaryQuerySchema,
   companyInputSchema,
   companyUpdateSchema,
   contactInputSchema,
@@ -206,14 +207,6 @@ import {
   PROVIDER_CHECK_KEYS,
   PROVIDER_KEYS,
   providerKeysUpdateSchema,
-  slackSettingsSchema,
-  slackTestSchema,
-  teamsAddChannelSchema,
-  teamsChannelId,
-  teamsSettingsSchema,
-  teamsTestSchema,
-  zoomMeetingCreateSchema,
-  zoomMeetingListQuery,
   docusignListQuery,
   docusignSendSchema,
   docusignVoidSchema,
@@ -437,6 +430,9 @@ export function buildOpenApiDocument(): object {
   action('get', '/deals/board', 'Deals', 'Kanban board for a pipeline (deals:read)', undefined, { query: z.object({ pipelineId: z.string().uuid().optional(), perStage: z.number().int().optional() }) });
   const dealViewQuery = { query: z.object({ pipelineId: z.string().uuid().optional(), ownerId: z.string().optional(), limit: z.number().int().optional() }) };
   action('get', '/deals/priority', 'Deals', 'Open deals ranked for attention (health risk, close date, size, priority) with the reasons (deals:read)', undefined, dealViewQuery);
+  action('get', '/deals/summary', 'Deals', 'Deals dashboard: totals, open and weighted value, created/won/lost and conversion in a date range, this month, overdue, upcoming closes, six-month trend, stage funnel, and deals by owner, manager and company (deals:read)', undefined, { query: dealsSummaryQuerySchema });
+  action('post', '/deals/{id}/archive', 'Deals', 'Archive a deal: kept, but off the board, list and dashboard (deals:write)');
+  action('post', '/deals/{id}/restore', 'Deals', 'Bring an archived deal back (deals:write)');
   action('get', '/deals/forecast', 'Deals', 'Open deals by expected close month: overdue, next six months, later, undated; value and weighted value (deals:read)', undefined, dealViewQuery);
   action('get', '/deals/territories', 'Deals', 'Open pipeline, overdue deals and this quarter’s won and lost results per sales territory, plus the open deals no territory covers and why (deals:read)', undefined, dealViewQuery);
   action('get', '/territories', 'Territories', 'Sales territories with their countries and manager (deals:read)');
@@ -446,7 +442,7 @@ export function buildOpenApiDocument(): object {
   action('get', '/deals/{id}/history', 'Deals', 'Audit history of one deal, newest first (deals:read)');
   action('post', '/deals/{id}/move', 'Deals', 'Move to another stage; Lost needs a reason (deals:write)', dealMoveSchema);
   action('post', '/deals/{id}/clone', 'Deals', 'Clone into the first stage (deals:write)');
-  action('post', '/deals/bulk-update', 'Deals', 'Reassign or move up to 200 deals (deals:write)', bulkDealUpdateSchema);
+  action('post', '/deals/bulk-update', 'Deals', 'Reassign, move, re-prioritise, re-date or set the probability of up to 200 deals (deals:write)', bulkDealUpdateSchema);
   action('get', '/pipelines', 'Pipelines', 'Pipelines with stages (pipelines:read)');
   action('post', '/pipelines', 'Pipelines', 'Create; limited by plan (pipelines:manage)', pipelineInputSchema);
   action('put', '/pipelines/{id}', 'Pipelines', 'Replace name and stages (pipelines:manage)', pipelineInputSchema);
@@ -517,29 +513,16 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp']) }) };
-  action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
+  const appParam = { params: z.object({ app: z.enum(['docusign', 'payments', 'whatsapp', 'twilio', 'sampbidx']) }) };
+  action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (DocuSign, card payments, WhatsApp, SMS, SampBidx) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
-  r.registerPath({ method: 'get', path: '/apps/{app}/callback', tags: ['Workspace apps'], summary: 'OAuth redirect target; stores the bot token encrypted and redirects to the Integrations page',
+  r.registerPath({ method: 'get', path: '/apps/{app}/callback', tags: ['Workspace apps'], summary: 'OAuth redirect target (DocuSign); stores the token encrypted and redirects to the Integrations page',
     request: { ...appParam, query: z.object({ code: z.string().optional(), state: z.string().optional(), error: z.string().optional() }) }, responses: { 302: { description: 'Back to /app/integrations' } } });
   r.registerPath({ method: 'delete', path: '/apps/{app}', tags: ['Workspace apps'], summary: 'Disconnect: revokes the token at the provider and deletes it (integrations:manage)', security: secured,
     request: appParam, responses: { 204: ok('Disconnected'), ...errors } });
   r.registerPath({ method: 'get', path: '/apps/{app}/events', tags: ['Workspace apps'], summary: 'Last 50 sends and failures (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Events'), ...errors } });
-  action('get', '/apps/slack/channels', 'Workspace apps', 'Public and private Slack channels the bot can see (automation:manage)');
-  action('put', '/apps/slack/settings', 'Workspace apps', 'Set the default channel for workflow posts (integrations:manage)', slackSettingsSchema);
-  action('post', '/apps/slack/test', 'Workspace apps', 'Post a test message to a channel or the default channel; 5 a minute (integrations:manage)', slackTestSchema);
-  action('get', '/apps/teams/channels', 'Workspace apps', 'Teams channels added in Integrations, without their URLs (automation:manage)');
-  action('post', '/apps/teams/channels', 'Workspace apps', 'Add a Teams channel by its Workflows URL; saved only if Teams accepts a welcome card; 10 a minute (integrations:manage)', teamsAddChannelSchema);
-  r.registerPath({ method: 'delete', path: '/apps/teams/channels/{id}', tags: ['Workspace apps'], summary: 'Remove a Teams channel; removing the last one disconnects Teams (integrations:manage)', security: secured,
-    request: { params: z.object({ id: teamsChannelId }) }, responses: { 200: ok('App status'), ...notFound, ...errors } });
-  action('put', '/apps/teams/settings', 'Workspace apps', 'Set the default Teams channel (integrations:manage)', teamsSettingsSchema);
-  action('post', '/apps/teams/test', 'Workspace apps', 'Post a test card to a Teams channel; 5 a minute (integrations:manage)', teamsTestSchema);
-  action('post', '/apps/zoom/meetings', 'Workspace apps', "Schedule a Zoom meeting in the caller's Zoom user (by SampForce email), linked to one lead, contact or deal and logged as an activity; recording needs the organiser's consent confirmation (activities:write)", zoomMeetingCreateSchema);
-  action('get', '/apps/zoom/meetings', 'Workspace apps', 'Zoom meetings scheduled from SampForce, with transcript status (activities:read)', undefined, { query: zoomMeetingListQuery });
-  r.registerPath({ method: 'post', path: '/apps/zoom/events', tags: ['Workspace apps'], summary: "Zoom event notifications (endpoint.url_validation, recording.transcript_completed, app_deauthorized); authenticated by Zoom's x-zm-signature only. Transcripts are imported only for recorded meetings scheduled from SampForce",
-    responses: { 200: ok('Handled, or the URL validation answer'), 401: { description: 'Signature check failed' }, 403: { description: 'ZOOM_WEBHOOK_SECRET_TOKEN not set' } } });
   action('post', '/apps/docusign/envelopes', 'Workspace apps', 'Email a draft contract to one signer for e-signature through DocuSign; needs confirm: true; one open envelope per contract (contracts:write)', docusignSendSchema);
   action('get', '/apps/docusign/envelopes', 'Workspace apps', 'Envelopes sent from SampForce and their status (contracts:read)', undefined, { query: docusignListQuery });
   action('post', '/apps/docusign/envelopes/{id}/void', 'Workspace apps', 'Void an envelope still out for signature (contracts:write)', docusignVoidSchema);
@@ -821,6 +804,18 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/success/escalations', tags: ['Customer success'], summary: 'Open an escalation (success:write)', security: secured, request: body(escalationInputSchema), responses: { 201: ok('Escalation'), ...errors } });
   action('post', '/success/escalations/{id}/resolve', 'Customer success', 'Resolve with a note (success:write)', escalationResolveSchema);
 
+  // Website Enquiry (ADR 0095): the company website's enquiries, sign-ups and reviews.
+  action('get', '/website-enquiries/summary', 'Website Enquiry', 'Counts by type, category, status and form, the last 14 days, the newest arrivals and how enquiries arrive (enquiries:read)');
+  action('get', '/website-enquiries', 'Website Enquiry', 'Enquiries, newest first, by view, status, type, category, form, date and search (enquiries:read)', undefined, { query: enquiryListQuerySchema });
+  action('get', '/website-enquiries/record', 'Website Enquiry', 'Enquiries linked to an employee or company (enquiries:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), companyId: z.string().uuid().optional() }) });
+  action('get', '/website-enquiries/{id}', 'Website Enquiry', 'One enquiry with every form field, write-back state and matching CRM records; opening marks it seen (enquiries:read)');
+  action('post', '/website-enquiries/seen', 'Website Enquiry', 'Mark every enquiry seen (enquiries:read)');
+  action('post', '/website-enquiries/{id}/unread', 'Website Enquiry', 'Mark one enquiry unread again (enquiries:read)');
+  action('patch', '/website-enquiries/{id}', 'Website Enquiry', 'Change status, stage, owner, note or star; a change is sent back to the website (enquiries:write)', enquiryUpdateSchema);
+  action('post', '/website-enquiries/{id}/convert', 'Website Enquiry', 'Turn an enquiry into a company and employee, reusing ones that match (enquiries:write, companies:write, contacts:write)', enquiryConvertSchema);
+  action('post', '/website-enquiries/sync', 'Website Enquiry', 'Pull from the website now instead of waiting for the next pass (enquiries:write)');
+  r.registerPath({ method: 'post', path: '/hooks/website-enquiries', tags: ['Website Enquiry'], summary: 'The website\'s signed webhook (X-Sampforce-Signature, HMAC-SHA256 of "t.body"); 401 on a bad signature, 503 until a receiving workspace is set', responses: { 200: ok('Received'), ...errors } });
+
   // Enhancement feature 14: sales gamification and sales teams.
   action('get', '/gamification/me', 'Gamification', 'Your points this month, rank, target progress, badges and competitions; enabled:false while gamification is off (gamification:read)');
   action('get', '/gamification/leaderboard', 'Gamification', 'People and teams ranked by points for a month, quarter or year (default this month), from CRM records under the workspace rules. 409 GAMIFICATION_OFF when off; managers-only visibility shows others just themselves (gamification:read)', undefined, { query: z.object({ period: z.string().optional() }) });
@@ -841,19 +836,6 @@ export function buildOpenApiDocument(): object {
   action('put', '/tenants/current/teams/{id}', 'Tenants', 'Rename a team and replace its members (members:manage)', teamInputSchema);
   r.registerPath({ method: 'delete', path: '/tenants/current/teams/{id}', tags: ['Tenants'], summary: 'Delete a sales team (members:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
 
-  // Enhancement feature 15: website visitor intelligence.
-  action('get', '/visitors/settings', 'Visitors', 'Tracking on or off, consent mode, allowed websites, retention, important pages and the public site key (visitors:read)');
-  action('put', '/visitors/settings', 'Visitors', 'Change tracking settings; turning tracking on needs at least one allowed website; audited (visitors:manage)', visitorSettingsSchema);
-  action('post', '/visitors/settings/rotate-key', 'Visitors', 'Issue a new site key; the old snippet stops working (visitors:manage)');
-  action('get', '/visitors/dashboard', 'Visitors', 'Visits, important pages, sources, campaigns and high-intent visitors for the last 7, 30 or 90 days (visitors:read)', undefined, { query: z.object({ days: z.coerce.number().optional() }) });
-  action('get', '/visitors/record', 'Visitors', 'Website activity linked to a lead or contact (visitors:read)', undefined, { query: z.object({ type: z.enum(['lead', 'contact']), id: z.string().uuid() }) });
-  action('get', '/visitors', 'Visitors', 'Visitors, newest first; segment all, identified, anonymous or high_intent (visitors:read)', undefined, { query: z.object({ segment: z.string().optional(), search: z.string().optional() }) });
-  action('get', '/visitors/{id}', 'Visitors', 'One visitor with sessions, pages and the intent signals behind the score (visitors:read)');
-  r.registerPath({ method: 'delete', path: '/visitors/{id}', tags: ['Visitors'], summary: 'Erase a visitor and all their page views; the linked lead or contact is kept; audited (visitors:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Erased'), ...notFound, ...errors } });
-  r.registerPath({ method: 'get', path: '/public/track/script.js', tags: ['Visitors'], summary: 'Public: the first-party tracking script. Honours Global Privacy Control and Do Not Track; no cookies or fingerprinting (no auth)', responses: { 200: { description: 'JavaScript', content: { 'application/javascript': { schema: z.string() } } } } });
-  r.registerPath({ method: 'get', path: '/public/track/{siteKey}/config', tags: ['Visitors'], summary: 'Public: consent mode and enquiry consent text for an allowed website; 404 when tracking is off or the origin is not allowed (no auth)', request: { params: z.object({ siteKey: z.string() }) }, responses: { 200: ok('Config'), 404: json(error, 'Not available') } });
-  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/collect', tags: ['Visitors'], summary: 'Public: record page views, custom events and engaged time; requests with a privacy signal are dropped (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(collectSchema) }, responses: { 200: ok('Stored count'), 404: json(error, 'Not available') } });
-  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/enquiry', tags: ['Visitors'], summary: 'Public: an enquiry from the website; links to a contact or open lead by email or creates a lead; 5 per address per 10 minutes (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(enquirySchema) }, responses: { 200: ok('Thank-you message'), 404: json(error, 'Not available'), 429: json(error, 'Too many enquiries') } });
 
   // Part 2: Prospect Lists and prospect discovery (Apollo.io search, Hunter.io verification; Mock Mode without keys).
   action('get', '/prospect-lists', 'Prospects', 'Prospect lists with counts, owner and assignee (prospects:read)');

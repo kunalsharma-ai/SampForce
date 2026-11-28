@@ -115,8 +115,9 @@ describe('company work', () => {
     await r.post(`/follow-ups/${dropped.id}/complete`, {}).expect(400);
 
     const counts = (await r.get('/follow-ups/counts?scope=mine&tz=UTC').expect(200)).body;
-    // Cancelled: the one dropped here, and the cadence follow-up the reply above stopped (ADR 0083).
-    expect(counts).toMatchObject({ overdue: 1, rescheduled: 1, completed: 1, cancelled: 2, today: today ? 1 : 0 });
+    // Cancelled: the one dropped here. The reply above came while the contact waited after the first email, so the
+    // cadence stopped before follow-up 1 was ever created (ADR 0096).
+    expect(counts).toMatchObject({ overdue: 1, rescheduled: 1, completed: 1, cancelled: 1, today: today ? 1 : 0 });
     expect(counts.upcoming).toBe(2); // the rescheduled one and the one from the interaction
     const re = (await r.get('/follow-ups?bucket=rescheduled').expect(200)).body;
     expect(re[0]).toMatchObject({ title: 'Call to confirm sample', rescheduleCount: 1 });

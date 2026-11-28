@@ -32,6 +32,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { AttributionSection, CurrencySection, DashboardsSection, ExportSection, NotificationsSection, OptionsSection } from './admin-sections';
 import { FollowUpCadenceSection } from './cadence-section';
+import { CompanyEventsSection } from './company-events-section';
 import { CustomFieldsSection } from './custom-fields-section';
 import { JourneySection } from './journey-section';
 
@@ -48,14 +49,15 @@ type Tab =
   | 'follow-up-types'
   | 'follow-up-cadence'
   | 'journey'
+  | 'company-events'
   | 'notifications'
   | 'currency'
   | 'exports'
   | 'dashboards'
   | 'attribution';
-const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'journey', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
+const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'journey', 'company-events', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
 /** Sections only administrators can open (their settings are not readable by everyone). */
-const ADMIN_ONLY: Tab[] = ['notifications', 'exports', 'dashboards', 'attribution'];
+const ADMIN_ONLY: Tab[] = ['company-events', 'notifications', 'exports', 'dashboards', 'attribution'];
 
 export const MEANING_LABELS = {
   NEW: 'New',
@@ -95,7 +97,7 @@ export function CrmConfiguration() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'numbering', label: t('Lead numbers') },
+          { value: 'numbering', label: t('Company numbers') },
           { value: 'company', label: t('Company statuses') },
           { value: 'employee', label: t('Employee statuses') },
           ...(stagesOn ? ([{ value: 'stages', label: t('Communication stages') }] as const) : []),
@@ -110,6 +112,7 @@ export function CrmConfiguration() {
           { value: 'currency', label: t('Currency') },
           ...(canManage
             ? ([
+                { value: 'company-events', label: t('Company events') },
                 { value: 'notifications', label: t('Notifications') },
                 { value: 'exports', label: t('Export permissions') },
                 { value: 'dashboards', label: t('Dashboards') },
@@ -131,6 +134,7 @@ export function CrmConfiguration() {
       {cadenceOn && tab === 'follow-up-cadence' && <FollowUpCadenceSection />}
       {tab === 'journey' && <JourneySection />}
       {tab === 'currency' && <CurrencySection canManage={canManage} />}
+      {canManage && tab === 'company-events' && <CompanyEventsSection />}
       {canManage && tab === 'notifications' && <NotificationsSection />}
       {canManage && tab === 'exports' && <ExportSection />}
       {canManage && tab === 'dashboards' && <DashboardsSection canManage={canManage} />}
@@ -160,7 +164,7 @@ function LeadNumbering({ canManage }: { canManage: boolean }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          {t('Lead numbers')}
+          {t('Company numbers')}
           <InfoTip topic="crm.leadNumbers" />
         </CardTitle>
       </CardHeader>
@@ -172,11 +176,11 @@ function LeadNumbering({ canManage }: { canManage: boolean }) {
             {row.isDefaultPrefix && <dd className="text-xs text-muted-foreground">{t('From your workspace initials')}</dd>}
           </div>
           <div className="rounded-lg border border-border p-3">
-            <dt className="text-muted-foreground">{t('Next lead number')}</dt>
+            <dt className="text-muted-foreground">{t('Next company number')}</dt>
             <dd className="mt-1 font-mono text-lg font-semibold">{row.next}</dd>
           </div>
           <div className="rounded-lg border border-border p-3">
-            <dt className="text-muted-foreground">{t('Company leads numbered')}</dt>
+            <dt className="text-muted-foreground">{t('Companies numbered')}</dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">{row.issued.toLocaleString(t.formatLocale)}</dd>
           </div>
         </dl>
@@ -192,12 +196,12 @@ function LeadNumbering({ canManage }: { canManage: boolean }) {
                 setError(t.maybe(parsed.error.issues[0]!.message));
                 return;
               }
-              if (parsed.data.applyToExisting && !window.confirm(t('Change every existing lead number to the new prefix? The order of the numbers stays the same.'))) return;
+              if (parsed.data.applyToExisting && !window.confirm(t('Change every existing company number to the new prefix? The order of the numbers stays the same.'))) return;
               setError(null);
               save.mutate(parsed.data, {
                 onSuccess: (r) => {
                   setDraft(null);
-                  setNotice(t('Saved. The next lead will be {number}.', { number: r.next }));
+                  setNotice(t('Saved. The next company will be {number}.', { number: r.next }));
                 },
               });
             }}
@@ -215,15 +219,15 @@ function LeadNumbering({ canManage }: { canManage: boolean }) {
                 value={v.apply}
                 onChange={(apply) => setDraft({ ...v, apply })}
                 options={[
-                  { value: 'new', label: t('New leads only') },
-                  { value: 'all', label: t('New and existing leads') },
+                  { value: 'new', label: t('New companies only') },
+                  { value: 'all', label: t('New and existing companies') },
                 ]}
                 description={v.apply === 'all' ? t('Existing numbers are rewritten with the new prefix; FRFS07 becomes ABC07.') : t('Existing numbers stay as they are.')}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
               <Button type="submit" disabled={save.isPending || !draft}>
-                {save.isPending ? t('Saving…') : t('Save lead numbers')}
+                {save.isPending ? t('Saving…') : t('Save company numbers')}
               </Button>
               <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
                 {notice}

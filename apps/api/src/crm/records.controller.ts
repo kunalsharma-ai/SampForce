@@ -36,7 +36,7 @@ export const companyFiltersSchema = z.object({
   country: z.string().regex(/^[A-Za-z]{2}$/).optional(),
   industry: z.string().trim().max(120).optional(),
 });
-const contactFiltersSchema = z.object({ statusId: z.string().uuid().optional() });
+export const contactFiltersSchema = z.object({ statusId: z.string().uuid().optional() });
 
 @Controller('leads')
 @ApiKeyAccess()

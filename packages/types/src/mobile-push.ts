@@ -25,6 +25,7 @@ export const MOBILE_PUSH_TYPE_OF: Readonly<Record<string, MobileNotificationType
   'followup.assigned': 'task_assigned',
   'task.due_soon': 'task_due_soon',
   'task.overdue': 'task_overdue',
+  'task.not_completed': 'task_overdue',
   'followup.reminder': 'follow_up_reminder',
   'followup.overdue': 'follow_up_reminder',
   'lead.assigned': 'lead_assigned',
@@ -34,6 +35,12 @@ export const MOBILE_PUSH_TYPE_OF: Readonly<Record<string, MobileNotificationType
   'billing.trial_ended': 'account_status',
   'billing.subscription_ended': 'account_status',
   'billing.unpaid': 'account_status',
+  // Team approvals (ADR 0098): a request to decide, and the decision on one's own request.
+  'approval.requested': 'approval',
+  'approval.escalated': 'approval',
+  'approval.approved': 'approval',
+  'approval.rejected': 'approval',
+  'approval.expired': 'approval',
 };
 
 /**
@@ -69,6 +76,8 @@ export function mobileRouteFor(link: string | null | undefined): string | null {
       return query.get('c') && id.test(query.get('c')!) ? `/chat/${query.get('c')}` : '/chat';
     case 'targets':
       return '/targets';
+    case 'approvals':
+      return query.get('request') && id.test(query.get('request')!) ? `/approvals?request=${query.get('request')}` : '/approvals';
     case 'announcements':
       return '/notifications';
     default:

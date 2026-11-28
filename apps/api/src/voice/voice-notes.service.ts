@@ -13,6 +13,9 @@ import {
   type VoiceNote,
   type VoiceNoteCreate,
   type VoiceRecordType,
+  VOICE_RECORD_TYPES,
+  type BulkActionResult,
+  type DeleteAllInput,
 } from '@dealflow/types';
 import { AgentOutputError, AgentsService } from '../ai/agents.service';
 import { PermissionDenied, READ_PERMISSION, RecordContextBuilder } from '../ai/record-context';
@@ -20,6 +23,15 @@ import { untrusted } from '../ai/redact';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { deleteAllMatching, parseListQuery } from '../common/delete-all';
+
+/** The voice notes list's query (GET /voice-notes), also used to find every note to delete at once. */
+export const voiceNoteListQuerySchema = z.object({ type: z.enum(VOICE_RECORD_TYPES).optional(), id: z.string().uuid().optional() });
+
+/** A person's own voice notes, optionally on one record. */
+function voiceWhere(auth: AuthContext, record: { type: VoiceRecordType; id: string } | null): Prisma.VoiceNoteWhereInput {
+  return { tenantId: auth.tenantId, userId: auth.userId, ...(record ? { [record.type === 'deal' ? 'dealId' : `${record.type}Id`]: record.id } : {}) };
+}
 import { ActivitiesService } from '../crm/activities.service';
 import { ContactsService } from '../crm/contacts.service';
 import { LeadsService } from '../crm/leads.service';
@@ -75,7 +87,7 @@ export class VoiceNotesService {
   list(auth: AuthContext, record: { type: VoiceRecordType; id: string } | null): Promise<VoiceNote[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.voiceNote.findMany({
-        where: { tenantId: auth.tenantId, userId: auth.userId, ...(record ? { [record.type === 'deal' ? 'dealId' : `${record.type}Id`]: record.id } : {}) },
+        where: voiceWhere(auth, record),
         orderBy: { createdAt: 'desc' },
         take: 50,
       });
@@ -120,6 +132,17 @@ export class VoiceNotesService {
       });
       return this.view(tx, row);
     });
+  }
+
+  /** Every voice note of mine the list shows (no cap of 50), for "delete all" (ADR 0096). */
+  matchingIds(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(voiceNoteListQuerySchema, query);
+    const record = q.type && q.id ? { type: q.type, id: q.id } : null;
+    return this.prisma.run(auth, async (tx) => (await tx.voiceNote.findMany({ where: voiceWhere(auth, record), select: { id: true } })).map((r) => r.id));
+  }
+
+  async deleteAll(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'voice-notes', input, await this.matchingIds(auth, input.query), (id) => this.remove(auth, id, meta));
   }
 
   async remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
@@ -227,7 +250,7 @@ export class VoiceNotesService {
       if (state.action.type !== item.action.type) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: `Action ${item.index + 1} cannot change its kind.` });
       const need = WRITE_PERMISSION[item.action.type];
       if (!auth.permissions.includes(need)) throw new ForbiddenException({ code: 'FORBIDDEN', message: `Your role cannot do this (${need}).` });
-      if (item.action.type === 'add_note' && !rec) throw new BadRequestException({ code: 'NEEDS_RECORD', message: 'A note needs a record. Make the voice note from a lead, contact, deal or company.' });
+      if (item.action.type === 'add_note' && !rec) throw new BadRequestException({ code: 'NEEDS_RECORD', message: 'A note needs a record. Make the voice note from a contact, deal or company.' });
     }
     const done: string[] = [];
     for (const item of input.items) {
@@ -285,7 +308,7 @@ export class VoiceNotesService {
       }
       case 'create_lead': {
         const { lead, duplicates } = await this.leads.create(auth, { fullName: a.name, companyName: a.company ?? undefined, email: a.email ?? undefined, phone: a.phone ?? undefined, source: 'Voice note' }, meta);
-        if (duplicates.length) state.warnings.push(`Possible duplicate of ${duplicates.length} existing record${duplicates.length === 1 ? '' : 's'}; check the lead.`);
+        if (duplicates.length) state.warnings.push(`Possible duplicate of ${duplicates.length} existing record${duplicates.length === 1 ? '' : 's'}; check the contact.`);
         return { type: 'lead', id: lead.id, link: `/app/leads/${lead.id}` };
       }
       case 'create_contact': {
@@ -412,6 +435,6 @@ export function checkAction(raw: VoiceAction, note: string, today: string, rec: 
       a.dueTime = null;
     }
   }
-  if (a.type === 'add_note' && !rec) warnings.push('A note needs a record. Make the voice note from a lead, contact, deal or company to save it.');
+  if (a.type === 'add_note' && !rec) warnings.push('A note needs a record. Make the voice note from a contact, deal or company to save it.');
   return { action: a, status: 'proposed', warnings, result: null };
 }

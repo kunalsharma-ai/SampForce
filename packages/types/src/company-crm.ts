@@ -99,7 +99,7 @@ export function phaseMeaning(phase: StagePhase): StatusMeaning {
 }
 export const DEFAULT_STATUSES: Record<CrmStatusKind, ReadonlyArray<DefaultStatus>> = {
   COMPANY: [
-    { name: 'New Lead', color: '#7dd3fc', meaning: 'NEW' },
+    { name: 'New Company', color: '#7dd3fc', meaning: 'NEW' },
     { name: 'Discussion Phase', color: '#3b82f6', meaning: 'ACTIVE' },
     { name: 'Revert Soon', color: '#f97316', meaning: 'ACTIVE' },
     { name: 'Call Scheduled', color: '#a855f7', meaning: 'ACTIVE' },

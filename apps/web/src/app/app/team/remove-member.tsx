@@ -68,7 +68,7 @@ export function RemoveMemberDialog({ member, onClose, onRemoved }: { member: Mem
                   <dt className="font-medium">{t('Records that move')}</dt>
                   <dd className="text-muted-foreground" data-impact-records>
                     {recordCount
-                      ? t('{companies} companies, {contacts} contacts, {leads} leads, {deals} deals, {rfqs} RFQs, {contracts} contracts and {tasks} open tasks', {
+                      ? t('{companies} companies, {contacts} contacts, {leads} inbound contacts, {deals} deals, {rfqs} RFQs, {contracts} contracts and {tasks} open tasks', {
                           companies: r!.companies,
                           contacts: r!.contacts,
                           leads: r!.leads,

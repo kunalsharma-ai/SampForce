@@ -25,15 +25,18 @@ import {
   startOfDayIn,
   sumByCurrency,
   type z,
-  type followUpListQuerySchema,
+  followUpListQuerySchema,
   type followUpUpdateSchema,
-  type interactionListQuerySchema,
-  type rfqListQuerySchema,
+  interactionListQuerySchema,
+  rfqListQuerySchema,
+  type BulkActionResult,
+  type DeleteAllInput,
   type rfqUpdateSchema,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { allPages, deleteAllMatching, parseListQuery } from '../common/delete-all';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -45,6 +48,16 @@ import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
 type FollowUpQuery = z.output<typeof followUpListQuerySchema>;
+
+/** The activities a company's interactions log shows (logged ones; synced emails are read separately). */
+function interactionWhere(tenantId: string, companyId: string, contactIds: string[], q: InteractionQuery): Prisma.ActivityWhereInput {
+  return {
+    tenantId,
+    deletedAt: null,
+    ...(q.contactId ? { contactId: q.contactId } : { OR: [{ companyId }, ...(contactIds.length ? [{ contactId: { in: contactIds } }] : [])] }),
+    ...(q.kind ? kindFilter(q.kind) : {}),
+  };
+}
 type InteractionQuery = z.output<typeof interactionListQuerySchema>;
 type RfqQuery = z.output<typeof rfqListQuerySchema>;
 type TaskModel = Prisma.TaskGetPayload<object>;
@@ -242,12 +255,7 @@ export class CompanyWorkService {
       const tid = auth.tenantId;
       const contacts = await tx.contact.findMany({ where: { tenantId: tid, companyId, deletedAt: null }, select: { id: true, firstName: true, lastName: true } });
       const contactIds = q.contactId ? contacts.filter((c) => c.id === q.contactId).map((c) => c.id) : contacts.map((c) => c.id);
-      const where: Prisma.ActivityWhereInput = {
-        tenantId: tid,
-        deletedAt: null,
-        ...(q.contactId ? { contactId: q.contactId } : { OR: [{ companyId }, ...(contactIds.length ? [{ contactId: { in: contactIds } }] : [])] }),
-        ...(q.kind ? kindFilter(q.kind) : {}),
-      };
+      const where = interactionWhere(tid, companyId, contactIds, q);
       const acts = await tx.activity.findMany({ where, orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }], take: q.limit });
       const wantEmails = !q.kind || q.kind === 'EMAIL_SENT' || q.kind === 'EMAIL_RECEIVED';
       const emails =
@@ -326,7 +334,7 @@ export class CompanyWorkService {
       if (!opts.attempt) await this.stages.interactionLogged(tx, auth, input);
       // The follow-up cadence (ADR 0083): the first email starts it, any answer from the employee stops it.
       if (input.contactId && !opts.attempt) {
-        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'INTERACTION');
+        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'LOGGED');
         else if (CADENCE_STOPPERS[input.kind]) await this.cadence.stop(tx, auth.tenantId, input.contactId, CADENCE_STOPPERS[input.kind]!);
       }
       if (input.followUpAt) {
@@ -347,6 +355,24 @@ export class CompanyWorkService {
       const rows = await this.interactionsIn(tx, auth.tenantId, [id]);
       return rows[0]!;
     });
+  }
+
+  /**
+   * Every logged interaction the company's log shows for this filter (no limit), for "delete all" (ADR 0096). Emails
+   * read from a mailbox are not interactions stored here, so they stay.
+   */
+  matchingIdsInteractions(auth: AuthContext, companyId: string, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(interactionListQuerySchema, query);
+    return this.prisma.run(auth, async (tx) => {
+      await this.visibleCompany(tx, auth, companyId);
+      const contacts = await tx.contact.findMany({ where: { tenantId: auth.tenantId, companyId, deletedAt: null }, select: { id: true } });
+      const contactIds = q.contactId ? contacts.filter((c) => c.id === q.contactId).map((c) => c.id) : contacts.map((c) => c.id);
+      return (await tx.activity.findMany({ where: interactionWhere(auth.tenantId, companyId, contactIds, q), select: { id: true } })).map((r) => r.id);
+    });
+  }
+
+  async deleteAllInteractions(auth: AuthContext, companyId: string, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'interactions', input, await this.matchingIdsInteractions(auth, companyId, input.query), (id) => this.removeInteraction(auth, id, meta));
   }
 
   removeInteraction(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
@@ -543,6 +569,32 @@ export class CompanyWorkService {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.updated', entityType: 'task', entityId: id, metadata: { followUp: true, rescheduled: { from: before.dueAt?.toISOString() ?? null, to: dueAt } }, meta });
       return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
+  }
+
+  /** Deletes a follow-up (a task) the person may change: gone from every list, kept in the audit log. */
+  removeFollowUp(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      await this.editableFollowUp(tx, auth, id);
+      await tx.task.update({ where: { id }, data: { deletedAt: new Date() } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.deleted', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
+    });
+  }
+
+  /** Every follow-up the list shows for this query (no 300 cap), then each one deleted (ADR 0096). */
+  async matchingIdsFollowUps(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(followUpListQuerySchema, query);
+    const ids = await this.prisma.run(auth, async (tx) => {
+      const where = await this.followUpWhere(tx, auth, q);
+      const now = new Date();
+      const today = startOfDayIn(now, q.tz);
+      const rows = await tx.task.findMany({ where: { ...where, ...bucketWhere(q.bucket ?? 'upcoming', now, today, new Date(today.getTime() + DAY)) }, select: { id: true } });
+      return rows.map((r) => r.id);
+    });
+    return ids;
+  }
+
+  async deleteAllFollowUps(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'follow-ups', input, await this.matchingIdsFollowUps(auth, input.query), (id) => this.removeFollowUp(auth, id, meta));
   }
 
   cancelFollowUp(auth: AuthContext, id: string, meta: RequestMeta): Promise<FollowUpRow> {
@@ -809,6 +861,17 @@ export class CompanyWorkService {
       await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [id] });
       return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
+  }
+
+  /** Every RFQ the register shows for this query, on every page, then each one deleted (ADR 0096). */
+  async matchingIdsRfqs(auth: AuthContext, query: Record<string, string>): Promise<string[]> {
+    const q = parseListQuery(rfqListQuerySchema, { ...query, page: '1', pageSize: '100' });
+    const ids = await allPages((page) => this.listRfqs(auth, { ...q, page }));
+    return ids;
+  }
+
+  async deleteAllRfqs(auth: AuthContext, input: DeleteAllInput, meta: RequestMeta): Promise<BulkActionResult> {
+    return deleteAllMatching({ prisma: this.prisma, audit: this.audit }, auth, meta, 'rfqs', input, await this.matchingIdsRfqs(auth, input.query), (id) => this.removeRfq(auth, id, meta));
   }
 
   removeRfq(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

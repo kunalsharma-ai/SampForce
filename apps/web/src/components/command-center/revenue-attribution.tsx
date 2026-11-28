@@ -241,7 +241,7 @@ function RecordBody({
       <dl className="grid grid-cols-2 gap-3 text-sm">
         {(
           [
-            ['Lead created by', r.leadCreator?.name],
+            ['Company created by', r.leadCreator?.name],
             ['Closed by', r.closer?.name],
             ['Manager', r.manager?.name],
             ['Source', r.source === 'DEAL' ? t('Won deal') : t('Won RFQ')],

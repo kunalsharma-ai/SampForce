@@ -10,6 +10,9 @@ import type { AddressInfo } from 'node:net';
  * It also takes chat messages (POST /v1/messages, ADR 0078) and lists them at GET /__messages, and clients
  * (PUT /v1/clients/{externalId}, ADR 0080): one client per external id, contacts matched by external id or email,
  * name, email, country and time zone required; listed at GET /__clients. A company named "REFUSE" gets 422.
+ * Deals (PUT /v1/deals/{externalId}, ADR 0099): one deal per external id, the client must exist already (by
+ * client.id or client.externalId), name, currency and amount required; listed at GET /__deals. A deal
+ * named "REFUSE" gets 422.
  *
  * SBX.key is accepted; any other key gets 401. An RFQ whose project name contains "REFUSE" gets 422. POST /__fail
  * with {"count": n} makes the next n sends answer 503. GET /__received lists what arrived (for browser tests).
@@ -48,8 +51,19 @@ export interface SbxClient {
   contacts: { id: string; externalId: string; email: string; name: string }[];
 }
 
+export interface SbxDeal {
+  id: string;
+  externalId: string;
+  puts: number;
+  clientId: string;
+  idempotencyKeys: string[];
+  json: Record<string, unknown>;
+}
+
 export interface SampbidxFixture {
   url: string;
+  /** Deals by SampForce deal id; a second PUT updates the same one. */
+  deals: Map<string, SbxDeal>;
   received: SbxReceived[];
   /** Clients by SampForce company id; a second PUT updates the same one. */
   clients: Map<string, SbxClient>;
@@ -97,6 +111,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   const calls: string[] = [];
   const byKey = new Map<string, SbxReceived>();
   const clients = new Map<string, SbxClient>();
+  const deals = new Map<string, SbxDeal>();
   let failures = 0;
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://fixture');
@@ -109,6 +124,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
       if (u.pathname === '/__received') return void json(200, received);
       if (u.pathname === '/__messages') return void json(200, messages);
       if (u.pathname === '/__clients') return void json(200, [...clients.values()]);
+      if (u.pathname === '/__deals') return void json(200, [...deals.values()]);
       if (u.pathname === '/__fail' && req.method === 'POST') {
         failures = Number((JSON.parse(raw.toString() || '{}') as { count?: number }).count ?? 1);
         return void json(200, { failing: failures });
@@ -164,6 +180,34 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
         clients.set(externalId, client);
         return void json(prior ? 200 : 201, { id: client.id, url: `https://sampbidx.example/clients/${client.id}`, contacts: client.contacts.map((c) => ({ externalId: c.externalId, id: c.id })) });
       }
+      const dealPath = /^\/v1\/deals\/([^/]+)$/.exec(path);
+      if (req.method === 'PUT' && dealPath) {
+        if (failures > 0) {
+          failures--;
+          return void json(503, { error: { message: 'Temporarily unavailable' } });
+        }
+        const externalId = decodeURIComponent(dealPath[1]!);
+        let body: { client?: { id?: string; externalId?: string } | null; deal?: { number?: string; name?: string; amount?: number; currency?: string } };
+        try {
+          body = JSON.parse(raw.toString('utf8'));
+        } catch {
+          return void json(400, { error: { message: 'Body is not JSON' } });
+        }
+        const client = [...clients.values()].find((c) => c.id === body.client?.id || c.externalId === body.client?.externalId);
+        if (!client) return void json(422, { error: { message: 'Unknown client: send the client first' } });
+        for (const f of ['name', 'currency'] as const) if (!body.deal?.[f]) return void json(422, { error: { message: `Deal ${f} is required` } });
+        if (!(typeof body.deal!.amount === 'number' && body.deal!.amount > 0)) return void json(422, { error: { message: 'Deal amount is required' } });
+        if (body.deal!.name!.includes('REFUSE')) return void json(422, { error: { message: 'Deal stage is not one SampBidx knows' } });
+        const idem = (req.headers['idempotency-key'] as string | undefined) ?? '';
+        const prior = deals.get(externalId);
+        const deal: SbxDeal = prior ?? { id: `DL-${randomBytes(3).toString('hex').toUpperCase()}`, externalId, puts: 0, clientId: client.id, idempotencyKeys: [], json: {} };
+        deal.puts++;
+        deal.clientId = client.id;
+        deal.json = body as Record<string, unknown>;
+        if (idem) deal.idempotencyKeys.push(idem);
+        deals.set(externalId, deal);
+        return void json(prior ? 200 : 201, { id: deal.id, url: `https://sampbidx.example/deals/${deal.id}`, status: 'received' });
+      }
       if (req.method === 'POST' && (path === '/v1/rfqs' || path === '/v1/rfq-emails')) {
         if (failures > 0) {
           failures--;
@@ -193,6 +237,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     received,
     clients,
+    deals,
     messages,
     calls,
     failNext: (n) => void (failures = n),

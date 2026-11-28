@@ -3,11 +3,11 @@
 import { cn } from '@dealflow/ui';
 import { useId } from 'react';
 
-/** Accessible tab strip; panels render below with matching ids. */
+/** Accessible tab strip; panels render below with matching ids. On a narrow screen it scrolls sideways itself. */
 export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: { key: T; label: string }[]; value: T; onChange: (k: T) => void; label: string }) {
   const base = useId();
   return (
-    <div role="tablist" aria-label={label} className="mb-4 inline-flex rounded-lg border border-border bg-muted/40 p-1">
+    <div role="tablist" aria-label={label} className="mb-4 inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-muted/40 p-1 [scrollbar-width:none]">
       {tabs.map((t) => (
         <button
           key={t.key}
@@ -15,7 +15,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs:
           role="tab"
           id={`${base}-${t.key}`}
           aria-selected={value === t.key}
-          className={cn('rounded-md px-3 py-1.5 text-sm font-medium transition-colors', value === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+          className={cn('shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors', value === t.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
           onClick={() => onChange(t.key)}
         >
           {t.label}

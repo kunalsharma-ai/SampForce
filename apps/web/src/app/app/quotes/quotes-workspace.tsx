@@ -1,5 +1,6 @@
 'use client';
 
+import { DeleteAllButton } from '@/components/delete-all-button';
 import {
   Badge,
   Button,
@@ -77,6 +78,7 @@ function QuoteList() {
             ))}
           </Select>
         </Field>
+        <DeleteAllButton path="/quotes" query={{ status }} hasItems={!!quotes.data?.length} permission="quotes:write" feature="quotes" invalidate={['quotes']} />
       </div>
       {canWrite && <NewQuote />}
       <Card>

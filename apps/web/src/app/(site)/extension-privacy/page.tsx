@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Browser extension privacy',
-  description: 'What the SampForce lead capture extension reads, where it sends it, what it keeps in your browser and how to remove it.',
+  description: 'What the SampForce contact capture extension reads, where it sends it, what it keeps in your browser and how to remove it.',
 };
 
 /**
@@ -12,12 +12,12 @@ export const metadata: Metadata = {
 export default function ExtensionPrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_li]:mt-1 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:ps-5">
-      <h1 className="text-4xl font-semibold tracking-tight">SampForce lead capture: privacy</h1>
+      <h1 className="text-4xl font-semibold tracking-tight">SampForce contact capture: privacy</h1>
       <p className="text-muted-foreground">Last updated 1 November 2026</p>
       <p>
-        The SampForce lead capture extension for Chrome and Edge finds email addresses on the web page you are reading and saves the people as leads in your
+        The SampForce contact capture extension for Chrome and Edge finds email addresses on the web page you are reading and saves the people as inbound contacts in your
         SampForce workspace. It can also show people who work at the company whose website you are on, from your workspace&apos;s data provider, and save
-        them to a prospect list or as leads. It works only after you connect it to your workspace, by signing in with your SampForce email and password or
+        them to a prospect list or as inbound contacts. It works only after you connect it to your workspace, by signing in with your SampForce email and password or
         with a connection code you create in SampForce. Sampledge makes SampForce and the extension.
       </p>
 
@@ -31,7 +31,7 @@ export default function ExtensionPrivacyPage() {
       <h2>Where it sends it</h2>
       <ul>
         <li>Only to the SampForce address you entered when connecting, which is your own workspace.</li>
-        <li>To check who is already in SampForce, it sends the addresses found and the site&apos;s address. When you save people, it sends their addresses and the names you kept, the company name and the page address, which SampForce records as the lead&apos;s source.</li>
+        <li>To check who is already in SampForce, it sends the addresses found and the site&apos;s address. When you save people, it sends their addresses and the names you kept, the company name and the page address, which SampForce records as the contact&apos;s source.</li>
         <li>When you press &quot;Find more people&quot;, it sends the site&apos;s domain. SampForce&apos;s servers then read that company&apos;s public website, and, if your workspace has added its own key, ask the data provider Hunter.io. The extension itself contacts no one but your workspace.</li>
         <li>When you press &quot;Find prospects&quot;, it sends the site&apos;s domain and any job titles you typed. SampForce&apos;s servers ask the data provider Apollo.io for people at that company, if your workspace has added its own key; without one, SampForce shows labelled sample people and nothing is sent to Apollo. Finding email addresses for the people you import also goes through SampForce&apos;s servers. The extension never reads people from the page or from social networks for this.</li>
         <li>When you sign in, it sends your email and password to your workspace only, once, to create the extension&apos;s own connection. The password is not stored.</li>
@@ -48,13 +48,13 @@ export default function ExtensionPrivacyPage() {
       <h2>What it does not do</h2>
       <ul>
         <li>No advertising, analytics or tracking code, and no data sent to Sampledge or anyone else except your workspace.</li>
-        <li>It does not sell or share data, and it does not use what it reads for anything other than finding and saving leads for you.</li>
+        <li>It does not sell or share data, and it does not use what it reads for anything other than finding and saving contacts for you.</li>
         <li>It does not read LinkedIn or other social network profiles on your behalf.</li>
       </ul>
 
       <h2>How your workspace handles it</h2>
       <p>
-        Leads saved through the extension are stored in your SampForce workspace like any other lead, under your workspace&apos;s own settings and agreements
+        Contacts saved through the extension are stored in your SampForce workspace like any other contact, under your workspace&apos;s own settings and agreements
         with Sampledge. Your workspace administrators can see and delete them. People on your workspace&apos;s do-not-email list are flagged and never
         added to a sequence.
       </p>

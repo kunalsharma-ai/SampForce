@@ -6,7 +6,7 @@ import { currentDbContext, type DbContext, dbContextStorage } from './scope';
  * SECURITY INVOKER function that exposed exactly one row through a narrow policy; here the same narrow read runs in
  * a `lookup` context, which the guard only lets see documents matching the given token.
  */
-type Client = Pick<SampforceClient, 'invitation' | 'leadForm' | 'subscription' | 'visitorSettings'>;
+type Client = Pick<SampforceClient, 'invitation' | 'leadForm' | 'subscription'>;
 
 function scoped<T>(ctx: DbContext, fn: () => Promise<T>): Promise<T> {
   // Awaited inside run(): Prisma queries are lazy and would otherwise execute after the context has ended.
@@ -42,14 +42,6 @@ export async function billingTenant(prisma: Client, ref: string): Promise<string
     prisma.subscription.findFirst({ where: { providerSubscriptionId: ref }, select: { tenantId: true } }),
   );
   return bySub?.tenantId ?? null;
-}
-
-/** The workspace of an enabled website-visitor site key (was app_visitor_site_tenant). */
-export async function visitorSiteTenant(prisma: Client, siteKey: string): Promise<string | null> {
-  const row = await scoped({ lookup: { VisitorSettings: { siteKey } } }, () =>
-    prisma.visitorSettings.findFirst({ where: { siteKey, enabled: true }, select: { tenantId: true } }),
-  );
-  return row?.tenantId ?? null;
 }
 
 /**

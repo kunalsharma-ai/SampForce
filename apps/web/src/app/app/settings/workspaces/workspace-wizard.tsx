@@ -22,6 +22,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
+import { useApprovalOverview } from '@/lib/team-approvals';
 import { useWorkspaceMutations } from '@/lib/workspaces';
 
 /*
@@ -87,16 +88,28 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
   const parent: WorkspaceRow = (level === 'EXECUTIVE' && parentId ? tree.workspaces.find((w) => w.id === parentId) : undefined) ?? tree.mine;
   const modules = useMemo(() => FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0), [parent]);
   const [groups, setGroups] = useState<Set<FeatureGroup>>(new Set(FEATURE_GROUPS));
-  const [actions, setActions] = useState<ActionGrants>(() => defaultChildActions(level, parent.actions));
+  const rules = tree.rules;
+  const ruleBlocksDelete = level === 'MANAGER' ? !rules.managerDelete : !rules.executiveDelete;
+  // When the Super Workspace lets Manager and Executive Workspaces delete (Approvals > Rules, ADR 0098), a new one
+  // starts with Delete wherever it gets Edit and the parent can hand Delete down; otherwise Delete starts off (W2).
+  const lowerLevelsDelete = useApprovalOverview().data?.settings.lowerLevelsDelete ?? false;
+  const startingActions = useMemo(() => {
+    const base = defaultChildActions(level, parent.actions);
+    if (!lowerLevelsDelete || ruleBlocksDelete) return base;
+    const out = { ...base } as Record<string, string[]>;
+    for (const [g, list] of Object.entries(base)) {
+      if (list?.includes('edit') && (parent.actions[g as FeatureGroup] ?? []).includes('delete') && !list.includes('delete')) out[g] = [...list, 'delete'];
+    }
+    return out as ActionGrants;
+  }, [level, parent, lowerLevelsDelete, ruleBlocksDelete]);
+  const [actions, setActions] = useState<ActionGrants>(startingActions);
   const [accessLevel, setAccessLevel] = useState<WorkspaceAccessLevel>('TEAM');
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
 
-  // A new level or parent starts again from what that parent can hand down, Delete off.
-  useEffect(() => setActions(defaultChildActions(level, parent.actions)), [level, parent]);
+  // A new level or parent starts again from what that parent can hand down.
+  useEffect(() => setActions(startingActions), [startingActions]);
 
-  const rules = tree.rules;
-  const ruleBlocksDelete = level === 'MANAGER' ? !rules.managerDelete : !rules.executiveDelete;
   const ruleModules = level === 'MANAGER' ? rules.managerModules : rules.executiveModules;
   const emailTaken = check.result?.available === false;
   const emailValid = !email.trim() || EMAIL.test(email.trim());
@@ -154,7 +167,7 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
 
   return (
     <Dialog open onOpenChange={(o) => !o && !create.isPending && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6" data-workspace-wizard>
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6" data-workspace-wizard>
         <DialogTitle className="text-lg font-semibold">{created ? t('Workspace created') : t('Create a workspace')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Your organisation has its one Super Workspace. Here you add Manager and Executive Workspaces below it.')}
@@ -215,8 +228,8 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
                       <span className="block font-medium">{l === 'MANAGER' ? t('Manager Workspace') : t('Executive Workspace')}</span>
                       <span className="block text-muted-foreground">
                         {l === 'MANAGER'
-                          ? t('Leads a team: sees its executives’ work, sets their targets and tasks, and can be allowed to create Executive Workspaces.')
-                          : t('One salesperson: works their own leads, companies and tasks, and reports to a manager or to the Super Workspace.')}
+                          ? t('Runs a team: sees its executives’ work, sets their targets and tasks, and can be allowed to create Executive Workspaces.')
+                          : t('One salesperson: works their own companies, contacts and tasks, and reports to a manager or to the Super Workspace.')}
                       </span>
                       {!allowed && <span className="block text-xs text-warning">{t('Not available: the limit is reached or it has not been allowed.')}</span>}
                     </span>

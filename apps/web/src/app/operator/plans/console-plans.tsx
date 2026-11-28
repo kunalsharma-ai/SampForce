@@ -135,7 +135,7 @@ function PlanDialog({ plan, plans, onClose }: { plan: ConsolePlanRow | null; pla
   });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[88vh] max-w-3xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{plan ? `Edit ${plan.name}` : 'New plan'}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {plan ? `${plan.clients} client${plan.clients === 1 ? '' : 's'} on this plan get the change on their next request.` : 'Choose what the plan includes and what it costs. You can assign it to clients straight away.'}

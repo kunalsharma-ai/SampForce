@@ -10,6 +10,7 @@ import {
 } from '@dealflow/types';
 import { PrismaService } from '../common/prisma.service';
 import { ConsoleService } from './console.service';
+import { OperatorPhotosService } from './operator-photos';
 import type { OperatorContext } from './operator-auth';
 import { writePlatformAudit } from './platform-audit';
 
@@ -29,6 +30,7 @@ export class ConsoleShellService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly console: ConsoleService,
+    private readonly photos: OperatorPhotosService,
   ) {}
 
   async me(op: OperatorContext): Promise<OperatorMe> {
@@ -37,7 +39,7 @@ export class ConsoleShellService {
       select: { preferences: true },
     });
     const { sessionId: _session, ...me } = op;
-    return { ...me, mfaSetupRequired: !!op.mfaSetupRequired, preferences: normaliseConsolePreferences(row?.preferences) };
+    return { ...me, mfaSetupRequired: !!op.mfaSetupRequired, preferences: normaliseConsolePreferences(row?.preferences), photoUrl: await this.photos.urlFor(op) };
   }
 
   async setPreferences(

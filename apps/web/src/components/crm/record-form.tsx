@@ -2,7 +2,7 @@
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
 import { Plus, Trash2 } from 'lucide-react';
-import { type CompanyLeadResult, contactInputSchema, type CustomFieldDef, type TenantDetails } from '@dealflow/types';
+import { type CompanyLeadResult, contactInputSchema, DEAL_SOURCES, type CustomFieldDef, type TenantDetails } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
@@ -17,7 +17,8 @@ import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue } from './custom-field-input';
 import { type PickerValue, RecordPicker } from './record-picker';
-import { useHiddenKeys } from '@/lib/session';
+import { useHiddenKeys, useLockedKeys } from '@/lib/session';
+import { useRfqs } from '@/lib/company-work';
 import { Select, Textarea } from './select';
 
 interface Props {
@@ -40,6 +41,8 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // An open deal with the same name at the same company (ADR 0096): shown with a link and "Create anyway".
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string; dealNumber: string | null } | null>(null);
   const custom = useCustomFields(entity);
   // A new company can be saved with its employees in one go (ADR 0066).
   const withEmployees = entity === 'companies' && mode === 'create';
@@ -51,6 +54,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       setErrors({});
       setFormError(null);
       setEmployees([]);
+      setDuplicate(null);
     }
   }, [open, initial]);
 
@@ -58,6 +62,8 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   // Fields the Console hides from this level are left out (R8, ADR 0092); the server ignores them anyway.
   const hiddenKeys = useHiddenKeys(entity === 'companies' ? 'company' : entity === 'contacts' ? 'contact' : entity === 'deals' ? 'deal' : null);
   const fields = FIELDS[entity].filter((f) => !(f.createOnly && mode === 'edit') && !hiddenKeys.has(f.name));
+  // Fields the workspace above locked can be filled in on a new record but not changed afterwards (ADR 0096).
+  const lockedKeys = useLockedKeys(mode === 'edit' ? (entity === 'companies' ? 'company' : entity === 'contacts' ? 'contact' : entity === 'deals' ? 'deal' : null) : null);
   // Draft recovery for new records: what was typed survives a closed dialog or a reload on this device.
   const draft = useFormDraft<Record<string, unknown>>(open && mode === 'create' ? `create-${entity}` : null, values, (v) =>
     Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
@@ -72,13 +78,15 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
     return d ? cfRaw(d) : undefined;
   });
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e: React.FormEvent | null, allowDuplicate = false) {
+    e?.preventDefault();
     setFormError(null);
+    setDuplicate(null);
     // Read-only and hidden fields are not sent; the API keeps read-only values and clears hidden ones.
     const editable = cfDefs.filter((d) => d.access.edit && logic.shows(d));
     const sendable = { ...values, ...Object.fromEntries(editable.map((d) => [`cf.${d.key}`, fieldPayloadValue(d, values[`cf.${d.key}`])])) };
     const payload = toPayload(entity, sendable, mode, editable.map((d) => d.key));
+    if (allowDuplicate) payload.allowDuplicate = true;
     const parsed = SCHEMAS[entity][mode === 'create' ? 'create' : 'update'].safeParse(payload);
     const problems: Record<string, string> = parsed.success
       ? {}
@@ -116,6 +124,13 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       onOpenChange(false);
       onSaved?.(row, raw);
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'DUPLICATE_DEAL') {
+        const existing = (err.details?.[0] as { existing?: { id: string; name: string; dealNumber: string | null } } | undefined)?.existing;
+        if (existing) {
+          setDuplicate(existing);
+          return;
+        }
+      }
       if (err instanceof ApiError && err.details?.length) {
         setErrors(Object.fromEntries(err.details.map((d) => [d.path.startsWith('customFields.') ? `cf.${d.path.slice(13)}` : d.path.replace(/^company\./, '').replace(/\.0\.value$|\.value$/, ''), d.message])));
       }
@@ -145,11 +160,17 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
         <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
             <div key={f.name} className={f.wide ? 'sm:col-span-2' : undefined}>
-              <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name] ?? (f.type === 'pipeline' ? errors.stageId : undefined)} />
+              {lockedKeys.has(f.name) ? (
+                <fieldset disabled data-locked-field={f.name} title={t('Locked by the workspace above yours')} className="opacity-80">
+                  <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name]} />
+                </fieldset>
+              ) : (
+                <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name] ?? (f.type === 'pipeline' ? errors.stageId : undefined)} />
+              )}
             </div>
           ))}
           {custom.data && custom.data.length > 0 && !hiddenKeys.has('customFields') && (
-            <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
+            <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2" disabled={lockedKeys.has('customFields')} {...(lockedKeys.has('customFields') ? { 'data-locked-field': 'customFields' } : {})}>
               <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
               {custom.data.filter((d) => (mode === 'edit' || d.showInForms) && logic.shows(d)).map((d) => (
                 <CustomFieldInput
@@ -165,6 +186,24 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
             </fieldset>
           )}
           {withEmployees && <QuickEmployees idPrefix={`${formId}-emp`} value={employees} onChange={setEmployees} errors={errors} />}
+          {duplicate && (
+            <div
+              role="alert"
+              ref={(el) => el?.scrollIntoView({ block: 'nearest' })}
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm sm:col-span-2"
+              data-duplicate-deal
+            >
+              <span className="min-w-0 flex-1">
+                {t('This company already has an open deal called “{name}”{number}. Open it, or create a second deal anyway.', { name: duplicate.name, number: duplicate.dealNumber ? ` (${duplicate.dealNumber})` : '' })}
+              </span>
+              <Button asChild type="button" size="sm" variant="outline">
+                <a href={`/app/deals?deal=${duplicate.id}`}>{t('Open the existing deal')}</a>
+              </Button>
+              <Button type="button" size="sm" disabled={saving} onClick={() => void submit(null, true)}>
+                {t('Create anyway')}
+              </Button>
+            </div>
+          )}
           {formError && (
             <p role="alert" className="text-sm text-critical sm:col-span-2">
               {formError}
@@ -269,6 +308,33 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
           ]}
         />
       );
+    case 'source':
+      return (
+        <>
+          <Field id={id} label={label} error={error} hint={hint}>
+            <Input list={`${id}-sources`} placeholder={spec.placeholder ? t(spec.placeholder) : undefined} value={str} onChange={(e) => set(spec.name, e.target.value)} />
+          </Field>
+          <datalist id={`${id}-sources`}>
+            {DEAL_SOURCES.map((s) => (
+              <option key={s} value={t.maybe(s)} />
+            ))}
+          </datalist>
+        </>
+      );
+    case 'list':
+      return (
+        <Field id={id} label={label} error={error} hint={hint}>
+          <MultiCombobox value={Array.isArray(v) ? (v as string[]) : []} onChange={(x) => set(spec.name, x)} creatable max={30} itemLabel={t('product or service')} placeholder={spec.placeholder ? t(spec.placeholder) : undefined} />
+        </Field>
+      );
+    case 'rfq':
+      return <RfqField id={id} label={label} hint={hint} error={error} value={str} companyId={(values.companyId as PickerValue | null)?.id ?? null} onChange={(x) => set(spec.name, x)} />;
+    case 'followUp':
+      return (
+        <Field id={id} label={label} error={error} hint={hint}>
+          <Input type="date" value={str} onChange={(e) => set(spec.name, e.target.value)} />
+        </Field>
+      );
     case 'textarea':
       return (
         <Field id={id} label={label} error={error} hint={hint}>
@@ -289,6 +355,24 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
         </Field>
       );
   }
+}
+
+/** The RFQs of the chosen company, to link one to the deal. */
+function RfqField({ id, label, hint, error, value, companyId, onChange }: { id: string; label: string; hint?: string; error?: string; value: string; companyId: string | null; onChange: (v: string) => void }) {
+  const t = useT();
+  const rfqs = useRfqs({ companyId: companyId ?? undefined }, !!companyId);
+  return (
+    <Field id={id} label={label} error={error} hint={hint}>
+      <Select value={value} disabled={!companyId} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{!companyId ? t('Choose a company first') : rfqs.isPending ? t('Loading…') : t('No RFQ')}</option>
+        {rfqs.data?.items.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.number} · {r.projectName}
+          </option>
+        ))}
+      </Select>
+    </Field>
+  );
 }
 
 function MoneyField({ id, label, spec, value, currency, set, error }: { id: string; label: string; spec: FieldSpec; value: string; currency: string; set: (n: string, v: unknown) => void; error?: string }) {

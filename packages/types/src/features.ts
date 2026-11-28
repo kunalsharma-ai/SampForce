@@ -38,7 +38,7 @@ export const FEATURE_KEYS = [
   'browser_extension',
   'marketing',
   'campaigns',
-  'website_visitors',
+  'website_enquiries',
   'meeting_intelligence',
   'voice_notes',
   // Intelligence
@@ -53,9 +53,6 @@ export const FEATURE_KEYS = [
   'client_portal',
   'customer_success',
   // Apps
-  'slack',
-  'teams',
-  'zoom',
   'docusign',
   'card_payments',
   'whatsapp',
@@ -113,6 +110,8 @@ export const FEATURE_KEYS = [
   // ADR 0082: the Leads and Accounts pages, hidden until the Console Admin switches them on.
   'leads_section',
   'accounts_section',
+  // ADR 0097: Learning & Development.
+  'learning',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -148,13 +147,13 @@ export interface FeatureDef {
 
 export const FEATURES: FeatureDef[] = [
   { key: 'rfqs', group: 'Sales', label: 'RFQs', description: 'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.', defaultFrom: 'free', paths: ['/app/rfqs'] },
-  { key: 'lead_transfers', group: 'Sales', label: 'Lead transfers', description: 'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.', defaultFrom: 'free', paths: [] },
+  { key: 'lead_transfers', group: 'Sales', label: 'Company transfers', description: 'Requests to move a company to a manager or senior person, approved, rejected or reassigned by them.', defaultFrom: 'free', paths: [] },
   { key: 'revenue_attribution', group: 'Sales', label: 'Revenue attribution', description: 'Revenue records for won deals, split between the people who won them without counting anything twice.', defaultFrom: 'free', paths: [] },
   { key: 'manager_dashboard', group: 'Sales', label: 'Manager dashboard', description: 'The team Command Center: team KPIs, the employee performance table, comparisons and follow-up monitoring.', defaultFrom: 'free', paths: [] },
   { key: 'senior_dashboard', group: 'Sales', label: 'Senior management dashboard', description: 'The organisation Command Center: department performance, rankings, revenue analytics and business insights.', defaultFrom: 'free', paths: [] },
   { key: 'instructions', group: 'Sales', label: 'Manager instructions', description: 'Instructions from managers to their team, acknowledged and completed by the people who receive them.', defaultFrom: 'free', paths: [] },
   { key: 'client_concerns', group: 'Sales', label: 'Client concerns', description: 'Client concerns and rejections with severity, deadlines and escalation to senior management.', defaultFrom: 'free', paths: [] },
-  { key: 'territories', group: 'Sales', label: 'Sales territories', description: 'Territories with rules that route leads and deals to their owners.', defaultFrom: 'growth', paths: ['/app/settings/territories'] },
+  { key: 'territories', group: 'Sales', label: 'Sales territories', description: 'Territories with rules that route companies, contacts and deals to their owners.', defaultFrom: 'growth', paths: ['/app/settings/territories'] },
   { key: 'quotes', group: 'Sales', label: 'Quotes and catalogue', description: 'Products, price books, quotes with approvals and PDFs, and the Quick Bid Studio.', defaultFrom: 'launch', paths: ['/app/quotes'] },
   { key: 'proposals', group: 'Sales', label: 'Proposals', description: 'Proposals built from quotes, shared by link and accepted online.', defaultFrom: 'growth', paths: [] },
   { key: 'contracts', group: 'Sales', label: 'Contracts', description: 'Contract register, renewals and reminders.', defaultFrom: 'growth', paths: ['/app/contracts'] },
@@ -166,10 +165,12 @@ export const FEATURES: FeatureDef[] = [
   { key: 'sequences', group: 'Engage', label: 'Email sequences', description: 'Multi-step email sequences with send windows, tracking and reply detection.', defaultFrom: 'launch', paths: ['/app/sequences'] },
   { key: 'email_finder', group: 'Engage', label: 'Email finder', description: 'Find and verify work email addresses.', defaultFrom: 'growth', paths: ['/app/finder'] },
   { key: 'prospect_lists', group: 'Engage', label: 'Prospect lists', description: 'Prospect lists from files, the extension and Apollo.io.', defaultFrom: 'growth', paths: ['/app/prospects'] },
-  { key: 'browser_extension', group: 'Engage', label: 'Browser extension', description: 'The SampForce browser extension for capturing leads from web pages.', defaultFrom: 'launch', paths: [] },
-  { key: 'marketing', group: 'Engage', label: 'Segments and lead forms', description: 'Segments and hosted lead forms with recorded consent.', defaultFrom: 'launch', paths: ['/app/marketing'] },
+  { key: 'browser_extension', group: 'Engage', label: 'Browser extension', description: 'The SampForce browser extension for capturing contacts from web pages.', defaultFrom: 'launch', paths: [] },
+  { key: 'marketing', group: 'Engage', label: 'Segments and contact forms', description: 'Segments and hosted contact forms with recorded consent.', defaultFrom: 'launch', paths: ['/app/marketing'] },
   { key: 'campaigns', group: 'Engage', label: 'Campaigns', description: 'Campaign tracking with first-touch attribution.', defaultFrom: 'launch', paths: ['/app/campaigns'] },
-  { key: 'website_visitors', group: 'Engage', label: 'Website visitors', description: 'Consent-aware website tracking and enquiries.', defaultFrom: 'professional', paths: ['/app/website-visitors'] },
+  // ADR 0095: replaces Website visitors (ADR 0029, removed). The Console Admin switches it on for the organisation that
+  // receives the company website's enquiries (Providers > Website enquiries does it when it names the workspace).
+  { key: 'website_enquiries', group: 'Engage', label: 'Website enquiries', description: 'Every enquiry, download form, live chat enquiry, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.', defaultFrom: 'free', paths: ['/app/website-enquiries'], since: 6, optIn: true },
   { key: 'meeting_intelligence', group: 'Engage', label: 'Meeting recordings', description: 'Meeting recordings, transcripts and AI summaries.', defaultFrom: 'growth', paths: ['/app/meetings/records'] },
   { key: 'voice_notes', group: 'Engage', label: 'Voice to CRM', description: 'Voice notes turned into suggested CRM updates.', defaultFrom: 'professional', paths: [] },
 
@@ -184,9 +185,6 @@ export const FEATURES: FeatureDef[] = [
   { key: 'client_portal', group: 'Revenue', label: 'Client portal', description: 'A signed-in portal where customers follow projects and approve proposals.', defaultFrom: 'professional', paths: ['/app/portal'] },
   { key: 'customer_success', group: 'Revenue', label: 'Customer success', description: 'Health scores, churn risk, escalations and renewals.', defaultFrom: 'professional', paths: ['/app/customer-success'] },
 
-  { key: 'slack', group: 'Apps', label: 'Slack', description: 'CRM alerts in Slack channels.', defaultFrom: 'growth', paths: [] },
-  { key: 'teams', group: 'Apps', label: 'Microsoft Teams', description: 'CRM alerts in Teams channels.', defaultFrom: 'growth', paths: [] },
-  { key: 'zoom', group: 'Apps', label: 'Zoom', description: 'Zoom meetings and transcripts.', defaultFrom: 'growth', paths: [] },
   { key: 'docusign', group: 'Apps', label: 'DocuSign', description: 'Send contracts and proposals for e-signature.', defaultFrom: 'professional', paths: [] },
   { key: 'card_payments', group: 'Apps', label: 'Card payments', description: 'Take card payments on proposals.', defaultFrom: 'professional', paths: [] },
   { key: 'whatsapp', group: 'Apps', label: 'WhatsApp', description: 'WhatsApp Business messages from CRM records.', defaultFrom: 'professional', paths: [] },
@@ -199,19 +197,19 @@ export const FEATURES: FeatureDef[] = [
   { key: 'custom_roles', group: 'Administration', label: 'Custom roles', description: 'Roles with your own permission sets beyond the five standard roles.', defaultFrom: 'professional', paths: [] },
   { key: 'sso_scim', group: 'Administration', label: 'Single sign-on and SCIM', description: 'OpenID Connect sign-in and SCIM provisioning.', defaultFrom: 'free', paths: [] },
   { key: 'custom_fields_advanced', group: 'Administration', label: 'Advanced custom fields', description: 'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.', defaultFrom: 'growth', paths: [] },
-  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [], parent: 'data_export' },
+  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, inbound contacts, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [], parent: 'data_export' },
 
   // ADR 0071: core modules and their subfeatures. Every plan includes them unless an operator takes them out.
-  { key: 'lead_management', group: 'CRM', label: 'Lead management', description: 'Inbound leads: capture, qualify, own and work them.', defaultFrom: 'free', paths: ['/app/leads'], since: 2 },
-  { key: 'lead_assignment', group: 'CRM', label: 'Lead assignment', description: 'Assign inbound leads to an owner.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
-  { key: 'lead_conversion', group: 'CRM', label: 'Lead conversion', description: 'Convert an inbound lead into a company, contact and deal.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
-  { key: 'lead_merge', group: 'CRM', label: 'Duplicate leads and merging', description: 'Find duplicate inbound leads and merge them.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
-  { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Company leads (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies'], since: 2 },
+  { key: 'lead_management', group: 'CRM', label: 'Company and contact management', description: 'Inbound contacts: capture, qualify, own and work them.', defaultFrom: 'free', paths: ['/app/leads'], since: 2 },
+  { key: 'lead_assignment', group: 'CRM', label: 'Inbound contact assignment', description: 'Assign inbound contacts to an owner.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'lead_conversion', group: 'CRM', label: 'Company conversion', description: 'Convert an inbound contact into a company, contact and deal.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'lead_merge', group: 'CRM', label: 'Duplicate inbound contacts and merging', description: 'Find duplicate inbound contacts and merge them.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Companies (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies'], since: 2 },
   { key: 'company_branches', group: 'CRM', label: 'Company branches', description: 'Branches and offices of a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'company_files', group: 'CRM', label: 'Company files', description: 'Files kept on a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'company_enrichment', group: 'CRM', label: 'Company auto-fill', description: 'Fill missing company details from the company’s own website and Wikidata, with the source of every value and undo.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 3 },
   { key: 'company_owner_changes', group: 'CRM', label: 'Company owner changes', description: 'Change a company’s owner with a reason, and its owner history.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
-  { key: 'lead_drafts', group: 'CRM', label: 'New lead wizard drafts', description: 'Save the new lead wizard as a draft and finish it later.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'lead_drafts', group: 'CRM', label: 'New company wizard drafts', description: 'Save the new company wizard as a draft and finish it later.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'contact_management', group: 'CRM', label: 'Contact management', description: 'Employees and points of contact of companies.', defaultFrom: 'free', paths: ['/app/contacts'], since: 2 },
   { key: 'duplicate_checks', group: 'CRM', label: 'Duplicate checks', description: 'Warn about existing companies and contacts while typing a new one.', defaultFrom: 'free', paths: [], parent: 'contact_management', since: 2 },
   { key: 'opportunity_management', group: 'CRM', label: 'Opportunity management', description: 'Deals with value, stage, owner and close date.', defaultFrom: 'free', paths: ['/app/deals'], since: 2 },
@@ -227,25 +225,27 @@ export const FEATURES: FeatureDef[] = [
   { key: 'follow_up_rescheduling', group: 'CRM', label: 'Follow-up rescheduling', description: 'Move a follow-up to a new date, counted on the follow-up.', defaultFrom: 'free', paths: [], parent: 'follow_up_management', since: 2 },
   { key: 'record_timeline', group: 'CRM', label: 'Record timeline', description: 'The history of everything that happened on a record.', defaultFrom: 'free', paths: [], since: 2 },
   { key: 'global_search', group: 'CRM', label: 'Global search', description: 'Search every record from the top bar.', defaultFrom: 'free', paths: [], since: 2 },
-  { key: 'data_import', group: 'CRM', label: 'Data import', description: 'Import companies, contacts and leads from CSV and Excel files.', defaultFrom: 'free', paths: ['/app/settings/import'], since: 2 },
+  { key: 'data_import', group: 'CRM', label: 'Data import', description: 'Import companies, contacts and inbound contacts from CSV and Excel files.', defaultFrom: 'free', paths: ['/app/settings/import'], since: 2 },
   { key: 'data_export', group: 'CRM', label: 'Data export', description: 'Export records as CSV files.', defaultFrom: 'free', paths: [], since: 2 },
   { key: 'task_management', group: 'Communication', label: 'Task assignment', description: 'Tasks assigned to people and workspaces, with priority, due date and status.', defaultFrom: 'free', paths: ['/app/tasks'], since: 2 },
   { key: 'notifications', group: 'Communication', label: 'Notifications', description: 'The notification inbox in the top bar.', defaultFrom: 'free', paths: [], since: 2 },
   { key: 'workspace_management', group: 'Administration', label: 'Workspace management', description: 'Create and manage Manager and Executive Workspaces within the subscription’s limits.', defaultFrom: 'free', paths: ['/app/settings/workspaces'], since: 2 },
   { key: 'user_management', group: 'Administration', label: 'User management', description: 'Invite people, change their roles and teams.', defaultFrom: 'free', paths: ['/app/team'], since: 2 },
   { key: 'permission_management', group: 'Administration', label: 'Permission management', description: 'Roles, and the features and actions each workspace hands down.', defaultFrom: 'free', paths: [], since: 2 },
-  { key: 'sales_target_management', group: 'Administration', label: 'Sales target management', description: 'Set and distribute sales targets.', defaultFrom: 'free', paths: ['/app/targets'], since: 2 },
+  { key: 'sales_target_management', group: 'Administration', label: 'Sales target management', description: 'Set and distribute sales targets.', defaultFrom: 'free', paths: ['/app/targets', '/app/performance'], since: 2 },
   { key: 'audit_log', group: 'Administration', label: 'Audit log', description: 'Who changed what, and when.', defaultFrom: 'free', paths: [], since: 2 },
-  { key: 'crm_configuration', group: 'Administration', label: 'CRM configuration', description: 'Statuses, departments, designations, lead numbering and other CRM settings.', defaultFrom: 'free', paths: ['/app/settings/crm'], since: 2 },
+  { key: 'crm_configuration', group: 'Administration', label: 'CRM configuration', description: 'Statuses, departments, designations, company numbering and other CRM settings.', defaultFrom: 'free', paths: ['/app/settings/crm'], since: 2 },
   { key: 'mobile_app', group: 'Apps', label: 'Mobile app', description: 'The SampForce app for iPhone and Android, once the Console Admin approves it and the Super Workspace switches it on.', defaultFrom: 'free', paths: ['/app/settings/mobile'], since: 2 },
   // ADR 0082 (redesign R2): the separate Leads and Accounts pages are off for every organisation until the Console Admin
   // switches them on. Companies and their contacts are where leads are worked now.
-  { key: 'leads_section', group: 'CRM', label: 'Leads page', description: 'The separate Leads page for inbound leads. Hidden unless the Console Admin switches it on; companies and contacts hold the leads otherwise.', defaultFrom: 'free', paths: [], exactPaths: ['/app/leads'], parent: 'lead_management', since: 4, optIn: true },
+  { key: 'leads_section', group: 'CRM', label: 'Inbound contacts page', description: 'The separate page for inbound contacts. Hidden unless the Console Admin switches it on; companies and contacts hold them otherwise.', defaultFrom: 'free', paths: [], exactPaths: ['/app/leads'], parent: 'lead_management', since: 4, optIn: true },
   { key: 'accounts_section', group: 'CRM', label: 'Accounts page', description: 'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.', defaultFrom: 'free', paths: ['/app/accounts'], parent: 'account_management', since: 4, optIn: true },
+  // ADR 0097: learning modules, assessments and certificates, for every workspace level.
+  { key: 'learning', group: 'Communication', label: 'Learning & Development', description: 'Learning modules with videos, documents and written lessons, assessments with marks, progress dashboards and certificates.', defaultFrom: 'free', paths: ['/app/learning'], since: 6 },
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
-export const FEATURE_CATALOG_VERSION = 5;
+export const FEATURE_CATALOG_VERSION = 6;
 
 /** Subfeatures of a feature, in catalogue order. */
 export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {
@@ -262,7 +262,7 @@ export function withParents(list: readonly FeatureKey[]): FeatureKey[] {
 }
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
-export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
+export const APP_FEATURES = { docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
 
 export const FEATURE_BY_KEY: Record<FeatureKey, FeatureDef> = Object.fromEntries(FEATURES.map((f) => [f.key, f])) as Record<FeatureKey, FeatureDef>;
 

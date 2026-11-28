@@ -57,8 +57,8 @@ const STEP_LABELS = {
   location: 'Company location',
   business: 'Business details',
   employees: 'Employees / POCs',
-  ownership: 'Lead ownership & POC assignment',
-  status: 'Lead status',
+  ownership: 'Company ownership & POC assignment',
+  status: 'Company status',
   remarks: 'Remarks & attachments',
   review: 'Review & save',
 } as const satisfies Record<LeadFormStep, MessageKey>;
@@ -275,7 +275,7 @@ export function LeadWizard() {
         setDraftId(d.id);
         router.replace(`/app/companies/new?draft=${d.id}`, { scroll: false });
       }
-      setNotice(t('Draft saved. Attachments are added when you save the lead.'));
+      setNotice(t('Draft saved. Attachments are added when you save the company.'));
     } catch (e) {
       setFormError(e instanceof Error ? e.message : t('Could not save.'));
     }
@@ -308,7 +308,7 @@ export function LeadWizard() {
   };
 
   if (draftParam && !loaded) {
-    if (draft.error) return <p role="alert" className="text-sm text-critical">{t('This draft could not be opened. It may have been saved as a lead or deleted.')}</p>;
+    if (draft.error) return <p role="alert" className="text-sm text-critical">{t('This draft could not be opened. It may have been saved as a company or deleted.')}</p>;
     return <Skeleton className="h-96" />;
   }
 
@@ -316,7 +316,7 @@ export function LeadWizard() {
   const ce = under(errors, 'company.');
   return (
     <div className="grid max-w-6xl gap-6 lg:grid-cols-[15rem_1fr]">
-      <nav aria-label={t('Lead form steps')} className="lg:sticky lg:top-4 lg:self-start">
+      <nav aria-label={t('Company form steps')} className="lg:sticky lg:top-4 lg:self-start">
         <ol className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible">
           {LEAD_FORM_STEPS.map((s, i) => {
             const hasError = Object.keys(errors).some((k) => stepOf(k) === s);
@@ -480,7 +480,7 @@ export function LeadWizard() {
                     <Plus aria-hidden /> {t('Add employee / POC')}
                   </Button>
                 </div>
-                {form.employees.length === 0 && <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('No employees added yet. A lead can be saved without them.')}</p>}
+                {form.employees.length === 0 && <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('No employees added yet. A company can be saved without them.')}</p>}
                 {form.employees.map((e, i) => {
                   const label = [e.firstName, e.lastName].filter(Boolean).join(' ') || t('Employee {n}', { n: i + 1 });
                   return (
@@ -541,7 +541,7 @@ export function LeadWizard() {
                     accept={[...PORTAL_DOCUMENT_TYPES]}
                     maxBytes={PORTAL_DOCUMENT_MAX_BYTES}
                     onFile={(f) => setFiles((list) => [...list.filter((x) => x.name !== f.name), f])}
-                    hint={t('PDF, image, text, CSV, Word, Excel or PowerPoint, up to 10 MB each. Uploaded when you save the lead; drafts keep the text only.')}
+                    hint={t('PDF, image, text, CSV, Word, Excel or PowerPoint, up to 10 MB each. Uploaded when you save the company; drafts keep the text only.')}
                   />
                   {files.length > 0 && (
                     <ul className="divide-y divide-border rounded-md border border-border" aria-label={t('Attachments')}>
@@ -584,7 +584,7 @@ export function LeadWizard() {
               <div className="ms-auto flex gap-2">
                 {current === 'review' ? (
                   <Button type="button" onClick={onSave} disabled={saving}>
-                    <Check aria-hidden /> {saving ? t('Saving…') : t('Save lead')}
+                    <Check aria-hidden /> {saving ? t('Saving…') : t('Save company')}
                   </Button>
                 ) : (
                   <Button type="button" onClick={next}>
@@ -618,7 +618,7 @@ function OwnershipStep({ value, onChange, errors }: { value: CompanyValue; onCha
     <div className="space-y-6">
       <dl className="grid gap-4 rounded-lg border border-border bg-muted/30 p-4 sm:grid-cols-2">
         <div>
-          <dt className="text-xs text-muted-foreground">{t('Lead created by')}</dt>
+          <dt className="text-xs text-muted-foreground">{t('Company created by')}</dt>
           <dd className="text-sm font-medium">{me?.name ?? session.data?.user.name}</dd>
         </div>
         <div>
@@ -627,11 +627,11 @@ function OwnershipStep({ value, onChange, errors }: { value: CompanyValue; onCha
         </div>
       </dl>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="lead-ownerId" label={t('Lead owner')} error={errors.ownerId} hint={t('You can give leads to yourself and to people who report to you.')}>
+        <Field id="lead-ownerId" label={t('Company owner')} error={errors.ownerId} hint={t('You can give companies to yourself and to people who report to you.')}>
           <PersonSelect assignableOnly value={ownerId} onChange={(id) => onChange({ ownerId: id })} />
         </Field>
         <div>
-          <p className="text-sm font-medium">{t('Lead owner designation')}</p>
+          <p className="text-sm font-medium">{t('Company owner designation')}</p>
           <p className="mt-2 text-sm text-muted-foreground">{owner?.designation ?? t('No designation set')}</p>
         </div>
         <Field id="lead-managerId" label={t('Assigned manager')} error={errors.managerId} hint={reportsTo ? t('Leave empty to use {name}, who the owner reports to.', { name: reportsTo.name }) : t('Leave empty to use the owner’s reporting manager.')}>
@@ -790,7 +790,7 @@ function Review({ form, files, errors, onEdit }: { form: LeadForm; files: File[]
       ])}
       {section('employees', [['Employees / POCs', form.employees.map((e) => [e.firstName, e.lastName].filter(Boolean).join(' ') + (e.jobTitle ? ` (${e.jobTitle})` : '')).join(', ')]])}
       {section('ownership', [
-        ['Lead owner', personLabel(owner)],
+        ['Company owner', personLabel(owner)],
         ['Assigned manager', manager ? personLabel(manager) : t('The owner’s reporting manager')],
         ['POC name', personLabel(poc)],
       ])}
@@ -819,7 +819,7 @@ function DraftPicker() {
         <ul className="divide-y divide-border" aria-label={t('Your drafts')}>
           {drafts.data.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-              <span className="font-medium">{d.title ?? t('Untitled lead')}</span>
+              <span className="font-medium">{d.title ?? t('Untitled company')}</span>
               <span className="text-muted-foreground">
                 {t('Step {n} of {total}: {name}', { n: d.step + 1, total: LEAD_FORM_STEPS.length, name: t(STEP_LABELS[LEAD_FORM_STEPS[d.step] ?? 'company']) })} · {relativeTime(d.updatedAt)}
               </span>
@@ -827,7 +827,7 @@ function DraftPicker() {
                 <Button asChild size="sm" variant="outline">
                   <Link href={`/app/companies/new?draft=${d.id}`}>{t('Continue')}</Link>
                 </Button>
-                <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(d.id)} aria-label={t('Delete draft {name}', { name: d.title ?? t('Untitled lead') })}>
+                <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(d.id)} aria-label={t('Delete draft {name}', { name: d.title ?? t('Untitled company') })}>
                   <Trash2 aria-hidden />
                 </Button>
               </span>

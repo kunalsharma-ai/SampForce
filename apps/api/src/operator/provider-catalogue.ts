@@ -77,7 +77,7 @@ const priceMap = (v: string) => {
 
 /**
  * Every deployment-wide provider SampForce reads keys for, in the order the operator console lists them.
- * Per-workspace providers (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments, Teams webhooks)
+ * Per-workspace providers (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments)
  * are entered by each workspace admin under Settings > Apps and are not here.
  */
 export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
@@ -167,53 +167,6 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       ],
       urls: [{ label: 'Redirect URI (Web)', path: '/api/v1/integrations/microsoft/callback', where: 'App registration > Authentication > Web > Redirect URIs' }],
     },
-  },
-  {
-    key: 'slack', name: 'Slack', usedFor: 'Workspace app: "Post to Slack" workflow steps',
-    fields: [
-      { name: 'SLACK_CLIENT_ID', label: 'Client ID', required: true, help: 'api.slack.com/apps > your app > Basic Information > App Credentials.' },
-      { name: 'SLACK_CLIENT_SECRET', label: 'Client secret', required: true },
-    ],
-    tested: ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET'],
-    checkNote: 'Calls oauth.v2.access with a made-up code. Slack answers "invalid_code" only when the client ID and secret are right. Nothing is installed.',
-    app: { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Slack; the connection is verified with auth.test' },
-    setup: {
-      consoleUrl: 'https://api.slack.com/apps', consoleLabel: 'Slack apps',
-      steps: [
-        'At api.slack.com/apps choose Create New App > From scratch, name it "SampForce" and pick your own Slack workspace to develop in.',
-        'OAuth & Permissions > Redirect URLs: add the redirect URL below and save.',
-        'OAuth & Permissions > Bot Token Scopes: add chat:write, chat:write.public, channels:read and groups:read.',
-        'Manage Distribution: turn on public distribution so other Slack workspaces can install it.',
-        'Basic Information > App Credentials: copy the Client ID and Client Secret, paste them below, save, then press Test connection.',
-      ],
-      urls: [{ label: 'Redirect URL', path: '/api/v1/apps/slack/callback', where: 'OAuth & Permissions > Redirect URLs' }],
-    },
-  },
-  {
-    key: 'zoom', name: 'Zoom', usedFor: 'Workspace app: schedule Zoom meetings from records; transcripts of recorded meetings',
-    fields: [
-      { name: 'ZOOM_CLIENT_ID', label: 'Client ID', required: true, help: 'Zoom App Marketplace > your General app > App Credentials.' },
-      { name: 'ZOOM_CLIENT_SECRET', label: 'Client secret', required: true },
-      { name: 'ZOOM_WEBHOOK_SECRET_TOKEN', label: 'Webhook secret token', required: false, help: 'Features > Access > Secret Token. Needed for transcript import; proven when Zoom sends its first signed event.' },
-    ],
-    tested: ['ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET'],
-    checkNote: "Exchanges a made-up code at Zoom's token endpoint, which checks the client ID and secret first. The webhook token is not part of the test.",
-    app: { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Zoom account; transcript import also needs the webhook secret token' },
-    setup: {
-      consoleUrl: 'https://marketplace.zoom.us/develop/create', consoleLabel: 'Zoom App Marketplace',
-      steps: [
-        'In the Zoom App Marketplace choose Develop > Build App > General App, and pick "User-managed".',
-        'Basic Information > OAuth Information: paste the redirect URL below into "OAuth Redirect URL" and add it to the OAuth allow list too.',
-        'Scopes: add the ones to read the connecting user (user:read:user), create meetings (meeting:write:meeting) and read cloud recordings for transcripts (cloud_recording:read:list_recording_files).',
-        'App Credentials: copy the Client ID and Client Secret, paste them below, save, then press Test connection.',
-        'For transcript import: Features > Access > copy the Secret Token and paste it below as the webhook secret token, and save. Then turn on Event Subscription, paste the event notification URL below, and add the event "Recording > Recording transcript files completed". Zoom checks the URL when you save it; the webhook status here turns green when it does.',
-      ],
-      urls: [
-        { label: 'OAuth redirect URL', path: '/api/v1/apps/zoom/callback', where: 'Basic Information > OAuth Redirect URL, and the OAuth allow list' },
-        { label: 'Event notification endpoint URL', path: '/api/v1/apps/zoom/events', where: 'Features > Access > Event Subscription' },
-      ],
-    },
-    webhook: 'zoom',
   },
   {
     key: 'docusign', name: 'DocuSign', usedFor: 'Workspace app: send contracts for e-signature; signed envelopes mark contracts signed',
@@ -474,6 +427,30 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
         'Phones turn notifications on from Profile in the app; the Mobile Configuration chooses which ones each level gets.',
       ],
     },
+  },
+  {
+    key: 'website_enquiries', name: 'Website enquiries (company website)',
+    usedFor: "Website Enquiry (ADR 0095): every enquiry, download form, live chat enquiry, newsletter sign-up and review from the company website's Sampforce API, in one workspace",
+    fields: [
+      { name: 'WEBSITE_API_BASE_URL', label: 'API address', required: true, help: 'The website super admin > System > Sampforce (sales) > API address, for example https://www.frequentresearch.com/api/v1/sampforce.', normalize: (v) => v.replace(/\/+$/, '') },
+      { name: 'WEBSITE_API_KEY', label: 'API key (sfk_...)', required: true, help: 'Made under System > Sampforce (sales) > Make an API key. Shown there only once. Keep the default rights; leads:write lets SampForce send statuses back.', validate: (v) => (/^sfk_\S{8,}$/.test(v) ? null : 'The key starts with sfk_.') },
+      { name: 'WEBSITE_WEBHOOK_SECRET', label: 'Webhook signing secret', required: false, help: 'The same text as SAMPFORCE_WEBHOOK_SECRET on the website (at least 16 characters). Without it only the pull sync brings enquiries in.' },
+      { name: 'WEBSITE_ENQUIRY_WORKSPACE', label: 'Receiving workspace (web address name)', required: true, help: "The workspace's web address name (slug), shown on the client's page in Clients. Saving it also switches the Website enquiries feature on for that client.", normalize: (v) => v.toLowerCase() },
+    ],
+    tested: ['WEBSITE_API_BASE_URL', 'WEBSITE_API_KEY'],
+    checkNote: "Calls the website's /ping with the key: it answers with the key's name and rights. Nothing is read or changed.",
+    app: { off: 'Website Enquiry shows "not connected"', on: 'Enquiries arrive in the receiving workspace; pulled every few minutes', verified: 'Connected: enquiries arrive in the receiving workspace' },
+    setup: {
+      steps: [
+        'Sign in to the website super admin as a Super Admin or IT Admin and open System > Sampforce (sales).',
+        'Press + Make an API key, name it "SampForce", keep the four default rights and, if you like, add this server\'s IP address. Confirm with your authenticator code and copy the sfk_ key at once.',
+        'Paste the API address and key below, and the web address name of the workspace that should receive the enquiries. Save, then press Test connection.',
+        'For instant delivery: on the website open System > Connections & keys > Sampforce, paste the webhook address below into SAMPFORCE_WEBHOOK_URL, and the same long random text into SAMPFORCE_WEBHOOK_SECRET there and into Webhook signing secret here (openssl rand -hex 32).',
+        'Press Send a test on the website: the webhook status here turns green. To bring in older leads, pick a date there and press Send older leads, or wait for the first pull, which imports everything.',
+      ],
+      urls: [{ label: 'Webhook address (SAMPFORCE_WEBHOOK_URL)', path: '/api/v1/hooks/website-enquiries', where: 'Website super admin > System > Connections & keys > Sampforce' }],
+    },
+    webhook: 'website',
   },
   {
     key: 'checkout', name: 'Plans and online checkout', usedFor: 'Whether workspaces can pay online, which Stripe or Razorpay price each plan uses, and what the public pricing page shows',

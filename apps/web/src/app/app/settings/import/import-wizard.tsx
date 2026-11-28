@@ -35,7 +35,7 @@ const LABELS: Record<string, MessageKey> = {
   address: 'Address', postalCode: 'Postal code', primaryEmail: 'Company email', primaryPhone: 'Company phone', companySize: 'Company size', companyType: 'Company type',
   notes: 'Notes', remarks: 'Remarks',
 };
-const VIEW: Record<ImportEntity, MessageKey> = { leads: 'View leads', contacts: 'View contacts', companies: 'View companies', companies_contacts: 'View companies' };
+const VIEW: Record<ImportEntity, MessageKey> = { leads: 'View inbound contacts', contacts: 'View contacts', companies: 'View companies', companies_contacts: 'View companies' };
 const ENTITY_FIELDS: Record<Exclude<ImportEntity, 'companies_contacts'>, 'leads' | 'contacts' | 'companies'> = { leads: 'leads', contacts: 'contacts', companies: 'companies' };
 /** Custom fields a column can fill: not calculated ones, not files, and only ones the person may edit. */
 const usable = (list: CustomFieldDef[] | undefined) => (list ?? []).filter((d) => d.type !== 'FORMULA' && d.type !== 'FILE' && d.access.edit);
@@ -173,7 +173,7 @@ export function ImportWizard() {
               }}
             >
               <option value="companies_contacts">{t('Companies with their employees')}</option>
-              <option value="leads">{t('Leads')}</option>
+              <option value="leads">{t('Inbound contacts')}</option>
               <option value="contacts">{t('Contacts')}</option>
               <option value="companies">{t('Companies')}</option>
             </Select>
@@ -366,7 +366,7 @@ function ResultCard({ result, entity }: { result: ImportResult; entity: ImportEn
               {result.newFields.map((f) => (
                 <li key={`${f.entity}.${f.key}`}>
                   <Badge tone="primary">
-                    {f.label} · {f.entity === 'COMPANY' ? t('Company') : f.entity === 'CONTACT' ? t('Employee') : t('Lead')}
+                    {f.label} · {f.entity === 'COMPANY' ? t('Company') : f.entity === 'CONTACT' ? t('Employee') : t('Inbound contact')}
                   </Badge>
                 </li>
               ))}

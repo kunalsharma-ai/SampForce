@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CALL_OUTCOME_LABELS, CALL_WINDOW_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS } from '@dealflow/types';
+import { CALL_OUTCOME_LABELS, CALL_STATUS_LABELS, CALL_WINDOW_LABELS, DIALER_AUTH_LABELS, DIALER_CAPABILITIES, DIALER_CATEGORY_LABELS, DIALER_PLACEHOLDERS, DIALER_PRESETS, DIALER_PROVIDERS, ENQUIRY_CATEGORY_LABELS, ENQUIRY_STATUS_LABELS, ENQUIRY_TYPE_LABELS, METRIC_RULE, OUTCOME_ACTION_LABELS, RANKING_METRIC_LABEL, RECORDING_SOURCE_LABELS, SUPER_TASK_NOTICES_LABEL, TARGET_METRIC_LABEL, TASK_CADENCE_LABEL, TASK_PLAN_DURATION_LABEL, TASK_PLAN_STATUS_LABEL, TASK_STATUS_LABEL, WEEKDAY_SHORT } from '@dealflow/types';
+import { ORG_ACTIVITY_LABELS, ORG_COMPLETENESS_FIELDS, ORG_CREDENTIAL_ACCESS_LABELS, ORG_CREDENTIAL_KIND_LABELS, ORG_DOCUMENT_CATEGORY_LABELS, ORG_DOCUMENT_VISIBILITY_LABELS, ORG_SHARE_SECTION_LABELS } from '@dealflow/types';
 import {
   ENRICH_FIELD_LABELS,
   COMPANY_EMAIL_CTA_LABELS,
@@ -53,7 +54,6 @@ import {
   DOMAIN_SOURCE_LABELS,
   FINDER_STATUS_LABELS,
   FORM_FIELD_LABELS,
-  PAGE_KIND_LABELS,
   PORTAL_REQUEST_CATEGORY_LABELS,
   PORTAL_REQUEST_STATUS_LABELS,
   PORTAL_ROLE_LABELS,
@@ -185,10 +185,9 @@ describe('page phrases', () => {
     ['email sequence labels', [...Object.values(MERGE_FIELDS), ...Object.values(RULE_ACTION_LABELS), ...Object.values(ENROLLMENT_LABEL), ...Object.values(EMAIL_TONE_LABELS), ...Object.values(EMAIL_BLOCK_LABELS), 'Draft', 'Active', 'Paused', 'Archived']],
     ['sequence analytics template names', [...source('../../../../api/src/sequences/analytics.service.ts').matchAll(/name: id === 'none' \? '([^']+)' : \(templates\.get\(id\) \?\? '([^']+)'\)/g)].flatMap((m) => [m[1]!, m[2]!])],
     ['email design validation messages', [...source('../../../../../packages/types/src/email-design.ts').matchAll(/(?:regex|refine|max|min)\([^,']*, '([^']+)'\)|message: '([^']+)'/g)].map((m) => (m[1] ?? m[2])!)],
-    // Inbox and meetings: shared labels, meeting-note stages, Zoom transcript states, and the compose and meeting analysis checks.
+    // Inbox and meetings: shared labels, meeting-note stages, and the compose and meeting analysis checks.
     ['inbox and meeting labels', [...Object.values(INBOX_CATEGORY_LABELS), ...Object.values(EMAIL_INTENT_LABELS), ...Object.values(EMAIL_NEXT_ACTION_LABELS), ...Object.values(MEETING_PLATFORM_LABELS)]],
     ['meeting note stages', [...source('../../components/meetings/record-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
-    ['Zoom transcript states', [...source('../../components/meetings/zoom-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
     ['compose and meeting analysis checks', [...source('../../../../../packages/types/src/meetings.ts').matchAll(/min\(1, '([^']+)'\)|message: '([^']+)'/g), ...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:subject|body): z\.string\(\)(?:\.trim\(\))?\.min\(1, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     ['AI availability reasons', [...source('../../../../api/src/ai/gateway.service.ts').matchAll(/\? '([^']+\.)'/g)].map((m) => m[1]!).filter((r) => !r.startsWith('An API key'))],
     // Quotes, contracts, approvals and billing: statuses from lib/revenue and lib/billing, bid and proposal templates,
@@ -208,8 +207,38 @@ describe('page phrases', () => {
       ].flatMap(([file, re]) => [...source(file as string).matchAll(re as RegExp)].flatMap((m) => m[1]!.split(/', '/).map((x) => x.replace(/^'|'$/g, '')))),
     ],
     ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
+    // Recurring tasks, target measures and performance ranking (ADR 0096).
+    [
+      'recurring task, target and ranking labels',
+      [
+        ...Object.values(TARGET_METRIC_LABEL), ...Object.values(METRIC_RULE), ...Object.values(TASK_CADENCE_LABEL), ...Object.values(TASK_PLAN_DURATION_LABEL),
+        ...Object.values(TASK_PLAN_STATUS_LABEL), ...Object.values(TASK_STATUS_LABEL), ...Object.values(WEEKDAY_SHORT), ...Object.values(RANKING_METRIC_LABEL), ...Object.values(SUPER_TASK_NOTICES_LABEL),
+      ],
+    ],
     // Calls (ADR 0088): outcomes, the good-time-to-call check and its weekdays, call states, dialer presets and placeholders.
-    ['call labels', [...Object.values(CALL_OUTCOME_LABELS), ...Object.values(CALL_WINDOW_LABELS), ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]), ...Object.values(DIALER_PLACEHOLDERS), 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', ...[...source('../../app/app/calls/calls-workspace.tsx').match(/const STATUS_LABEL[^\n]*/)![0].matchAll(/: '([^']+)'/g)].map((m) => m[1]!)]],
+    ['website enquiry labels', [...Object.values(ENQUIRY_TYPE_LABELS), ...Object.values(ENQUIRY_CATEGORY_LABELS), ...Object.values(ENQUIRY_STATUS_LABELS)]],
+    // The universal dialer (ADR 0101): providers (not their brand names), what they can do, sign-in kinds, call states,
+    // outcome actions, recording sources and the connection-test steps the server reports.
+    [
+      'call labels',
+      [
+        ...Object.values(CALL_OUTCOME_LABELS),
+        ...Object.values(CALL_WINDOW_LABELS),
+        ...DIALER_PRESETS.flatMap((p) => [p.name, p.description]),
+        ...Object.values(DIALER_PLACEHOLDERS),
+        'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+        ...DIALER_PROVIDERS.flatMap((p) => [p.description, ...(p.setupHelp ? [p.setupHelp] : []), ...Object.values(p.labels ?? {}).filter((l) => !/^API ID$/.test(l!))]) as string[],
+        ...Object.values(DIALER_CAPABILITIES),
+        ...Object.values(DIALER_CATEGORY_LABELS),
+        ...Object.values(DIALER_AUTH_LABELS),
+        ...Object.values(CALL_STATUS_LABELS),
+        ...Object.values(OUTCOME_ACTION_LABELS),
+        ...Object.values(RECORDING_SOURCE_LABELS),
+        'The call request is complete', 'The keys are saved', 'The provider accepted the keys', 'Signed in to the provider', 'The webhook answered', 'The link is complete',
+      ],
+    ],
+    // My Organization (ADR 0100): document categories and audiences, credential kinds, shared sections, history and completeness.
+    ['my organization labels', [...Object.values(ORG_DOCUMENT_CATEGORY_LABELS), ...Object.values(ORG_DOCUMENT_VISIBILITY_LABELS), ...Object.values(ORG_CREDENTIAL_KIND_LABELS), ...Object.values(ORG_CREDENTIAL_ACCESS_LABELS), ...Object.values(ORG_SHARE_SECTION_LABELS), ...Object.values(ORG_ACTIVITY_LABELS), ...ORG_COMPLETENESS_FIELDS.map((f) => f[1])]],
     // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
     // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
     // retention plan's cadences and steps.
@@ -309,7 +338,6 @@ describe('page phrases', () => {
         ...Object.values(PROSPECT_SOURCE_LABELS),
         ...Object.values(PROSPECT_IMPORT_FIELD_LABELS),
         ...Object.values(EMAIL_STATUS_LABELS),
-        ...Object.values(PAGE_KIND_LABELS),
         ...Object.values(COMPETITION_METRIC_LABELS),
         ...Object.values(BADGE_METRIC_LABELS),
         ...Object.values(SCORING_RULE_LABELS).flatMap((r) => [r.label, r.unit]),
@@ -319,7 +347,6 @@ describe('page phrases', () => {
           ['../../app/app/portal/portal-workspace.tsx', /const TOGGLES[\s\S]*?\];/, /(?:label|hint): '([^']+)'/g],
           ['../../components/prospects/prospects.tsx', /const MODE_LABEL.*/, /: '([^']+)'/g],
           ['../../components/prospects/prospects.tsx', /const FIELDS[\s\S]*?\];/, /\['\w+', '([^']+)'/g],
-          ['../../components/visitors/visitors.tsx', /const SEGMENTS[\s\S]*?\];/, /label: '([^']+)'/g],
           ['../../app/app/settings/pipelines/pipelines-manager.tsx', /const NEW_PIPELINE[\s\S]*?\};/, /name: '([^']+)'/g],
           ['../../../../api/src/finder/finder.service.ts', /[\s\S]*/, /notes\.push\('([^']+)'\)/g],
           ['../../../../api/src/prospects/prospects.service.ts', /[\s\S]*/, /(?:detail: |notice: |\? )'([A-Z][^']{20,})'/g],

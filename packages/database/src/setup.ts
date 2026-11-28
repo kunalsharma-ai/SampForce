@@ -247,6 +247,194 @@ export async function upgradeSupportTicketStatuses(prisma: PrismaClient, log: (l
   if (res.nModified) log(`moved ${res.nModified} support queries from old statuses to new ones`);
 }
 
+/** The collections Website Visitors (ADR 0029) kept. The feature was removed for Website Enquiry (ADR 0095). */
+export const RETIRED_VISITOR_COLLECTIONS = ['web_events', 'web_sessions', 'web_visitors', 'visitor_settings'] as const;
+
+/**
+ * Removes what Website Visitors (ADR 0029) left behind once the feature itself is gone (ADR 0095, Kunal 2026-11-27:
+ * "remove website visitor completely"). Idempotent; once done it changes nothing.
+ *
+ *  - Its four collections (anonymous page views, sessions, visitors and the tracking settings) are dropped: no code
+ *    reads them any more, and keeping browsing history nobody can see or erase is worse for privacy than deleting it.
+ *    Leads and contacts that enquiries created are ordinary CRM records and stay.
+ *  - The visitors:read and visitors:manage permissions leave every role. Custom roles get the matching Website
+ *    Enquiry permission instead (read stays read, manage becomes write); built-in roles get what their definition
+ *    says, as for every new permission.
+ *  - Workflows started by "They show high intent on your website" can never run again: they are paused and moved to
+ *    the bin (deleted_at), so they disappear from the list but their history stays.
+ *  - Unsent high-intent events and the notifications that pointed at the removed page are deleted.
+ *  - Plan lists and per-workspace overrides lose the website_visitors feature key, and notification settings the
+ *    category of high-intent visitors.
+ */
+export async function retireWebsiteVisitors(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const existing = new Set(
+    ((await prisma.$runCommandRaw({ listCollections: 1, nameOnly: true })) as { cursor?: { firstBatch?: { name: string }[] } }).cursor?.firstBatch?.map((c) => c.name) ?? [],
+  );
+  for (const name of RETIRED_VISITOR_COLLECTIONS) {
+    if (!existing.has(name)) continue;
+    await prisma.$runCommandRaw({ drop: name });
+    log(`dropped ${name} (Website Visitors removed)`);
+  }
+  const run = async (command: Record<string, unknown>): Promise<number> => {
+    const res = (await prisma.$runCommandRaw(command as Prisma.InputJsonObject)) as { n?: number; nModified?: number };
+    return res.nModified ?? res.n ?? 0;
+  };
+  const builtIn = await run({
+    update: 'roles',
+    updates: [
+      { q: { is_system: true, key: { $in: ['owner', 'admin', 'manager', 'member', 'viewer'] }, permissions: { $in: ['visitors:read', 'visitors:manage'] } }, u: [{ $set: { permissions: { $setUnion: [{ $setDifference: ['$permissions', ['visitors:read', 'visitors:manage']] }, { $cond: [{ $in: ['$key', ['viewer']] }, ['enquiries:read'], ['enquiries:read', 'enquiries:write']] }] } } }], multi: true },
+    ],
+  });
+  const custom = await run({
+    update: 'roles',
+    updates: [
+      { q: { is_system: { $ne: true }, permissions: 'visitors:manage' }, u: { $addToSet: { permissions: { $each: ['enquiries:read', 'enquiries:write'] } } }, multi: true },
+      { q: { is_system: { $ne: true }, permissions: 'visitors:read' }, u: { $addToSet: { permissions: 'enquiries:read' } }, multi: true },
+      { q: { permissions: { $in: ['visitors:read', 'visitors:manage'] } }, u: { $pull: { permissions: { $in: ['visitors:read', 'visitors:manage'] } } }, multi: true },
+    ],
+  });
+  if (builtIn + custom) log(`moved ${builtIn + custom} roles from website visitor permissions to website enquiry permissions`);
+  const workflows = await run({
+    update: 'workflows',
+    updates: [{ q: { trigger_type: 'visitor.high_intent', deleted_at: null }, u: { $set: { status: 'PAUSED', deleted_at: { $date: new Date().toISOString() } } }, multi: true }],
+  });
+  if (workflows) log(`moved ${workflows} high-intent visitor workflows to the bin`);
+  const events = await run({ delete: 'domain_events', deletes: [{ q: { type: { $regex: '^visitor\\.' }, processed_at: null }, limit: 0 }] });
+  const notices = await run({ delete: 'notifications', deletes: [{ q: { $or: [{ type: { $regex: '^visitor\\.' } }, { link: { $regex: '^/app/website-visitors' } }] }, limit: 0 }] });
+  if (events + notices) log(`deleted ${events} pending visitor events and ${notices} visitor notifications`);
+  const overrides = await run({ delete: 'tenant_feature_overrides', deletes: [{ q: { feature: 'website_visitors' }, limit: 0 }] });
+  const plansChanged = await run({ update: 'plans', updates: [{ q: { 'entitlements.features': 'website_visitors' }, u: { $pull: { 'entitlements.features': 'website_visitors' } }, multi: true }] });
+  // A workspace that switched the "High-intent website visitors" notifications off keeps its other choices: the stored
+  // list is read with the current category names, so an unknown one would make it fall back to the defaults.
+  const settings = await run({ update: 'crm_settings', updates: [{ q: { 'notifications.disabled': 'visitors' }, u: { $pull: { 'notifications.disabled': 'visitors' } }, multi: true }] });
+  if (settings) log(`removed the visitors notification category from ${settings} workspaces' settings`);
+  if (overrides + plansChanged) log(`removed website_visitors from ${plansChanged} plans and ${overrides} workspace overrides`);
+}
+
+/** Workspace apps removed on 2026-11-27: Slack, Microsoft Teams and Zoom. */
+export const REMOVED_APPS = { providers: ['SLACK', 'TEAMS', 'ZOOM'], features: ['slack', 'teams', 'zoom'], providerKeys: ['slack', 'zoom'] } as const;
+const REMOVED_PROVIDER_SECRETS = ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET', 'ZOOM_WEBHOOK_SECRET_TOKEN'];
+
+interface StoredNode {
+  id: string;
+  type: string;
+  action?: { type?: string };
+  next?: string | null;
+  onTrue?: string | null;
+  onFalse?: string | null;
+  onReject?: string | null;
+}
+
+/**
+ * Takes the "Post to Slack or Teams" steps out of a workflow definition. Every arrow that pointed at a removed step
+ * now points at the step after it. A wait left with nothing after it is removed too, since a definition may not end
+ * on a wait. Returns null when the definition has no such step. Exported for the tests.
+ */
+export function withoutChatSteps(def: { start: string | null; nodes: StoredNode[] }): { definition: { start: string | null; nodes: StoredNode[] }; removed: Map<string, string | null> } | null {
+  if (!def.nodes.some((n) => n.type === 'action' && n.action?.type === 'post_to_chat')) return null;
+  const removed = new Map<string, string | null>();
+  let nodes = def.nodes;
+  for (;;) {
+    const drop = nodes.filter((n) => (n.type === 'action' && n.action?.type === 'post_to_chat') || (n.type === 'delay' && !n.next));
+    if (!drop.length) break;
+    for (const n of drop) removed.set(n.id, n.next ?? null);
+    // Follows chains of removed steps to the first one that stays.
+    const resolve = (id: string | null | undefined): string | null => {
+      let cur = id ?? null;
+      const seen = new Set<string>();
+      while (cur && removed.has(cur) && !seen.has(cur)) {
+        seen.add(cur);
+        cur = removed.get(cur) ?? null;
+      }
+      return cur;
+    };
+    nodes = nodes
+      .filter((n) => !removed.has(n.id))
+      .map((n) => {
+        const out = { ...n };
+        for (const k of ['next', 'onTrue', 'onFalse', 'onReject'] as const) if (k in out) out[k] = resolve(out[k]);
+        return out;
+      });
+    def = { ...def, start: resolve(def.start), nodes };
+  }
+  const resolveFinal = (id: string | null): string | null => {
+    let cur = id;
+    while (cur && removed.has(cur)) cur = removed.get(cur) ?? null;
+    return cur;
+  };
+  for (const [id, next] of removed) removed.set(id, resolveFinal(next));
+  return { definition: { ...def, nodes }, removed };
+}
+
+/**
+ * Clears out what the removed Slack, Teams and Zoom apps left in the database: their connections and send logs, the
+ * Zoom meetings collection, their console keys, checks and webhook receipts, their plan features and overrides, and
+ * "Post to Slack or Teams" steps in saved workflows (Prisma could not read any of these once the code forgot them).
+ * Notes and activities made from Zoom meetings stay. Idempotent: a second run finds nothing to change.
+ */
+export async function removeChatAndMeetingApps(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const providers = [...REMOVED_APPS.providers];
+  const del = async (collection: string, q: Prisma.InputJsonObject): Promise<number> =>
+    ((await prisma.$runCommandRaw({ delete: collection, deletes: [{ q, limit: 0 }] })) as { n?: number }).n ?? 0;
+
+  const events = await del('app_events', { provider: { $in: providers } });
+  const connections = await del('app_connections', { provider: { $in: providers } });
+  if (events || connections) log(`removed ${connections} Slack, Teams and Zoom connections and ${events} of their events`);
+
+  const existing = (await prisma.$runCommandRaw({ listCollections: 1, filter: { name: 'zoom_meetings' }, nameOnly: true })) as { cursor?: { firstBatch?: unknown[] } };
+  if (existing.cursor?.firstBatch?.length) {
+    await prisma.$runCommandRaw({ drop: 'zoom_meetings' });
+    log('dropped the zoom_meetings collection');
+  }
+
+  const secrets = await del('platform_secrets', { _id: { $in: REMOVED_PROVIDER_SECRETS } });
+  const settings = await del('platform_settings', {
+    _id: { $in: [...REMOVED_APPS.providerKeys.map((k) => `provider_check:${k}`), 'webhook_receipt:zoom', ...REMOVED_PROVIDER_SECRETS.map((k) => `env_import:${k}`)] },
+  });
+  if (secrets || settings) log(`removed ${secrets} Slack and Zoom provider keys and ${settings} of their console records`);
+
+  const overrides = await del('tenant_feature_overrides', { feature: { $in: [...REMOVED_APPS.features] } });
+  if (overrides) log(`removed ${overrides} Slack, Teams and Zoom feature overrides`);
+  const plans = (await prisma.$runCommandRaw({
+    update: 'plans',
+    updates: [{ q: { 'entitlements.features': { $in: [...REMOVED_APPS.features] } }, u: { $pull: { 'entitlements.features': { $in: [...REMOVED_APPS.features] } } }, multi: true }],
+  })) as { nModified?: number };
+  if (plans.nModified) log(`took Slack, Teams and Zoom out of ${plans.nModified} plans`);
+
+  const versions = (await prisma.workflowVersion.findRaw({ filter: { 'definition.nodes.action.type': 'post_to_chat' } })) as unknown as Array<{ _id: string; definition: { start: string | null; nodes: StoredNode[] } }>;
+  for (const v of versions) {
+    const out = withoutChatSteps(v.definition);
+    if (!out) continue;
+    await prisma.workflowVersion.update({ where: { id: v._id }, data: { definition: { ...v.definition, ...out.definition } as unknown as Prisma.InputJsonValue } });
+    // A run waiting on a removed step moves on to the step after it.
+    for (const [from, to] of out.removed) {
+      await prisma.workflowExecution.updateMany({ where: { versionId: v._id, currentNode: from }, data: { currentNode: to } });
+    }
+  }
+  if (versions.length) log(`removed "Post to Slack or Teams" steps from ${versions.length} workflow versions`);
+}
+
+/**
+ * Features shipped for every workspace level (ADR 0097: Learning & Development). A Manager or Executive Workspace only
+ * gets what the workspace above granted it, and existing workspaces were granted their list before the feature
+ * existed, so the feature is added to every existing workspace once (a counter marks it done). The workspace above can
+ * take it away again in the Permission Center, and that choice is kept.
+ */
+export const SHIPPED_WORKSPACE_FEATURES = ['learning'] as const;
+
+export async function shipWorkspaceFeatures(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  for (const key of SHIPPED_WORKSPACE_FEATURES) {
+    const marker = `workspace-feature-shipped:${key}`;
+    if (await prisma.counter.findUnique({ where: { id: marker } })) continue;
+    const res = (await prisma.$runCommandRaw({
+      update: 'workspace_nodes',
+      updates: [{ q: { features: { $ne: key } }, u: { $addToSet: { features: key } }, multi: true }],
+    })) as { nModified?: number };
+    if (res.nModified) log(`added ${key} to ${res.nModified} workspaces`);
+    await prisma.counter.create({ data: { id: marker, value: 1 } });
+  }
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
@@ -255,4 +443,7 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await upgradeCommandCenter(prisma, log);
   await eraseRecentPageHistory(prisma, log);
   await upgradeSupportTicketStatuses(prisma, log);
+  await retireWebsiteVisitors(prisma, log);
+  await removeChatAndMeetingApps(prisma, log);
+  await shipWorkspaceFeatures(prisma, log);
 }

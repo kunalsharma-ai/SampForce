@@ -1,0 +1,58 @@
+/*
+ * First Email Pending (ADR 0096). Each status has its own colour: amber pending, rose missing address, red bounced,
+ * sky waiting. Text colours keep 4.5:1 on their backgrounds in light and dark; motion stops under reduced motion.
+ */
+[data-tone='amber'] { --fe: #d97706; --fe-bg: #fffbeb; --fe-bd: #fcd34d; --fe-fg: #92400e; --fe-bg-d: rgb(217 119 6 / 0.16); --fe-fg-d: #fde68a; }
+[data-tone='rose'] { --fe: #e11d48; --fe-bg: #fff1f2; --fe-bd: #fda4af; --fe-fg: #9f1239; --fe-bg-d: rgb(225 29 72 / 0.16); --fe-fg-d: #fecdd3; }
+[data-tone='red'] { --fe: #dc2626; --fe-bg: #fef2f2; --fe-bd: #fca5a5; --fe-fg: #991b1b; --fe-bg-d: rgb(220 38 38 / 0.16); --fe-fg-d: #fecaca; }
+[data-tone='sky'] { --fe: #0284c7; --fe-bg: #f0f9ff; --fe-bd: #7dd3fc; --fe-fg: #075985; --fe-bg-d: rgb(2 132 199 / 0.18); --fe-fg-d: #bae6fd; }
+
+.fe-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(251 191 36 / 0.18), transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, rgb(56 189 248 / 0.16), transparent 55%),
+    hsl(var(--surface));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 18px 40px -26px rgb(217 119 6 / 0.55);
+}
+.dark .fe-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(251 191 36 / 0.12), transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, rgb(56 189 248 / 0.1), transparent 55%),
+    hsl(var(--surface));
+}
+.fe-medallion {
+  background: linear-gradient(135deg, #f59e0b, #ea580c 55%, #db2777);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 10px 20px -8px rgb(234 88 12 / 0.7);
+}
+.fe-total { background: #fffbeb; color: #92400e; box-shadow: inset 0 0 0 1px #fcd34d; }
+.dark .fe-total { background: rgb(217 119 6 / 0.16); color: #fde68a; box-shadow: inset 0 0 0 1px rgb(252 211 77 / 0.4); }
+
+.fe-tile .fe-tile-icon { background: var(--fe-bg); color: var(--fe-fg); box-shadow: inset 0 0 0 1px var(--fe-bd), 0 6px 14px -8px var(--fe); }
+.dark .fe-tile .fe-tile-icon { background: var(--fe-bg-d); color: var(--fe-fg-d); }
+.fe-tile-active { border-color: var(--fe); background: var(--fe-bg); color: var(--fe-fg); box-shadow: 0 0 0 2px var(--fe), 0 12px 24px -14px var(--fe); }
+.dark .fe-tile-active { background: var(--fe-bg-d); color: var(--fe-fg-d); }
+
+.fe-row { position: relative; overflow: hidden; border-inline-start: 4px solid var(--fe); box-shadow: 0 1px 2px rgb(15 23 42 / 0.05); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.fe-row:hover { box-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 14px 28px -18px var(--fe); }
+.fe-avatar { background: linear-gradient(135deg, var(--fe-bg), #fff); color: var(--fe-fg); box-shadow: inset 0 0 0 2px var(--fe-bd); }
+.dark .fe-avatar { background: var(--fe-bg-d); color: var(--fe-fg-d); box-shadow: inset 0 0 0 2px var(--fe); }
+.fe-chip { background: var(--fe-bg); color: var(--fe-fg); box-shadow: inset 0 0 0 1px var(--fe-bd); }
+.dark .fe-chip { background: var(--fe-bg-d); color: var(--fe-fg-d); box-shadow: inset 0 0 0 1px var(--fe); }
+.fe-primary { background: linear-gradient(135deg, #c2410c, #be185d); box-shadow: 0 8px 16px -10px #be185d; }
+.fe-primary:hover { filter: brightness(1.08); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fe-row { animation: fe-in 0.35s ease both; }
+  .fe-row:hover { transform: translateY(-1px); }
+  .fe-medallion { animation: fe-float 4s ease-in-out infinite; }
+  .fe-tile { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+}
+@keyframes fe-in {
+  /* Movement only: fading text in would fail contrast checks while it animates. */
+  from { transform: translateY(6px); }
+  to { transform: none; }
+}
+@keyframes fe-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}

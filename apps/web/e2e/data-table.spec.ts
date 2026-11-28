@@ -16,7 +16,7 @@ async function seedLeads(page: Page) {
   }
 }
 
-const table = (page: Page) => page.getByRole('table', { name: 'Leads' });
+const table = (page: Page) => page.getByRole('table', { name: 'Inbound contacts' });
 const names = (page: Page) => table(page).locator('tbody tr td:nth-child(2) a').allTextContents();
 
 test('sorts by several columns, hides and moves columns, and highlights search matches', async ({ page }) => {
@@ -45,12 +45,12 @@ test('sorts by several columns, hides and moves columns, and highlights search m
   await expect(table(page).getByRole('columnheader', { name: 'Updated' })).toBeVisible();
 
   // Search narrows the rows and marks the match.
-  await page.getByLabel('Search leads').fill('tanaka');
+  await page.getByLabel('Search inbound contacts').fill('tanaka');
   await expect(table(page).locator('tbody tr')).toHaveCount(1);
   await expect(table(page).locator('mark').first()).toHaveText(/tanaka/i);
 
   // Column width by keyboard.
-  await page.getByLabel('Search leads').fill('');
+  await page.getByLabel('Search inbound contacts').fill('');
   const handle = table(page).getByRole('separator', { name: 'Resize Status column' });
   const before = Number(await handle.getAttribute('aria-valuenow'));
   await handle.focus();
@@ -75,26 +75,26 @@ test('saved views keep the layout, can be shared, and reopen next time', async (
 
   await page.getByRole('button', { name: /^View:/ }).click();
   await page.getByRole('menuitem', { name: 'Save as new view…' }).click();
-  await page.getByLabel('View name').fill('Qualified leads');
+  await page.getByLabel('View name').fill('Qualified contacts');
   await page.getByLabel('Share with everyone in this workspace').check();
   await page.getByRole('button', { name: 'Save view' }).click();
-  await expect(page.getByRole('button', { name: 'View: Qualified leads' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View: Qualified contacts' })).toBeVisible();
 
   // Back to the default view, then reload: the last used view reopens.
   await page.getByRole('button', { name: /^View:/ }).click();
   await page.getByRole('menuitemradio', { name: 'Default view' }).click();
   await expect(table(page).locator('tbody tr')).toHaveCount(4);
   await page.getByRole('button', { name: /^View:/ }).click();
-  await page.getByRole('menuitemradio', { name: /Qualified leads/ }).click();
+  await page.getByRole('menuitemradio', { name: /Qualified contacts/ }).click();
   await expect(table(page).locator('tbody tr')).toHaveCount(2);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'View: Qualified leads' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View: Qualified contacts' })).toBeVisible();
   await expect(table(page).locator('tbody tr')).toHaveCount(2);
   await expect(page.getByLabel('Filter by status')).toHaveValue('QUALIFIED');
 
   // Saving changes back to the view.
   await page.getByLabel('Filter by status').selectOption('NEW');
-  await page.getByRole('button', { name: 'View: Qualified leads (changed)' }).click();
+  await page.getByRole('button', { name: 'View: Qualified contacts (changed)' }).click();
   await page.getByRole('menuitem', { name: 'Discard changes' }).click();
   await expect(page.getByLabel('Filter by status')).toHaveValue('QUALIFIED');
 
@@ -114,9 +114,9 @@ test('saved views keep the layout, can be shared, and reopen next time', async (
   for (const l of qualified) expect((await page.request.patch(`/api/v1/leads/${l.id}`, { data: { ownerId: mate.userId }, headers: ORIGIN })).ok()).toBe(true);
   await p2.goto('/app/leads');
   await p2.getByRole('button', { name: /^View:/ }).click();
-  await expect(p2.getByRole('menuitemradio', { name: /Qualified leads/ })).toBeVisible();
-  await p2.getByRole('menuitemradio', { name: /Qualified leads/ }).click();
-  await expect(p2.getByRole('table', { name: 'Leads' }).locator('tbody tr')).toHaveCount(2);
+  await expect(p2.getByRole('menuitemradio', { name: /Qualified contacts/ })).toBeVisible();
+  await p2.getByRole('menuitemradio', { name: /Qualified contacts/ }).click();
+  await expect(p2.getByRole('table', { name: 'Inbound contacts' }).locator('tbody tr')).toHaveCount(2);
   await p2.getByRole('button', { name: /^View:/ }).click();
   await expect(p2.getByRole('menuitem', { name: /Delete/ })).toHaveCount(0);
   await ctx.close();
@@ -131,21 +131,21 @@ test('bulk actions assign, change status and delete selected rows', async ({ pag
   await table(page).getByRole('checkbox', { name: 'Select Ada Byron' }).check();
   await table(page).getByRole('checkbox', { name: 'Select Ben Okafor' }).check();
   const bar = page.getByRole('region', { name: 'Bulk actions' });
-  await expect(bar).toContainText('2 leads selected');
+  await expect(bar).toContainText('2 inbound contacts selected');
   await bar.getByLabel('Set status of selected').selectOption('CONTACTED');
   await expect(bar).toBeHidden();
   await expect(table(page).getByRole('row', { name: /Ada Byron/ })).toContainText('Contacted');
   await expect(table(page).getByRole('row', { name: /Ben Okafor/ })).toContainText('Contacted');
 
   await table(page).getByRole('checkbox', { name: 'Select all rows on this page' }).check();
-  await expect(bar).toContainText('4 leads selected');
+  await expect(bar).toContainText('4 inbound contacts selected');
   await bar.getByLabel('Assign selected to').selectOption({ label: 'Test Person' });
   await expect(bar).toBeHidden();
   await expect(table(page).locator('tbody tr').first()).toContainText('Test Person');
 
   await table(page).getByRole('checkbox', { name: 'Select Di Marsh' }).check();
   await bar.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('dialog', { name: 'Delete 1 lead?' }).getByRole('button', { name: 'Delete 1 lead' }).click();
+  await page.getByRole('dialog', { name: 'Delete 1 inbound contact?' }).getByRole('button', { name: 'Delete 1 inbound contact' }).click();
   await expect(table(page).locator('tbody tr')).toHaveCount(3);
   await expect(table(page).getByRole('link', { name: 'Di Marsh' })).toHaveCount(0);
 

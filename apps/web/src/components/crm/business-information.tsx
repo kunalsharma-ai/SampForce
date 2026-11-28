@@ -55,11 +55,12 @@ import { InfoTip } from '@/components/info-tip';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
-import { useCan, useHiddenKeys } from '@/lib/session';
+import { useCan, useHiddenKeys, useLockedKeys } from '@/lib/session';
 import { Select, Textarea } from './select';
 import { BRAND_MARKS } from './brand-marks';
 import { INSTAGRAM_GRADIENT, profileLinks } from './social-icons';
 import { CountryFlag } from './status-chip';
+import { focusSection, useCompanyActions } from './company-actions';
 
 type T = ReturnType<typeof useT>;
 type Icon = typeof Globe;
@@ -121,7 +122,7 @@ function Chips({ items, tone, icon: I }: { items: string[]; tone: keyof typeof T
 }
 
 /** A big number with its label, for the key facts strip. */
-function Stat({ icon: I, tint, label, value, source }: { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }) {
+function Stat({ icon: I, tint, label, value, source, extra }: { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource; extra?: React.ReactNode }) {
   const t = useT();
   return (
     <div className="flex min-w-[9.5rem] flex-1 basis-40 items-center gap-3 rounded-xl border border-border bg-background/60 p-3">
@@ -133,6 +134,7 @@ function Stat({ icon: I, tint, label, value, source }: { icon: Icon; tint: keyof
           {label} <SourceTag source={source} t={t} />
         </p>
         <p className="truncate text-base font-semibold">{value}</p>
+        {extra}
       </div>
     </div>
   );
@@ -205,14 +207,29 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
   const phones = c.phones.length ? c.phones : c.primaryPhone ? [{ value: c.primaryPhone, primary: true }] : [];
   const hqLine = [c.address, c.city, c.state, c.postalCode].filter(Boolean).join(', ');
   const profiles = profileLinks(c);
+  const actions = useCompanyActions();
+  // The headcount is what the company publishes; the people themselves are the Employees / POCs below (ADR 0079).
+  const staff = (
+    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
+      <span className="text-muted-foreground">{t('Company headcount')}</span>
+      <button type="button" className="inline-flex min-h-6 items-center font-medium text-primary hover:underline" onClick={() => focusSection('company-employees')}>
+        {t('View {count} saved employees', { count: c.contactCount })}
+      </button>
+      {actions.has('findPeople') && (
+        <button type="button" className="inline-flex min-h-6 items-center font-medium text-primary hover:underline" onClick={() => actions.run('findPeople')}>
+          {t('Find people')}
+        </button>
+      )}
+    </span>
+  );
 
   const stats = [
     c.foundedYear && { icon: CalendarDays, tint: 'primary' as const, label: label('foundedYear'), value: c.foundedYear, source: src.foundedYear },
-    c.employeeCount !== null && { icon: Users, tint: 'accent' as const, label: label('employeeCount'), value: c.employeeCount.toLocaleString(t.formatLocale), source: src.employeeCount },
+    c.employeeCount !== null && { icon: Users, tint: 'accent' as const, label: label('employeeCount'), value: c.employeeCount.toLocaleString(t.formatLocale), source: src.employeeCount, extra: staff },
     c.companySize && { icon: UsersRound, tint: 'info' as const, label: label('companySize'), value: c.companySize, source: src.companySize },
     c.branchCount !== null && { icon: Building, tint: 'success' as const, label: label('branchCount'), value: c.branchCount, source: src.branchCount },
     c.operatingStatus && { icon: Activity, tint: 'warning' as const, label: label('operatingStatus'), value: t.maybe(c.operatingStatus), source: src.operatingStatus },
-  ].filter(Boolean) as { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }[];
+  ].filter(Boolean) as { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource; extra?: React.ReactNode }[];
 
   const overview = has(c.overview) || has(c.legalName) || has(c.industry) || has(c.businessCategory) || has(c.companyType) || has(c.specialties) || has(c.services) || has(c.products) || has(c.industriesServed);
   const locations = has(hqLine) || has(c.country) || has(c.headquarters) || has(c.timezone) || has(c.addresses);
@@ -587,17 +604,47 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   // Fields the Console hides from this level are left out (R8); the server ignores them anyway.
   const hiddenKeys = useHiddenKeys('company');
+  // Fields the workspace above locked are shown read only (ADR 0096); the server ignores changes to them.
+  const lockedKeys = useLockedKeys('company');
+  const lockedHint = t('Locked by the workspace above yours');
   const label = (f: EnrichField) => t.maybe(ENRICH_FIELD_LABELS[f]);
-  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) => hiddenKeys.has(k) ? null : (
-    <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={extra.hint}>
-      <Input type={type} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-    </Field>
+  // Deleting a saved value happens here, never on the page itself (Kunal, ADR 0097): "Delete" empties the field, and
+  // nothing is removed until Save. A field the workspace above locked has no Delete.
+  const clearable = (k: keyof Form, fieldLabel: string, node: React.ReactNode) => (
+    <div className="relative">
+      {node}
+      {!!form[k] && !lockedKeys.has(k as string) && (
+        <button
+          type="button"
+          className="absolute end-0 top-0 inline-flex items-center gap-1 rounded px-1 text-xs text-muted-foreground hover:text-critical focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+          aria-label={t('Delete {item}', { item: fieldLabel })}
+          onClick={() => set(k, '' as never)}
+        >
+          <Trash2 aria-hidden className="size-3.5" /> {t('Delete')}
+        </button>
+      )}
+    </div>
   );
-  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) => hiddenKeys.has(k) ? null : (
-    <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={hint}>
-      <Textarea rows={rows} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
-    </Field>
-  );
+  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) =>
+    hiddenKeys.has(k)
+      ? null
+      : clearable(
+          k,
+          extra.label ?? label(k),
+          <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={lockedKeys.has(k) ? lockedHint : extra.hint}>
+            <Input type={type} value={form[k] as string} readOnly={lockedKeys.has(k)} data-locked-field={lockedKeys.has(k) ? k : undefined} onChange={(e) => set(k, e.target.value as never)} />
+          </Field>,
+        );
+  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) =>
+    hiddenKeys.has(k)
+      ? null
+      : clearable(
+          k,
+          fieldLabel,
+          <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={lockedKeys.has(k as string) ? lockedHint : hint}>
+            <Textarea rows={rows} value={form[k] as string} readOnly={lockedKeys.has(k as string)} data-locked-field={lockedKeys.has(k as string) ? k : undefined} onChange={(e) => set(k, e.target.value as never)} />
+          </Field>,
+        );
   const onePerLine = t('One per line.');
 
   async function save(e: React.FormEvent) {
@@ -660,6 +707,7 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
       <DialogContent className="top-[4%] max-h-[92vh] max-w-3xl overflow-y-auto p-6">
         <DialogTitle>{t('Edit business information')}</DialogTitle>
         <DialogDescription>{t('Change or clear anything. Auto-fill never changes a value you edit here, and does not add back what you remove.')}</DialogDescription>
+        <p className="mt-1 text-xs text-muted-foreground">{t('Use Delete beside a field, or remove a line from a list, to delete unwanted details. Nothing is deleted until you press Save.')}</p>
         <form className="mt-4 space-y-4" onSubmit={save} noValidate>
           {group(
             t('Overview'),

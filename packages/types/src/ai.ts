@@ -37,13 +37,13 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
   },
   lead_qualification: {
     key: 'lead_qualification',
-    name: 'Lead Qualification',
-    purpose: 'Scores a lead from explainable signals and writes a short qualification summary.',
+    name: 'Contact Qualification',
+    purpose: 'Scores an inbound contact from explainable signals and writes a short qualification summary.',
     tier: 'fast',
     permission: 'leads:write',
     withoutModel: 'The rule-based score and its signals are still calculated; only the written summary needs the AI provider.',
-    can: ['Read the lead and its activity', 'Store a score with the signals behind it'],
-    cannot: ['Change the lead status or owner', 'Contact the lead'],
+    can: ['Read the inbound contact and its activity', 'Store a score with the signals behind it'],
+    cannot: ['Change the inbound contact’s status or owner', 'Contact the person'],
   },
   deal_intelligence: {
     key: 'deal_intelligence',
@@ -102,17 +102,17 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
     tier: 'balanced',
     permission: 'ai:use',
     withoutModel: 'Templates, merge fields and the rule-based sequence tips still work; drafting and reading emails need the AI provider.',
-    can: ['Read the lead, contact or deal and its recent email', 'Write a draft into the editor for you to review'],
+    can: ['Read the contact or deal and its recent email', 'Write a draft into the editor for you to review'],
     cannot: ['Send an email', 'Change the record', 'Invent prices, dates or commitments'],
   },
   voice_assistant: {
     key: 'voice_assistant',
     name: 'Voice Assistant',
-    purpose: 'Turns a dictated or recorded voice note into proposed tasks, notes, leads and contacts, and finds the summary of your last call.',
+    purpose: 'Turns a dictated or recorded voice note into proposed tasks, notes and contacts, and finds the summary of your last call.',
     tier: 'fast',
     permission: 'activities:write',
     withoutModel: 'You can still dictate or type a note and add tasks and notes by hand; turning a note into actions needs the AI provider.',
-    can: ['Read the note you dictate and the record it is on', 'Propose tasks, notes, leads and contacts for you to check and confirm'],
+    can: ['Read the note you dictate and the record it is on', 'Propose tasks, notes and contacts for you to check and confirm'],
     cannot: ['Save anything without your confirmation', 'Delete records, send emails or change amounts, stages or owners', 'Invent names, emails, phone numbers or dates'],
   },
   retention_advisor: {
@@ -307,7 +307,7 @@ export const meetingNotesRequestSchema = z
     contactId: z.string().uuid().optional(),
     leadId: z.string().uuid().optional(),
   })
-  .refine((v) => v.meetingId || v.dealId || v.contactId || v.leadId, { message: 'Link the notes to a meeting, deal, contact or lead', path: ['dealId'] });
+  .refine((v) => v.meetingId || v.dealId || v.contactId || v.leadId, { message: 'Link the notes to a meeting, deal or contact', path: ['dealId'] });
 export type MeetingNotesRequest = z.infer<typeof meetingNotesRequestSchema>;
 
 export const workflowDraftRequestSchema = z.object({ description: z.string().trim().min(10, 'Describe the workflow in a sentence or two').max(2000) });

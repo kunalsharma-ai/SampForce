@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { pingWebsite } from '../website-enquiries/website-api';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { explainNetworkError, hostAndPort, networkCode } from '../common/network-error';
 import { publicFetch } from '../common/net-guard';
@@ -48,10 +49,6 @@ export class ConnectionTests {
     @Inject(API_ENV) private readonly env: ApiEnv,
     private readonly mailer: MailerService,
   ) {}
-
-  private appRedirect(app: string): string {
-    return `${trim(this.env.PUBLIC_WEB_URL)}/api/v1/apps/${app}/callback`;
-  }
 
   private mailboxRedirect(provider: string): string {
     return `${trim(this.env.PUBLIC_WEB_URL)}/api/v1/integrations/${provider}/callback`;
@@ -148,21 +145,6 @@ export class ConnectionTests {
     return judgeOAuth('Microsoft', res.status, await readJson(res));
   }
 
-  /** Slack answers 200 with `ok: false`; `invalid_code` means the client ID and secret were accepted. */
-  async slack(): Promise<string> {
-    const res = await this.post(`${trim(this.env.SLACK_API_BASE_URL)}/oauth.v2.access`, { code: PROBE_CODE, redirect_uri: this.appRedirect('slack') }, [this.env.SLACK_CLIENT_ID ?? '', this.env.SLACK_CLIENT_SECRET ?? '']);
-    const body = await readJson(res);
-    const error = String(body.error ?? '');
-    if (error === 'invalid_code' || error === 'bad_redirect_uri') return 'Slack accepted the client ID and secret (the test code was refused, as expected). Nothing was connected.';
-    if (error === 'invalid_client_id' || error === 'bad_client_secret' || error === 'invalid_client') throw new Error(`Slack refused the client ID or secret (${error}).`);
-    throw new Error(`Slack answered ${res.status}${error ? ` ${error}` : ''}.`);
-  }
-
-  async zoom(): Promise<string> {
-    const res = await this.post(`${trim(this.env.ZOOM_AUTH_BASE_URL)}/oauth/token`, { grant_type: 'authorization_code', code: PROBE_CODE, redirect_uri: this.appRedirect('zoom') }, [this.env.ZOOM_CLIENT_ID ?? '', this.env.ZOOM_CLIENT_SECRET ?? '']);
-    return judgeOAuth('Zoom', res.status, await readJson(res));
-  }
-
   async docusign(): Promise<string> {
     const res = await this.post(new URL('/oauth/token', this.env.DOCUSIGN_AUTH_BASE_URL).toString(), { grant_type: 'authorization_code', code: PROBE_CODE }, [this.env.DOCUSIGN_INTEGRATION_KEY ?? '', this.env.DOCUSIGN_SECRET_KEY ?? '']);
     return judgeOAuth('DocuSign', res.status, await readJson(res));
@@ -202,6 +184,16 @@ export class ConnectionTests {
     const res = await publicFetch(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT) }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
     if (res.status >= 200 && res.status < 400) return `The invite link opens (HTTP ${res.status}).`;
     throw new Error(`The invite link answered HTTP ${res.status}. Copy it again from Zapier's developer platform.`);
+  }
+
+  /** The website's GET /ping (ADR 0095): the key's name and rights. Nothing is read or changed. */
+  async websiteEnquiries(): Promise<string> {
+    const ping = await pingWebsite(this.env);
+    const needed = ['leads:read', 'leads:write'].filter((s) => !ping.key.scopes.includes(s));
+    const name = ping.key.name ? `"${ping.key.name}" (${ping.key.prefix}...)` : 'The key';
+    return needed.length
+      ? `${name} works but lacks ${needed.join(' and ')}: ${needed.includes('leads:read') ? 'leads cannot be read' : 'statuses cannot be sent back to the website'}. Rights: ${ping.key.scopes.join(', ') || 'none'}.`
+      : `${name} works with the rights ${ping.key.scopes.join(', ')}.`;
   }
 
   /** GET /v1/balance reads the account balance: no charge, no customer, no change. */

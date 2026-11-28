@@ -12,7 +12,7 @@ async function axe(page: Page) {
 test('the lead form uses searchable country and currency pickers, a phone field and tag chips', async ({ page }) => {
   await signUp(page, 'Form Library');
   await page.goto('/app/leads');
-  await page.getByRole('button', { name: 'New lead' }).click();
+  await page.getByRole('button', { name: 'New inbound contact' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Full name *').fill('Ada Lovelace');
 
@@ -61,11 +61,11 @@ test('the lead form uses searchable country and currency pickers, a phone field 
   await expect(country).toHaveValue('United Kingdom');
   await axe(page);
 
-  await dialog.getByRole('button', { name: 'Create lead' }).click();
+  await dialog.getByRole('button', { name: 'Create inbound contact' }).click();
   await expect(dialog.getByText('This is not a valid +44 number. Check the digits.')).toBeVisible();
   await expect(dialog.getByLabel('Phone', { exact: true })).toBeFocused();
   await dialog.getByLabel('Phone', { exact: true }).fill('020 7946 0958');
-  await dialog.getByRole('button', { name: 'Create lead' }).click();
+  await dialog.getByRole('button', { name: 'Create inbound contact' }).click();
   await expect(page.getByRole('heading', { level: 1, name: /Ada Lovelace/ })).toBeVisible();
 
   const id = page.url().split('/').pop()!;

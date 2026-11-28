@@ -3,9 +3,13 @@ import {
   type ActionGrants,
   allActions,
   capByRules,
+  combineFieldAccess,
   DEFAULT_WORKSPACE_DESIGNATION,
+  type FieldAccess,
+  hiddenFieldsFor,
   type FeatureKey,
   intersectActions,
+  NO_FIELD_LIMITS,
   intersectFeatures,
   parseActionGrants,
   type WorkspaceLevel,
@@ -35,6 +39,9 @@ export interface StoredNode {
   canViewOtherManagers: boolean;
   canViewAuditLog: boolean;
   canChatWithPeers: boolean;
+  /** Field access set by the parent (ADR 0096); optional because documents from before it have none. */
+  hiddenFields?: string[] | null;
+  lockedFields?: string[] | null;
   /** Optional so stand-ins and older reads need not set them (W4, W5). */
   department?: string | null;
   description?: string | null;
@@ -55,6 +62,8 @@ export interface NodeAccess {
   features: FeatureKey[];
   /** Effective actions per module and feature. */
   actions: ActionGrants;
+  /** Fields hidden from it or locked for it (ADR 0096): the Console's for its level plus every workspace above. */
+  fieldAccess: FieldAccess;
   /** True for the root, which is not stored until the organisation's first change to its hierarchy. */
   virtual?: boolean;
 }
@@ -103,7 +112,7 @@ export async function resolveOrganisation(tx: Reader, tenantId: string): Promise
   const stored = nodes.find((n) => n.level === 'SUPER' && !n.parentId);
   const rootNode = stored ?? virtualRoot(tenantId);
   const ceiling = rootNode.actions ? parseActionGrants(rootNode.actions) : allActions();
-  const root: NodeAccess = { node: rootNode, level: 'SUPER', features: ent.features, actions: ceiling, ...(stored ? {} : { virtual: true }) };
+  const root: NodeAccess = { node: rootNode, level: 'SUPER', features: ent.features, actions: ceiling, fieldAccess: NO_FIELD_LIMITS, ...(stored ? {} : { virtual: true }) };
   const byId = new Map<string, NodeAccess>([[rootNode.id, root]]);
   const children = new Map<string, StoredNode[]>();
   for (const n of nodes) {
@@ -126,13 +135,15 @@ export async function resolveOrganisation(tx: Reader, tenantId: string): Promise
         level,
         features: capped.features,
         actions: capped.actions,
+        // The Super Workspace always sees and changes every field; below it, limits only add up (ADR 0096).
+        fieldAccess: level === 'SUPER' ? NO_FIELD_LIMITS : combineFieldAccess(parent.fieldAccess, { hidden: n.hiddenFields ?? [], locked: n.lockedFields ?? [] }, hiddenFieldsFor(level, rules)),
       };
       byId.set(n.id, access);
       queue.push(access);
     }
   }
   // A node whose parent chain is broken (parent missing) gets nothing.
-  for (const n of nodes) if (!byId.has(n.id)) byId.set(n.id, { node: n, level: levelOf(n.level), features: [], actions: {} });
+  for (const n of nodes) if (!byId.has(n.id)) byId.set(n.id, { node: n, level: levelOf(n.level), features: [], actions: {}, fieldAccess: NO_FIELD_LIMITS });
   return { root, byId, rules };
 }
 

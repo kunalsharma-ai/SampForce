@@ -1,0 +1,115 @@
+/*
+ * On-screen notification cards (spec section 9). Each card's picture moves in a way that fits what happened: the sun
+ * rises for a check-in, steam curls from the cup on a break, the tick draws itself for a finished task, the trophy
+ * jumps for a won deal, the plane flies for SampBidx. Transforms and opacity only, on decorative parts hidden from
+ * assistive technology. Under reduced motion the global rule in packages/ui/src/tokens.css ends every animation at
+ * once, so each picture settles on its still look, and the countdown bar is not drawn.
+ */
+
+.sfo-card {
+  --sfo-a: #e02424;
+  --sfo-b: #ffc857;
+  --sfo-glow: rgba(224, 36, 36, 0.35);
+}
+
+/* The glowing edge down the card's start side, in the kind's colours. */
+.sfo-card::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--sfo-a), var(--sfo-b));
+}
+
+/* The picture: a rounded tile in the kind's gradient, with a soft glow under it. */
+.sfo-tile {
+  background: linear-gradient(135deg, var(--sfo-a), var(--sfo-b));
+  box-shadow: 0 8px 22px -6px var(--sfo-glow), inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 6px rgba(0, 0, 0, 0.18);
+}
+/* A highlight across the top of the tile, for a lit, slightly 3D look. */
+.sfo-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+.sfo-tile .sfo-icon { animation: sfo-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+
+/* A ring that ripples out from the tile once when the card arrives. */
+.sfo-ripple {
+  border: 2px solid var(--sfo-a);
+  animation: sfo-ripple 1.1s ease-out 0.15s both;
+}
+
+/* The countdown along the bottom: it empties while the card is on screen and stops while you read it. */
+.sfo-timer {
+  background: linear-gradient(to right, var(--sfo-a), var(--sfo-b));
+  transform-origin: left center;
+  animation: sfo-timer var(--sfo-ms, 6000ms) linear both;
+}
+[dir='rtl'] .sfo-timer { transform-origin: right center; }
+.sfo-card[data-paused='yes'] .sfo-timer { animation-play-state: paused; }
+
+/* ── What each picture does ── */
+[data-sfo-anim='rise'] .sfo-icon { animation: sfo-rise 0.9s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+[data-sfo-anim='rise'] .sfo-rays { animation: sfo-rays 2.4s ease-in-out 0.6s infinite; }
+[data-sfo-anim='set'] .sfo-icon { animation: sfo-set 1s cubic-bezier(0.3, 0.9, 0.3, 1) both; }
+[data-sfo-anim='steam'] .sfo-steam { animation: sfo-steam 1.6s ease-in-out infinite; }
+[data-sfo-anim='steam'] .sfo-steam:nth-child(2) { animation-delay: 0.35s; }
+[data-sfo-anim='steam'] .sfo-steam:nth-child(3) { animation-delay: 0.7s; }
+[data-sfo-anim='spin'] .sfo-icon { animation: sfo-spin-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+[data-sfo-anim='drop'] .sfo-icon { animation: sfo-drop 0.8s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+[data-sfo-anim='tick'] .sfo-icon { animation: sfo-pop 0.55s cubic-bezier(0.2, 1.8, 0.4, 1) both; }
+[data-sfo-anim='tick'] .sfo-icon path,
+[data-sfo-anim='tick'] .sfo-icon polyline {
+  stroke-dasharray: 40;
+  animation: sfo-draw 0.6s ease-out 0.25s both;
+}
+[data-sfo-anim='jump'] .sfo-icon { animation: sfo-jump 1.2s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+[data-sfo-anim='shake'] .sfo-icon { animation: sfo-shake 0.7s ease-in-out 0.2s both; }
+[data-sfo-anim='wiggle'] .sfo-icon { animation: sfo-wiggle 0.9s ease-in-out 0.15s both; }
+[data-sfo-anim='pulse'] .sfo-icon { animation: sfo-pulse 1.4s ease-in-out infinite; }
+[data-sfo-anim='fly'] .sfo-icon { animation: sfo-fly 1.1s cubic-bezier(0.3, 1.2, 0.4, 1) both; }
+[data-sfo-anim='swing'] .sfo-icon { transform-origin: 50% 10%; animation: sfo-swing 1.2s ease-in-out both; }
+[data-sfo-anim='half'] .sfo-ring-fill { animation: sfo-half 1s cubic-bezier(0.3, 0.9, 0.3, 1) 0.2s both; }
+[data-sfo-anim='fall'] .sfo-icon { animation: sfo-fall 0.9s cubic-bezier(0.4, 0, 0.6, 1) both; }
+
+/* Sparkles that burst around celebratory pictures (task done, deal won, approval granted). */
+.sfo-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 9999px;
+  background: var(--c, #ffc857);
+  animation: sfo-burst 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.2s both;
+}
+
+@keyframes sfo-pop { from { transform: scale(0.3) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sfo-ripple { from { transform: scale(0.85); opacity: 0.8; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes sfo-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes sfo-rise { from { transform: translateY(14px) scale(0.8); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sfo-rays { 0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.55; } 50% { transform: rotate(20deg) scale(1.12); opacity: 1; } }
+@keyframes sfo-set { 0% { transform: translateY(-12px) rotate(-30deg); opacity: 0; } 70% { transform: translateY(1px) rotate(6deg); opacity: 1; } 100% { transform: none; } }
+@keyframes sfo-steam { 0% { transform: translateY(4px) scaleY(0.6); opacity: 0; } 40% { opacity: 0.9; } 100% { transform: translateY(-9px) scaleY(1.1); opacity: 0; } }
+@keyframes sfo-spin-in { from { transform: rotate(-200deg) scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sfo-drop { 0% { transform: translateY(-18px); opacity: 0; } 60% { transform: translateY(2px); opacity: 1; } 80% { transform: translateY(-2px); } 100% { transform: none; } }
+@keyframes sfo-draw { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
+@keyframes sfo-jump { 0% { transform: scale(0.4); opacity: 0; } 30% { transform: translateY(-8px) scale(1.15); opacity: 1; } 55% { transform: translateY(0) scale(0.95); } 75% { transform: translateY(-3px) rotate(-6deg); } 100% { transform: none; } }
+@keyframes sfo-shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-3px) rotate(-8deg); } 40%, 80% { transform: translateX(3px) rotate(8deg); } }
+@keyframes sfo-wiggle { 0%, 100% { transform: none; } 25% { transform: rotate(-12deg) scale(1.1); } 50% { transform: rotate(10deg) scale(1.1); } 75% { transform: rotate(-5deg); } }
+@keyframes sfo-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes sfo-fly { 0% { transform: translate(-14px, 12px) rotate(-10deg) scale(0.6); opacity: 0; } 60% { transform: translate(3px, -3px) rotate(4deg); opacity: 1; } 100% { transform: none; } }
+@keyframes sfo-swing { 0% { transform: rotate(0); } 20% { transform: rotate(18deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } 100% { transform: none; } }
+@keyframes sfo-half { from { stroke-dashoffset: 69.1; } to { stroke-dashoffset: 34.6; } }
+@keyframes sfo-fall { 0% { transform: translateY(-8px); opacity: 0; } 70% { transform: translateY(3px); opacity: 1; } 100% { transform: none; } }
+@keyframes sfo-burst {
+  0% { transform: translate(0, 0) scale(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+}

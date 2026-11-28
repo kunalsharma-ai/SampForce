@@ -43,7 +43,7 @@ export const NEXT_ACTION_RULES = {
   close_date_passed: { base: 70, note: "Your open deal's expected close date has passed" },
   renewal_due: { base: 70, note: 'A contract you own ends within 30 days and has no renewal yet' },
   quote_awaiting_answer: { base: 65, note: 'A quote was sent 5 or more days ago and is not accepted or declined' },
-  new_lead_untouched: { base: 60, note: 'A lead assigned to you is still New with nothing logged after a day' },
+  new_lead_untouched: { base: 60, note: 'An inbound contact assigned to you is still New with nothing logged after a day' },
   engaged_no_reply: { base: 58, note: 'Someone opened or clicked several of your sequence emails in 14 days without replying (opens are estimates)' },
   prospect_silent: { base: 55, note: 'Someone finished one of your sequences in the last 14 days without replying: try another channel' },
   deal_no_next_step: { base: 50, note: 'Your open deal has no open task' },

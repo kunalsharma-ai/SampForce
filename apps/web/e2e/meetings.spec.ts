@@ -41,7 +41,7 @@ test('turns a calendar meeting into reviewed notes, tasks and a timeline summary
   const banner = page.getByLabel('Recording transcription status');
   await expect(banner.getByText('Pending Configuration')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Transcribe recording' })).toBeDisabled();
-  await expect(page.getByLabel('Linked contact')).toHaveValue('Tom Ops');
+  await expect(page.getByLabel('Linked contact', { exact: true })).toHaveValue('Tom Ops');
 
   await page.getByLabel('Linked deal').fill('Pilot');
   await page.getByRole('option', { name: /Pilot rollout/ }).click();
@@ -102,7 +102,7 @@ test('starts notes for a call outside the calendar and deletes them', async ({ p
   await page.getByRole('button', { name: 'Analyse with AI' }).click();
   await page.getByRole('button', { name: 'Save reviewed version' }).click();
   await expect(page.getByRole('button', { name: 'Add summary to a record' })).toBeDisabled();
-  await expect(page.getByText('Link a deal, contact or lead above first.')).toBeVisible();
+  await expect(page.getByText('Link a deal or contact above first.')).toBeVisible();
   await expectNoA11yViolations(page);
   page.once('dialog', (d) => void d.accept());
   await page.getByRole('button', { name: 'Delete notes' }).click();

@@ -22,7 +22,7 @@ import { useShell } from '@/stores/shell';
 const ITEM = 'flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm aria-selected:bg-muted';
 
 const HIT_META = {
-  lead: { icon: UserPlus, path: 'leads', label: 'Lead' },
+  lead: { icon: UserPlus, path: 'leads', label: 'Inbound contact' },
   contact: { icon: ContactRound, path: 'contacts', label: 'Contact' },
   company: { icon: Building2, path: 'companies', label: 'Company' },
   deal: { icon: Handshake, path: 'deals', label: 'Deal' },
@@ -30,7 +30,7 @@ const HIT_META = {
 } as const;
 
 const CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
-  { kind: 'leads', label: 'New lead', permission: 'leads:write' },
+  { kind: 'leads', label: 'New inbound contact', permission: 'leads:write' },
   { kind: 'contacts', label: 'New contact', permission: 'contacts:write' },
   { kind: 'companies', label: 'New company', permission: 'companies:write' },
   { kind: 'deals', label: 'New deal', permission: 'deals:write' },

@@ -34,8 +34,8 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
 
   // ── The daily work first, in this order ──
   const primary = nav.locator('[data-nav-section="modules"]').first().getByRole('link');
-  await expect(primary).toHaveText(['Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', /^Team chat/, 'My achievements', 'Team status']);
-  await expect(nav.getByRole('link', { name: /^Leads/ })).toHaveCount(0);
+  await expect(primary).toHaveText(['Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'Performance', 'Recognition', 'RFQs', /^Team chat/, 'My achievements', 'Team status']);
+  await expect(nav.getByRole('link', { name: /^Inbound contacts/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: /^Accounts/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
 
@@ -54,13 +54,13 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await search.fill('accounts');
   await expect(page.getByRole('option', { name: /^Accounts/ })).toHaveCount(0);
   await search.fill('new lead');
-  await expect(page.getByRole('option', { name: 'New lead', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('option', { name: 'New inbound contact', exact: true })).toHaveCount(0);
   await search.press('Escape');
 
   // ── Opening the address says it is switched off, with no upgrade button ──
   await page.goto('/app/leads');
   const off = page.locator('[data-feature-locked="leads_section"][data-opt-in]');
-  await expect(off.getByText('Leads page is switched off')).toBeVisible();
+  await expect(off.getByText('Inbound contacts page is switched off')).toBeVisible();
   await expect(off.getByText('Your SampForce administrator can switch it on for your organisation.')).toBeVisible();
   await expect(off.getByRole('link', { name: 'See plans and upgrade' })).toHaveCount(0);
   await shot(page, '03-leads-switched-off');
@@ -74,8 +74,8 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await setFeatures(page, { leads_section: true, accounts_section: true });
   await page.goto('/app/leads');
   await expect(page.locator('[data-feature-locked]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { level: 1, name: 'Leads' })).toBeVisible();
-  await expect(sidebar(page).getByRole('link', { name: /^Leads/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Inbound contacts' })).toBeVisible();
+  await expect(sidebar(page).getByRole('link', { name: /^Inbound contacts/ })).toBeVisible();
   await expect(sidebar(page).getByRole('link', { name: /^Accounts/ })).toBeVisible();
   await shot(page, '04-sidebar-leads-on');
 
@@ -91,7 +91,7 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
       } else {
         const bar = page.locator('[data-shell="bottom-nav"]');
         await expect(bar.getByRole('link', { name: 'Companies' })).toBeVisible();
-        await expect(bar.getByRole('link', { name: 'Leads' })).toHaveCount(0);
+        await expect(bar.getByRole('link', { name: 'Inbound contacts' })).toHaveCount(0);
         await expectCleanLayout(page, '[data-shell="bottom-nav"]');
       }
       await shot(page, `05-nav-${mode}-${size.name}`);

@@ -102,8 +102,8 @@ export const table = {
   'Deleted {count}.': ['{count} eliminados.', '{count} supprimés.', '{count} gelöscht.', 'تم حذف {count}.'],
   'Clear selection': ['Borrar selección', 'Effacer la sélection', 'Auswahl aufheben', 'مسح التحديد'],
   // Record nouns used in "{items} selected" (lower case, as the English sentence uses them)
-  lead: ['lead', 'prospect', 'Lead', 'عميل محتمل'],
-  leads: ['leads', 'prospects', 'Leads', 'عملاء محتملين'],
+  'inbound contact': ['contacto entrante', 'contact entrant', 'Eingangskontakt', 'جهة اتصال واردة'],
+  'inbound contacts': ['contactos entrantes', 'contacts entrants', 'Eingangskontakte', 'جهات اتصال واردة'],
   contact: ['contacto', 'contact', 'Kontakt', 'جهة اتصال'],
   contacts: ['contactos', 'contacts', 'Kontakte', 'جهات اتصال'],
   company: ['empresa', 'entreprise', 'Unternehmen', 'شركة'],

@@ -65,7 +65,7 @@ export const HELP_CATEGORIES = [
     audience: 'workspace',
     icon: 'building-2',
     tone: 4,
-    title: ['Leads, companies & contacts', 'Leads, empresas y contactos', 'Prospects, entreprises et contacts', 'Leads, Unternehmen & Kontakte', 'العملاء المحتملون والشركات وجهات الاتصال'],
+    title: ['Companies & contacts', 'Empresas y contactos', 'Entreprises et contacts', 'Unternehmen & Kontakte', 'الشركات وجهات الاتصال'],
     description: [
       'Create, find, qualify and convert the people and companies you sell to.',
       'Crea, busca, califica y convierte a las personas y empresas a las que vendes.',
@@ -123,11 +123,11 @@ export const HELP_CATEGORIES = [
     tone: 2,
     title: ['Prospecting & outreach', 'Prospección y contacto', 'Prospection et démarchage', 'Akquise & Ansprache', 'التنقيب والتواصل'],
     description: [
-      'Email sequences, the email finder, prospect lists, the browser extension, website visitors and marketing.',
-      'Secuencias de correo, buscador de correos, listas de prospectos, extensión, visitantes web y marketing.',
-      'Séquences d’e-mails, recherche d’adresses, listes de prospects, extension, visiteurs du site et marketing.',
-      'E-Mail-Sequenzen, E-Mail-Finder, Interessentenlisten, Browsererweiterung, Website-Besucher und Marketing.',
-      'سلاسل البريد وباحث البريد وقوائم العملاء المحتملين وإضافة المتصفح وزوار الموقع والتسويق.',
+      'Email sequences, the email finder, prospect lists, the browser extension, website enquiries and marketing.',
+      'Secuencias de correo, buscador de correos, listas de prospectos, extensión, consultas de la web y marketing.',
+      'Séquences d’e-mails, recherche d’adresses, listes de prospects, extension, demandes du site et marketing.',
+      'E-Mail-Sequenzen, E-Mail-Finder, Interessentenlisten, Browsererweiterung, Website-Anfragen und Marketing.',
+      'سلاسل البريد وباحث البريد وقوائم العملاء المحتملين وإضافة المتصفح واستفسارات الموقع والتسويق.',
     ],
   },
   {
@@ -193,11 +193,11 @@ export const HELP_CATEGORIES = [
     tone: 1,
     title: ['Apps & integrations', 'Apps e integraciones', 'Applications et intégrations', 'Apps & Integrationen', 'التطبيقات والتكاملات'],
     description: [
-      'Connect your mailbox, calendar, Slack, Zoom, WhatsApp, payments, Zapier, API keys and webhooks.',
-      'Conecta tu buzón, calendario, Slack, Zoom, WhatsApp, pagos, Zapier, claves de API y webhooks.',
-      'Connectez boîte mail, agenda, Slack, Zoom, WhatsApp, paiements, Zapier, clés d’API et webhooks.',
-      'Postfach, Kalender, Slack, Zoom, WhatsApp, Zahlungen, Zapier, API-Schlüssel und Webhooks verbinden.',
-      'اربط بريدك وتقويمك وSlack وZoom وWhatsApp والمدفوعات وZapier ومفاتيح API والخطافات.',
+      'Connect your mailbox, calendar, DocuSign, WhatsApp, payments, Zapier, API keys and webhooks.',
+      'Conecta tu buzón, calendario, DocuSign, WhatsApp, pagos, Zapier, claves de API y webhooks.',
+      'Connectez boîte mail, agenda, DocuSign, WhatsApp, paiements, Zapier, clés d’API et webhooks.',
+      'Postfach, Kalender, DocuSign, WhatsApp, Zahlungen, Zapier, API-Schlüssel und Webhooks verbinden.',
+      'اربط بريدك وتقويمك وDocuSign وWhatsApp والمدفوعات وZapier ومفاتيح API والخطافات.',
     ],
   },
   {

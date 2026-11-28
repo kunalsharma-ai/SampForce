@@ -1,6 +1,6 @@
 # ADR 0029: Website visitor intelligence is first-party, consent-gated and anonymous until an enquiry
 
-- Status: Accepted
+- Status: Superseded by [ADR 0095](0095-website-enquiry.md) on 2026-11-27. Website Visitors was removed: its menu, page, API, tracking script, worker job and data.
 - Date: 2026-10-31
 - Part of: Enhancement programme, Phase 3 (feature 15)
 

@@ -170,7 +170,7 @@ export class RecordIntelligenceService {
   private async people(tx: TenantTx, t: string, entity: TimelineEntity, id: string): Promise<People> {
     if (entity === 'lead') {
       const l = await tx.lead.findFirst({ where: { id, tenantId: t, deletedAt: null }, select: { id: true } });
-      if (!l) throw notFound('Lead');
+      if (!l) throw notFound('Inbound contact');
       return { leadIds: [id], contactIds: [], dealIds: [], companyId: null };
     }
     if (entity === 'contact') {

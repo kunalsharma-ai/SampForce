@@ -22,8 +22,8 @@ export type SceneVariant = 'console' | 'super' | 'manager' | 'executive';
 export const SCENE_COPY: Record<SceneVariant, { eyebrow: string; headline: string; sub: string }> = {
   console: { eyebrow: 'SampForce Console', headline: 'Welcome to the SampForce Console', sub: 'The control center for every SampForce client.' },
   super: { eyebrow: 'Super Workspace', headline: 'Your whole company, in one place', sub: 'Workspaces, teams, targets and every client relationship, from the top.' },
-  manager: { eyebrow: 'Manager Workspace', headline: 'Lead your team to the next win', sub: 'Assign work, track targets and coach your executives as it happens.' },
-  executive: { eyebrow: 'Executive Workspace', headline: 'Ready to close? Let’s sell.', sub: 'Your leads, follow-ups and deals, ready the moment you sign in.' },
+  manager: { eyebrow: 'Manager Workspace', headline: 'Guide your team to the next win', sub: 'Assign work, track targets and coach your executives as it happens.' },
+  executive: { eyebrow: 'Executive Workspace', headline: 'Ready to close? Let’s sell.', sub: 'Your companies, follow-ups and deals, ready the moment you sign in.' },
 };
 
 /** The SampForce mark, part by part, so its halves can fly in and lock together. Same shapes and colours as LogoMark. */
@@ -98,7 +98,7 @@ function rnd(n: number) {
 const BADGE: Record<SceneVariant, { icon: typeof Crown; name: string; role: string }> = {
   console: { icon: ShieldCheck, name: 'SampForce Console', role: 'Super Admin · Sampledge staff only' },
   super: { icon: Crown, name: 'Super Workspace', role: 'For owners and admins' },
-  manager: { icon: Users, name: 'Manager Workspace', role: 'For team leads' },
+  manager: { icon: Users, name: 'Manager Workspace', role: 'For team managers' },
   executive: { icon: Rocket, name: 'Executive Workspace', role: 'For sales executives' },
 };
 
@@ -494,7 +494,7 @@ function ExecutiveBackdrop() {
 function ExecutiveStage() {
   const toasts = [
     { x: 470, y: 30, text: 'Deal won', icon: 'check', d: 0.6 },
-    { x: 520, y: 150, text: '+3 new leads', icon: 'up', d: 2.1 },
+    { x: 520, y: 150, text: '+3 new companies', icon: 'up', d: 2.1 },
     { x: 480, y: 270, text: 'Meeting booked', icon: 'cal', d: 3.6 },
   ];
   const bars = [60, 95, 85, 130, 120, 175, 230];

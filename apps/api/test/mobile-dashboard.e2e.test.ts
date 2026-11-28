@@ -56,12 +56,12 @@ describe('mobile dashboard', () => {
 
   it('counts today’s leads against the daily target, as the web does', async () => {
     let t = card(await dashboard(execToken), 'todays_target');
-    expect(t.empty).toBe('No daily lead target is set for you.');
+    expect(t.empty).toBe('No daily company target is set for you.');
     await api(owner).post('/targets', { workspaceId: exec.workspaceId, metric: 'LEADS', period: 'DAILY', startsOn: today, amount: 5 }).expect(201);
     await http().post('/api/v1/mobile/records/companies').set('authorization', `Bearer ${execToken}`).send({ name: 'Morning Lead' }).expect(201);
     t = card(await dashboard(execToken), 'todays_target');
     expect(t.empty).toBeNull();
-    expect(statOf(t, 'Leads today')).toBe(1);
+    expect(statOf(t, 'Companies today')).toBe(1);
     expect(statOf(t, 'Target')).toBe(5);
     expect(statOf(t, 'Still needed')).toBe(4);
     expect(t.bars[0]?.percent).toBe(20);
@@ -70,7 +70,7 @@ describe('mobile dashboard', () => {
     expect(web.today).toMatchObject({ leads: 1, leadTarget: 5 });
     // The organisation sees the lead too.
     const org = card(await dashboard(ownerToken), 'leads_today');
-    expect(statOf(org, 'Leads today')).toBe(1);
+    expect(statOf(org, 'Companies today')).toBe(1);
   });
 
   it('lists open tasks and follow-ups on their cards', async () => {

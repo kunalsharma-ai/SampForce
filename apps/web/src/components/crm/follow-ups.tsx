@@ -334,7 +334,7 @@ export function FollowUpDialog({
               ))}
             </Select>
           </Field>
-          <Field id="fu-assignee" label={t('Assigned executive')} hint={editing ? undefined : t('Left empty: the lead owner.')}>
+          <Field id="fu-assignee" label={t('Assigned executive')} hint={editing ? undefined : t('Left empty: the company owner.')}>
             <PersonSelect value={v.assigneeId} onChange={(id) => set({ assigneeId: id })} />
           </Field>
           <Field id="fu-manager" label={t('Assigned manager')} hint={editing ? undefined : t('Left empty: the executive’s reporting manager.')}>

@@ -7,7 +7,19 @@ import { createApp } from '../src/bootstrap';
 
 export const ORIGIN = 'http://localhost:3000';
 
+/** When this test file started: helpers load once per file, since vitest isolates each file's modules. */
+const FILE_STARTED_AT = new Date();
+
 export async function startApp(): Promise<INestApplication> {
+  // Test files share one database and run one after another, and the worker reads every workspace's queues. Work
+  // that earlier files left queued is set aside first, so this file's worker only does this file's work:
+  // - company auto-fill runs for made-up websites: app.close() would wait out each look-up (up to about 30 seconds);
+  // - domain events never relayed: worker.drain() would relay hundreds of them, 100 a tick, for up to 10 ticks.
+  const db = ownerClient();
+  const leftover = { lt: FILE_STARTED_AT };
+  await db.companyEnrichment.updateMany({ where: { status: 'PENDING', createdAt: leftover }, data: { status: 'FAILED', error: 'Closed by the test set-up: queued by an earlier test file.' } });
+  await db.domainEvent.updateMany({ where: { processedAt: null, createdAt: leftover }, data: { processedAt: new Date(), lastError: 'Set aside by the test set-up: queued by an earlier test file.' } });
+  await db.$disconnect();
   const app = await createApp();
   await app.init();
   return app;
@@ -158,4 +170,13 @@ export async function workspacePerson(app: INestApplication, creator: TestUser, 
   await agent.post('/api/v1/auth/invitations/accept').set('origin', ORIGIN).send({ token, name, password }).expect(200);
   const me = (await agent.get('/api/v1/auth/me').expect(200)).body as { user: { id: string; email: string }; tenant: { id: string } };
   return { agent, email: me.user.email, password, tenantId: me.tenant.id, userId: me.user.id, workspaceId: ws.id };
+}
+
+/**
+ * Turns off "Manager and Executive Workspaces can delete" (ADR 0098, on by default), so Delete is granted workspace by
+ * workspace in the Permission Center as in workspace redesign W2. For suites that test that per-workspace grant.
+ */
+export async function perWorkspaceDelete(owner: TestUser): Promise<void> {
+  const settings = (await api(owner).get('/team-approvals/overview').expect(200)).body.settings;
+  await api(owner).put('/team-approvals/settings', { ...settings, lowerLevelsDelete: false }).expect(200);
 }

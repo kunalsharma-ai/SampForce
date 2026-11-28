@@ -71,7 +71,7 @@ test('deactivates, reactivates and deletes a Manager Workspace with a handover',
   await workspaceAction(page, 'North Team', 'Delete');
   const impact = page.getByRole('dialog', { name: 'Delete North Team' });
   await expect(impact.locator('[data-impact-people]')).toContainText('Rahul Sharma');
-  await expect(impact.locator('[data-impact-records]')).toHaveText('1 companies, 0 contacts, 2 leads, 0 deals and 0 open tasks');
+  await expect(impact.locator('[data-impact-records]')).toHaveText('1 companies, 0 contacts, 2 inbound contacts, 0 deals and 0 open tasks');
   await expect(impact.locator('[data-impact-below]')).toHaveText('North Field One');
   await impact.getByLabel('Who receives them').selectOption({ label: 'South Team · Manager Workspace · Priya Nair' });
   await expect(impact.getByText('Records go to Priya Nair.')).toBeVisible();

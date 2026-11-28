@@ -46,7 +46,8 @@ describe('Company journey', () => {
     const c = await make('Northwind Panels', ['Priya Shah', 'Tom Hale']);
     expect(await cardOf(c.id)).toMatchObject({ stage: 'FRESH_EMAIL', employees: 2, followUp: null, nextAction: null });
 
-    await api(rep).post(`/contacts/${c.contactIds[0]}/initial-email`, {}).expect(200);
+    // Sent just over 7 days ago: the follow-up period has passed, so follow-up 1 is created at once (ADR 0096).
+    await api(rep).post(`/contacts/${c.contactIds[0]}/initial-email`, { sentAt: new Date(Date.now() - 7 * 86_400_000 - 60_000).toISOString() }).expect(200);
     let card = await cardOf(c.id);
     expect(card).toMatchObject({ stage: 'INITIAL_EMAIL', followUp: { step: 1, total: 5 }, nextAction: { title: 'Follow-up 1 of 5: Priya Shah', overdue: false } });
 

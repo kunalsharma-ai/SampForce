@@ -1,5 +1,6 @@
-import type { AchievementRow } from '@dealflow/types';
+import { type AchievementRow, TARGET_METRIC_LABEL, type TargetMetric } from '@dealflow/types';
 import type { Translator } from '@/lib/i18n';
+import { monthLabel } from '@/lib/recognition';
 
 /** What a celebration says: every figure comes from the stored achievement, which was read from the records. */
 export interface AchievementCopy {
@@ -50,7 +51,7 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
       add(t('Achieved'), when);
       return a.kind === 'DEAL_CONVERTED'
         ? { title: t('Company converted into a deal!'), message: t('Congratulations! You’ve successfully converted a new company into a deal!'), facts, linkLabel: t('View deal') }
-        : { title: t('Prospect converted!'), message: t('Your lead is now a deal in the pipeline.'), facts, linkLabel: t('View deal') };
+        : { title: t('Prospect converted!'), message: t('Your company is now a deal in the pipeline.'), facts, linkLabel: t('View deal') };
     case 'RFQ_SUBMITTED':
       add(t('Company'), d.companyName);
       add(t('RFQ'), d.rfqNumber ? `${d.rfqNumber} · ${d.rfqTitle ?? ''}` : d.rfqTitle);
@@ -65,15 +66,15 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
       add(t('Deadlines'), d.onTime ? t('All done before their deadlines') : t('All done'));
       return { title: t('All Tasks Completed!'), message: t('You’ve successfully cleared your daily workload.'), facts, linkLabel: t('View tasks') };
     case 'LEAD_MILESTONE':
-      add(t('Leads today'), t('{actual} of {target}', { actual: num(d.actual), target: num(d.target) }));
+      add(t('Companies today'), t('{actual} of {target}', { actual: num(d.actual), target: num(d.target) }));
       add(t('Still to go'), num(d.remaining));
-      return { title: t('{percent}% of today’s lead target', { percent: d.percent ?? 0 }), message: t('Keep going: {remaining} more qualified leads reach your target.', { remaining: num(d.remaining) }), facts, linkLabel: t('View my achievements') };
+      return { title: t('{percent}% of today’s company target', { percent: d.percent ?? 0 }), message: t('Keep going: {remaining} more qualified companies reach your target.', { remaining: num(d.remaining) }), facts, linkLabel: t('View my achievements') };
     case 'LEAD_TARGET': {
       add(t('Target'), num(d.target));
-      add(t('Valid leads added'), num(d.actual));
+      add(t('Valid companies added'), num(d.actual));
       add(t('Achieved'), when);
-      const title = d.period === 'WEEK' ? t('Weekly Lead Target Achieved!') : d.period === 'MONTH' ? t('Monthly Lead Target Achieved!') : t('Daily Lead Target Achieved!');
-      return { title, message: t('You’ve successfully reached your target of {target} qualified leads.', { target: num(d.target) }), facts, linkLabel: t('View my achievements') };
+      const title = d.period === 'WEEK' ? t('Weekly Company Target Achieved!') : d.period === 'MONTH' ? t('Monthly Company Target Achieved!') : t('Daily Company Target Achieved!');
+      return { title, message: t('You’ve successfully reached your target of {target} qualified companies.', { target: num(d.target) }), facts, linkLabel: t('View my achievements') };
     }
     case 'SALES_TARGET': {
       const value = (n: number | undefined) => (d.metric === 'REVENUE' ? (money(n, d.currency, loc) ?? num(n)) : t('{n} deals won', { n: num(n) }));
@@ -107,6 +108,39 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
         facts,
         linkLabel: t('View deal'),
       };
+    case 'TASK_PLAN_DONE': {
+      for (const i of d.items ?? []) add(t.maybe(TARGET_METRIC_LABEL[i.metric as TargetMetric] ?? i.metric), t('{actual} of {target}', { actual: num(i.done), target: num(i.amount) }));
+      if ((d.streak ?? 0) > 1) add(t('Streak'), t('{n} in a row', { n: num(d.streak) }));
+      const first = d.items?.[0];
+      const one = d.items?.length === 1 && first ? t.maybe(TARGET_METRIC_LABEL[first.metric as TargetMetric] ?? first.metric).toLowerCase() : null;
+      return {
+        title: d.cadence === 'WEEK' ? t('This week’s task completed!') : d.cadence === 'MONTH' ? t('This month’s task completed!') : t('Today’s task completed!'),
+        message: one ? t('Great work! You completed your {measure} target: {title}.', { measure: one, title: d.taskTitle ?? '' }) : t('Great work! You achieved 100% of {title}.', { title: d.taskTitle ?? '' }),
+        facts,
+        linkLabel: t('View tasks'),
+      };
+    }
+    case 'TASK_PLAN_HALF':
+      for (const i of d.items ?? []) add(t.maybe(TARGET_METRIC_LABEL[i.metric as TargetMetric] ?? i.metric), t('{actual} of {target}', { actual: num(i.done), target: num(i.amount) }));
+      return { title: t('Halfway there!'), message: t('{title} is {percent}% done. Keep going.', { title: d.taskTitle ?? '', percent: d.percent ?? 50 }), facts, linkLabel: t('View tasks') };
+    case 'EMPLOYEE_OF_THE_MONTH': {
+      const month = d.month ? monthLabel(d.month, loc) : '';
+      add(t('Month'), month);
+      if (d.scope === 'TEAM' && d.teamName) add(t('Team'), d.teamName);
+      add(t('Goals achieved'), `${num(d.percent)}%`);
+      add(t('Performance score'), num(Math.round(d.score ?? 0)));
+      add(t('Reward'), d.reward);
+      return { title: t('Employee of the Month – {month}', { month }), message: t('Congratulations! You have been selected as Employee of the Month for {month}.', { month }), facts, linkLabel: t('View on the dashboard') };
+    }
+    case 'RECOGNITION_ELIGIBLE': {
+      const month = d.month ? monthLabel(d.month, loc) : '';
+      add(t('Goals achieved'), `${num(d.percent)}%`);
+      add(t('Reward'), d.reward);
+      return { title: t('Congratulations! You have achieved your Employee of the Month target.'), message: t('You are eligible for Employee of the Month – {month}. The winner is chosen from the eligible people.', { month }), facts, linkLabel: t('View on the dashboard') };
+    }
+    case 'PIP_COMPLETED':
+      add(t('Plan'), d.planNumber ? `${d.planNumber} · ${d.planTitle ?? ''}` : d.planTitle);
+      return { title: t('Improvement plan completed!'), message: t('Well done! You completed improvement plan {number}.', { number: d.planNumber ?? '' }), facts, linkLabel: t('View on the dashboard') };
     case 'CONSISTENCY':
       add(t('Working time'), hours(d.workedMinutes ?? 0, t));
       add(t('Breaks taken'), d.breaks ? t('{n} ({time})', { n: num(d.breaks), time: hours(d.breakMinutes ?? 0, t) }) : t('None'));

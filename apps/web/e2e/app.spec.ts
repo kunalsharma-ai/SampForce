@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
-  'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'Performance', 'Recognition', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Inbound contacts', 'Accounts', 'Sales Activities',
+  'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Revenue Intelligence', 'Forecasting',
-  'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
+  'Reports & Analytics', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
 ];
 
 test('redirects visitors without a session to sign-in', async ({ page }) => {
@@ -47,8 +47,8 @@ test('every sidebar entry leads to a working page', async ({ page }) => {
     await expect(page.getByText('This page does not exist')).toHaveCount(0);
   }
   expect(await nav.getByRole('link').count()).toBe(SIDEBAR.length);
-  // The Revenue section was taken out of the menu; its pages still open from their links.
-  for (const [path, heading] of [['/app/quotes', 'Quotes & Proposals'], ['/app/contracts', 'Contracts'], ['/app/portal', 'Client Portal'], ['/app/customer-success', 'Customer Success']] as const) {
+  // The Revenue section and Sales Gamification were taken out of the menu; their pages still open from their links.
+  for (const [path, heading] of [['/app/quotes', 'Quotes & Proposals'], ['/app/contracts', 'Contracts'], ['/app/portal', 'Client Portal'], ['/app/customer-success', 'Customer Success'], ['/app/gamification', 'Sales Gamification']] as const) {
     await expect(nav.getByRole('link', { name: new RegExp(`^${heading.replace(/[&]/g, '\\&')}`) })).toHaveCount(0);
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -126,7 +126,7 @@ test('the browser extension privacy page is public and linked from the site foot
   await page.goto('/pricing');
   await page.getByRole('link', { name: 'Browser extension privacy' }).click();
   await expect(page).toHaveURL(/\/extension-privacy$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'SampForce lead capture: privacy' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'SampForce contact capture: privacy' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Where it sends it' })).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations).toEqual([]);

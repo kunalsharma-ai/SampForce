@@ -34,8 +34,13 @@ interface Props<T extends { id: string }> {
   /** Shown left of the view controls (filters). */
   filters?: React.ReactNode;
   empty: React.ReactNode;
-  /** Bulk actions: rows can be selected when set. */
-  bulk?: { statuses?: { value: string; label: string }[] };
+  /**
+   * Bulk actions: rows can be selected when set. `query` is the list's query (search, filters, custom field filters),
+   * so the person can select every matching record on every page, not only the rows on screen.
+   */
+  bulk?: { statuses?: { value: string; label: string }[]; query?: Record<string, string | number | undefined | null>;
+    extra?: (ids: string[], clear: () => void) => React.ReactNode;
+  };
 }
 
 /**
@@ -62,7 +67,12 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
   const [selection, setSelection] = useState<RowSelectionState>({});
   // A new filter, search or view is a new set of rows: start the selection again.
   const filterKey = JSON.stringify([view.config.q, view.config.filters, view.active?.id]);
-  useEffect(() => setSelection({}), [filterKey]);
+  // Every matching record on every page, chosen from the bar once the whole page is ticked.
+  const [allPages, setAllPages] = useState(false);
+  useEffect(() => {
+    setSelection({});
+    setAllPages(false);
+  }, [filterKey]);
   const selectedIds = Object.keys(selection).filter((k) => selection[k]);
 
   const q = view.config.q;
@@ -115,6 +125,11 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
   const from = total === 0 ? 0 : (view.page - 1) * pageSize + 1;
   const to = Math.min(total, view.page * pageSize);
   const rows = table.getRowModel().rows;
+  // Unticking a row ends "every matching record".
+  const pageAll = table.getIsAllPageRowsSelected();
+  useEffect(() => {
+    if (!pageAll) setAllPages(false);
+  }, [pageAll]);
   const firstLeft = p.bulk ? SELECT_W : 0;
   const sortIndex = (id: string) => view.config.sort.findIndex((s) => s.id === id);
 
@@ -162,13 +177,24 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
           <DensityMenu view={view} />
         </div>
       </div>
-      {p.bulk && selectedIds.length > 0 && (
+      {p.bulk && (selectedIds.length > 0 || allPages) && (
         <BulkBar
           entity={view.entity}
           ids={selectedIds}
           noun={p.noun}
           statuses={p.bulk.statuses}
-          onClear={() => setSelection({})}
+          // Offered once every row on this page is ticked and there are more pages.
+          total={table.getIsAllPageRowsSelected() && total > rows.length ? total : undefined}
+          all={allPages ? { query: listQuery(p.bulk.query ?? view.params), expected: total } : undefined}
+          onSelectAll={setAllPages}
+          onClear={() => {
+            setSelection({});
+            setAllPages(false);
+          }}
+          extra={p.bulk.extra?.(selectedIds, () => {
+            setSelection({});
+            setAllPages(false);
+          })}
         />
       )}
 
@@ -532,4 +558,11 @@ function WithIcon({ icon, children }: { icon: React.ReactNode; children: React.R
       <span className="truncate">{children}</span>
     </span>
   );
+}
+
+/** The list query without paging, as strings, for "every matching record". */
+function listQuery(params: Record<string, string | number | undefined | null>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(params)) if (k !== 'page' && k !== 'pageSize' && v !== undefined && v !== null && v !== '') out[k] = String(v);
+  return out;
 }

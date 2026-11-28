@@ -3,11 +3,11 @@ import type { PhraseTable } from './types';
 /** Sales Activities: the task list and the recent activity feed. */
 export const activities = {
   'Sales Activities': ['Actividades de venta', 'Activités commerciales', 'Vertriebsaktivitäten', 'أنشطة المبيعات'],
-  "Your tasks and the team's latest calls, emails, meetings and notes. Log activities from any lead, contact, company or deal.": [
-    'Tus tareas y las últimas llamadas, correos, reuniones y notas del equipo. Registra actividades desde cualquier lead, contacto, empresa u oportunidad.',
-    'Vos tâches et les derniers appels, e-mails, réunions et notes de l’équipe. Enregistrez des activités depuis n’importe quel prospect, contact, entreprise ou opportunité.',
-    'Ihre Aufgaben und die neuesten Anrufe, E-Mails, Meetings und Notizen des Teams. Erfassen Sie Aktivitäten bei jedem Lead, Kontakt, Unternehmen oder jeder Verkaufschance.',
-    'مهامك وأحدث مكالمات الفريق ورسائله واجتماعاته وملاحظاته. سجّل الأنشطة من أي عميل محتمل أو جهة اتصال أو شركة أو صفقة.',
+  "Your tasks and the team’s latest calls, emails, meetings and notes. Log activities from any company, contact or deal.": [
+    'Tus tareas y las últimas llamadas, correos, reuniones y notas del equipo. Registra actividades desde cualquier empresa, contacto u oportunidad.',
+    'Vos tâches et les derniers appels, e-mails, réunions et notes de l’équipe. Consignez des activités depuis n’importe quelle entreprise, contact ou opportunité.',
+    'Ihre Aufgaben und die neuesten Anrufe, E-Mails, Meetings und Notizen des Teams. Erfassen Sie Aktivitäten aus jedem Unternehmen, Kontakt oder jeder Verkaufschance.',
+    'مهامك وأحدث مكالمات الفريق ورسائله واجتماعاته وملاحظاته. سجّل الأنشطة من أي شركة أو جهة اتصال أو صفقة.',
   ],
   Tasks: ['Tareas', 'Tâches', 'Aufgaben', 'المهام'],
   '{count} overdue': ['{count} vencidas', '{count} en retard', '{count} überfällig', '{count} متأخرة'],
@@ -27,5 +27,5 @@ export const activities = {
     'Noch keine Aktivitäten erfasst. Öffnen Sie einen Datensatz und nutzen Sie „Aktivität erfassen“.',
     'لم يُسجَّل أي نشاط بعد. افتح سجلًا واستخدم «تسجيل نشاط».',
   ],
-  Lead: ['Lead', 'Prospect', 'Lead', 'عميل محتمل'],
+  'Inbound contact': ['Contacto entrante', 'Contact entrant', 'Eingangskontakt', 'جهة اتصال واردة'],
 } as const satisfies PhraseTable;

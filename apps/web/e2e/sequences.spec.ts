@@ -31,7 +31,7 @@ test('writes a template, previews it for a lead, and builds and starts a sequenc
   // The insert puts the cursor back in the box after the field.
   await expect(page.getByLabel('Email', { exact: true })).toBeFocused();
   await page.getByLabel('Email', { exact: true }).fill('Hi {{first_name|there}}, a note for {{company}}.');
-  await page.getByLabel('Preview for a lead').fill('Ana');
+  await page.getByLabel('Preview for a contact').fill('Ana');
   await page.getByRole('option', { name: /Ana Buyer/ }).click();
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByText('Hi Ana, a note for Buyer Co.')).toBeVisible();
@@ -74,7 +74,7 @@ test('writes a template, previews it for a lead, and builds and starts a sequenc
 
   // Enrolling needs the sender's own mailbox, which this test workspace has not connected.
   await page.getByRole('tab', { name: /People/ }).click();
-  await page.getByLabel('A lead').fill('Ana');
+  await page.getByLabel('An inbound contact').fill('Ana');
   await page.getByRole('option', { name: /Ana Buyer/ }).click();
   await page.getByRole('button', { name: 'Enrol', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Connect your Google or Microsoft mailbox' })).toBeVisible();
@@ -111,7 +111,7 @@ test('workspace variables and custom fields fill templates, templates group by c
   await page.getByLabel('Insert a custom field or workspace variable').selectOption('var.booking_link');
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('Pick a time: {{var.booking_link}}');
   await page.getByLabel('Category').fill('Cold outreach');
-  await page.getByLabel('Preview for a lead').fill('Rhea');
+  await page.getByLabel('Preview for a contact').fill('Rhea');
   await page.getByRole('option', { name: /Rhea North/ }).click();
   await page.getByRole('button', { name: 'Preview' }).click();
   await expect(page.getByText('News for Nordics')).toBeVisible();

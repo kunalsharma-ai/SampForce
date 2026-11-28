@@ -78,7 +78,7 @@ test('a manager runs their team from the manager dashboard: instructions, follow
   await expect(main.getByRole('heading', { name: 'Manager dashboard', level: 1 })).toBeVisible();
   await expect(main.getByText('2 reporting employees', { exact: false })).toBeVisible();
   const kpis = main.getByRole('list', { name: 'Team metrics' });
-  await expect(kpis.getByRole('button', { name: 'Leads generated: 3. Show the records' })).toBeVisible();
+  await expect(kpis.getByRole('button', { name: 'Companies created: 3. Show the records' })).toBeVisible();
   await expect(kpis.getByRole('button', { name: 'Revenue generated: $19,000. Show the records' })).toBeVisible();
   await expect(page.getByTestId('team-target')).toContainText('$19,000 of $30,000');
   const table = page.getByTestId('team-table');

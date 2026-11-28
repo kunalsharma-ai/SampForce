@@ -430,7 +430,7 @@ export class SequencesService {
         sequence: { id: r.sequence.id, name: r.sequence.name },
         person: r.contactId
           ? { type: 'contact' as const, id: r.contactId, name: contacts.get(r.contactId) ?? 'Deleted contact' }
-          : { type: 'lead' as const, id: r.leadId ?? '', name: (r.leadId && leads.get(r.leadId)) || 'Deleted lead' },
+          : { type: 'lead' as const, id: r.leadId ?? '', name: (r.leadId && leads.get(r.leadId)) || 'Deleted inbound contact' },
         email: r.email,
         sender: names.get(r.senderId) ?? null,
         status: r.status,

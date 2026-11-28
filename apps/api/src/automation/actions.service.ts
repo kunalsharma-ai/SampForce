@@ -1,8 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { AppError, AppsService } from '../apps/apps.service';
-import { slackEscape } from '../apps/slack';
-import { teamsEscape } from '../apps/teams';
+import { AppError } from '../apps/apps.service';
 import { AuditService } from '../audit/audit.service';
 import { createHmac } from 'node:crypto';
 import {
@@ -72,7 +70,6 @@ export class WorkflowActions {
     private readonly notifications: NotificationsService,
     private readonly communication: CommunicationService,
     private readonly audit: AuditService,
-    private readonly apps: AppsService,
     private readonly whatsapp: WhatsappService,
     private readonly twilio: TwilioService,
     private readonly moduleRef: ModuleRef,
@@ -122,7 +119,7 @@ export class WorkflowActions {
           const seq = await tx.sequence.findFirst({ where: { id: action.sequenceId, tenantId: actor.tenantId } });
           if (!seq || seq.status !== 'ACTIVE') throw new ActionError('The sequence is missing or not active. Start it, then retry.');
           const people = person.type === 'lead' ? await loadLeads(tx, actor.tenantId, [person.id]) : await loadContacts(tx, actor.tenantId, [person.id]);
-          if (!people.length) throw new ActionError('The lead or contact no longer exists.');
+          if (!people.length) throw new ActionError('The contact no longer exists.');
           // Emails go from the workflow owner's mailbox, under the sequence's own windows, limits and do-not-email checks.
           return sequences.enrollPeople(tx, actor.tenantId, seq, people, actor.userId, actor.userId);
         });
@@ -135,7 +132,7 @@ export class WorkflowActions {
         await this.prisma.run(actor, async (tx) => {
           const where = { id: person.id, tenantId: actor.tenantId, deletedAt: null };
           const n = person.type === 'lead' ? await tx.lead.updateMany({ where, data: { emailStatus: action.status } }) : await tx.contact.updateMany({ where, data: { emailStatus: action.status } });
-          if (!n.count) throw new ActionError('The lead or contact no longer exists.');
+          if (!n.count) throw new ActionError('The contact no longer exists.');
           await this.audit.record(tx, { tenantId: actor.tenantId, actorUserId: actor.userId, action: `${person.type}.email_flagged`, entityType: person.type, entityId: person.id, metadata: { status: action.status }, meta });
         });
         return { emailStatus: action.status };
@@ -149,7 +146,7 @@ export class WorkflowActions {
           const current = person.type === 'lead'
             ? await tx.lead.findFirst({ where, select: { engagementScore: true } })
             : await tx.contact.findFirst({ where, select: { engagementScore: true } });
-          if (!current) throw new ActionError('The lead or contact no longer exists.');
+          if (!current) throw new ActionError('The contact no longer exists.');
           const next = Math.min(100, Math.max(0, (current.engagementScore ?? 0) + action.points));
           if (person.type === 'lead') await tx.lead.update({ where: { id: person.id }, data: { engagementScore: next } });
           else await tx.contact.update({ where: { id: person.id }, data: { engagementScore: next } });
@@ -171,11 +168,11 @@ export class WorkflowActions {
         return { field: action.field, value: action.value };
       }
       case 'add_tag': {
-        if (entity !== 'lead' || !id) throw new ActionError('Tags can only be added to leads.');
+        if (entity !== 'lead' || !id) throw new ActionError('Tags can only be added to inbound contacts.');
         need('leads:write');
         const lead = await this.leads.get(actor, id);
         if (lead.tags.some((t) => t.toLowerCase() === action.tag.toLowerCase())) return { tag: action.tag, alreadyPresent: true };
-        if (lead.tags.length >= 20) throw new ActionError('The lead already has the maximum of 20 tags.');
+        if (lead.tags.length >= 20) throw new ActionError('The inbound contact already has the maximum of 20 tags.');
         await this.leads.update(actor, id, { tags: [...lead.tags, action.tag] }, meta);
         return { tag: action.tag };
       }
@@ -216,28 +213,6 @@ export class WorkflowActions {
         if (res.status < 200 || res.status >= 300) throw new ActionError(`The endpoint answered ${res.status}.`);
         return { status: res.status, host: url.host };
       }
-      case 'post_to_chat': {
-        // Record values are escaped so they cannot add links or @mentions; the record link is added by SampForce.
-        const link = recordLink(entity, id);
-        const url = link ? `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${link}` : null;
-        if (action.app === 'teams') {
-          try {
-            const r = await this.apps.postToTeams(actor.tenantId, { channelId: action.channelId, message: { text: teamsEscape(text(action.text)), link: url ? { title: 'Open in SampForce', url } : null }, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
-            return { app: 'teams', channel: r.channel };
-          } catch (e) {
-            if (e instanceof AppError) throw new ActionError(e.message);
-            throw e;
-          }
-        }
-        const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in SampForce>` : '');
-        try {
-          const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
-          return { app: action.app, channel: r.channel, ts: r.ts };
-        } catch (e) {
-          if (e instanceof AppError) throw new ActionError(e.message);
-          throw e;
-        }
-      }
       case 'send_whatsapp': {
         // Reached only after a person approved this exact step; consent and the template are checked again here.
         need('activities:write');
@@ -274,7 +249,7 @@ export class WorkflowActions {
   }
 
   private person(entity: string, id: string | null): { type: 'lead' | 'contact'; id: string; field: 'leadId' | 'contactId' } {
-    if (!id || (entity !== 'lead' && entity !== 'contact')) throw new ActionError('This step needs a lead or contact.');
+    if (!id || (entity !== 'lead' && entity !== 'contact')) throw new ActionError('This step needs a contact.');
     return { type: entity, id, field: entity === 'lead' ? 'leadId' : 'contactId' };
   }
 

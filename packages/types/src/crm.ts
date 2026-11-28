@@ -63,6 +63,8 @@ export const listQuerySchema = z.object({
   /** Deals only: expected close date on or after / on or before (YYYY-MM-DD). */
   closeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
   closeTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  /** Deals only: "true" lists archived deals instead of active ones (ADR 0096). */
+  archived: z.enum(['true', 'false']).optional(),
   /** Custom field filters (ADR 0062): a JSON list of {key, op, value}. */
   cf: customFieldFiltersParam,
 });
@@ -620,6 +622,9 @@ export interface PipelineRow {
 export const DEAL_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type DealPriority = (typeof DEAL_PRIORITIES)[number];
 
+/** Suggested deal sources (ADR 0096); a team can also type its own. */
+export const DEAL_SOURCES = ['Website', 'Referral', 'Email campaign', 'Cold call', 'Event', 'Partner', 'Existing client', 'RFQ', 'SampBidx', 'Other'] as const;
+
 export const dealInputSchema = z.object({
   name: z.string().trim().min(1, 'Enter a deal name').max(200),
   amount: money.default(0),
@@ -641,6 +646,16 @@ export const dealInputSchema = z.object({
   /** Revenue attribution (ADR 0063): the assigned manager and the people who helped win the deal. */
   managerId: uuidRef,
   supportingUserIds: z.array(z.string().uuid()).max(20).optional(),
+  /** Deals redesign (ADR 0096): where it came from, what it sells, and notes. */
+  source: z.string().trim().max(80).nullable().optional().or(z.literal('').transform(() => null)),
+  products: z.array(z.string().trim().min(1).max(120)).max(30).optional(),
+  notes: z.string().trim().max(5000).nullable().optional().or(z.literal('').transform(() => null)),
+  /** Links an RFQ of the deal's company to this deal; null unlinks the current one. */
+  rfqId: uuidRef,
+  /** Books a follow-up task on the deal for its owner on this date (YYYY-MM-DD). */
+  nextFollowUpAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional().or(z.literal('').transform(() => undefined)),
+  /** Creates the deal even though the same company already has an open deal with this name. */
+  allowDuplicate: z.boolean().optional(),
 });
 export const dealUpdateSchema = dealInputSchema.partial();
 export type DealInput = z.infer<typeof dealInputSchema>;
@@ -679,6 +694,19 @@ export interface DealRow {
   managerId: string | null;
   leadCreatorId: string | null;
   supportingUserIds: string[];
+  source: string | null;
+  products: string[];
+  notes: string | null;
+  /** Set when the deal is archived: it leaves the board, the list and the dashboard until restored. */
+  archivedAt: string | null;
+  /** The RFQ linked to this deal (the latest, when several are). Filled on the list, board and single deal. */
+  rfq?: { id: string; number: string; projectName: string } | null;
+  /** The latest send of this deal to SampBidx, or null when it was never sent. */
+  sampbidx?: { delivery: string; remoteStatus: string | null; remoteUrl: string | null; sentAt: string | null } | null;
+  /** When the last call, email, meeting or note was logged on the deal. */
+  lastActivityAt?: string | null;
+  /** The earliest open follow-up task on the deal. */
+  nextFollowUp?: { id: string; title: string; dueAt: string | null } | null;
 }
 
 /** One open deal in the priority view, with the reasons it ranks where it does. */
@@ -711,11 +739,104 @@ export interface DealHistoryItem {
   createdAt: string;
 }
 
-export const bulkDealUpdateSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
-  ownerId: z.string().uuid().optional(),
-  stageId: z.string().uuid().optional(),
+/**
+ * POST /deals/bulk-update: change many deals at once (Deals redesign, ADR 0096). Every field is optional, but at
+ * least one change must be given. `expectedCloseDate: null` clears the date; `priority: null` clears the priority.
+ */
+export const bulkDealUpdateSchema = z
+  .object({
+    ids: z.array(z.string().uuid()).min(1).max(200),
+    ownerId: z.string().uuid().optional(),
+    stageId: z.string().uuid().optional(),
+    /** Needed when the new stage is a lost stage and a deal has no loss reason yet. */
+    lossReason: z.string().trim().min(1).max(300).optional(),
+    priority: z.enum(DEAL_PRIORITIES).nullable().optional(),
+    expectedCloseDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+      .nullable()
+      .optional(),
+    probability: z.coerce.number().int().min(0).max(100).nullable().optional(),
+    /** true archives the deals, false brings them back. */
+    archived: z.boolean().optional(),
+  })
+  .strict()
+  .refine(
+    (v) => v.ownerId !== undefined || v.stageId !== undefined || v.priority !== undefined || v.expectedCloseDate !== undefined || v.probability !== undefined || v.archived !== undefined,
+    { message: 'Choose something to change', path: ['ids'] },
+  );
+export type BulkDealUpdateInput = z.infer<typeof bulkDealUpdateSchema>;
+
+/** One count and value pair in the deals dashboard. Values add up deals in the workspace currency only. */
+export interface DealsMetric {
+  count: number;
+  value: number;
+}
+
+/** One row of "deals by employee / manager / company" on the dashboard. */
+export interface DealsBreakdownRow {
+  /** The person or company; null for deals with nobody (or no company) set. */
+  ref: { id: string; name: string } | null;
+  open: DealsMetric;
+  won: DealsMetric;
+  lost: number;
+}
+
+/** GET /deals/summary query: the dashboard's filters. `from`/`to` (YYYY-MM-DD) bound the created, won and lost figures. */
+export const dealsSummaryQuerySchema = z.object({
+  pipelineId: z.string().uuid().optional(),
+  ownerId: z.union([z.literal('me'), z.string().uuid()]).optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
 });
+export type DealsSummaryQuery = z.infer<typeof dealsSummaryQuerySchema>;
+
+/**
+ * GET /deals/summary: the real numbers behind the Deals dashboard (ADR 0096), for the deals the caller can see
+ * (record visibility), leaving out archived and deleted deals.
+ */
+export interface DealsSummary {
+  currency: string;
+  /** Deals in other currencies: counted, but their amounts are not added to the values. */
+  otherCurrencyCount: number;
+  /** The period the created, won and lost figures cover (inclusive), or null for all time. */
+  range: { from: string | null; to: string | null };
+  /** Every active deal, whatever its status. */
+  total: DealsMetric;
+  open: DealsMetric & { weighted: number };
+  /** In the period. */
+  created: DealsMetric;
+  won: DealsMetric;
+  lost: DealsMetric;
+  /** Won ÷ (won + lost) for deals closed in the period, 0-100; null when none closed. */
+  conversionRate: number | null;
+  /** Average amount of the deals won in the period, and of the open deals now. */
+  averageWon: number | null;
+  averageOpen: number | null;
+  /** Average days from creation to close for deals won in the period. */
+  averageCycleDays: number | null;
+  /** Calendar month to date, whatever the period. */
+  createdThisMonth: DealsMetric;
+  closedThisMonth: DealsMetric;
+  overdue: DealsMetric;
+  closingNext30Days: DealsMetric;
+  noCloseDate: number;
+  /** Open deals nobody has changed for 14 days or more. */
+  stalled: number;
+  /** Open deals by priority. */
+  priorities: { HIGH: number; MEDIUM: number; LOW: number; NONE: number };
+  /** The last six months, oldest first: month is YYYY-MM. */
+  trend: { month: string; created: number; won: number; wonValue: number; lost: number }[];
+  /** Stages of the chosen (or default) pipeline with the open deals in each. */
+  pipeline: { id: string; name: string } | null;
+  stages: { id: string; name: string; category: 'OPEN' | 'WON' | 'LOST'; probability: number; count: number; value: number }[];
+  /** At most eight rows each, the largest open value first. */
+  byOwner: DealsBreakdownRow[];
+  byManager: DealsBreakdownRow[];
+  byCompany: DealsBreakdownRow[];
+  /** Open deals closing in the next 30 days, soonest first (at most eight). */
+  upcoming: { id: string; name: string; amount: number; currency: string; expectedCloseDate: string; company: { id: string; name: string } | null; owner: OwnerRef | null; stage: string }[];
+}
 
 // ───────────── Activities & tasks ─────────────
 

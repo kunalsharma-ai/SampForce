@@ -79,6 +79,8 @@ export const apiEnvSchema = z.object({
   FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /** Tests only: company logo look-ups (ADR 0070) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
   LOGO_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /** Tests only: learning video look-ups (ADR 0097) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
+  LEARNING_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /**
    * Company auto-fill (ADR 0076) also reads Wikidata (www.wikidata.org). Unset or true: on. False for a server that
    * should only reach the companies' own websites (an office network without general internet).
@@ -99,32 +101,24 @@ export const apiEnvSchema = z.object({
   APOLLO_API_BASE_URL: z.string().url().default('https://api.apollo.io/api/v1'),
   /** Default provider calls (searches, email reveals, verifications) one person may make per 24 hours. */
   PROSPECT_DAILY_LIMIT: z.coerce.number().int().min(0).max(5000).default(100),
-  /** Website enquiries one workspace accepts in 24 hours, across all visitors, so a flood cannot fill the CRM. */
-  VISITOR_ENQUIRIES_PER_DAY: z.coerce.number().int().min(1).max(100000).default(500),
   /** Optional speech-to-text for meeting recordings (Deepgram). Unset = paste a transcript or notes instead. */
   DEEPGRAM_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   DEEPGRAM_API_BASE_URL: z.string().url().default('https://api.deepgram.com'),
   /** Largest recording accepted for transcription, in megabytes. The audio is never stored. */
+  // Website Enquiry (ADR 0095): enquiries, downloads, chat leads, sign-ups and reviews from the company website's
+  // "Sampforce API". The address, key, webhook secret and receiving workspace are entered in the operator console.
+  WEBSITE_API_BASE_URL: z.string().url().regex(/^https?:\/\//, 'Use an http:// or https:// address').optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_API_KEY: z.string().max(400).optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_WEBHOOK_SECRET: z.string().min(16, 'Use at least 16 characters (for example openssl rand -hex 32)').max(400).optional().or(z.literal('').transform(() => undefined)),
+  WEBSITE_ENQUIRY_WORKSPACE: z.string().trim().max(120).optional().or(z.literal('').transform(() => undefined)),
+  /** How often the website API is pulled for new and changed leads, as a safety net for the webhook. */
+  WEBSITE_ENQUIRY_SYNC_MS: z.coerce.number().int().min(1000).default(600_000),
   MEETING_UPLOAD_MAX_MB: z.coerce.number().int().min(1).max(500).default(100),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_TENANT: z.string().default('common'),
-  /**
-   * Workspace apps (Slack, and later Teams, Zoom, DocuSign, payments, WhatsApp). Each needs the platform's own app
-   * credentials here; a workspace admin then connects their account. Without them the app shows Pending Configuration.
-   */
-  SLACK_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
-  SLACK_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
-  SLACK_AUTH_BASE_URL: z.string().url().default('https://slack.com'),
-  SLACK_API_BASE_URL: z.string().url().default('https://slack.com/api'),
-  // Zoom workspace app (General app, admin-managed). The webhook secret token verifies Zoom's event notifications.
-  ZOOM_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
-  ZOOM_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
-  ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
-  ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
-  ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
   /** Invite link to the operator's SampForce app in Zapier (integrations/zapier). Unset: Zapier is Pending Configuration. */
   ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
@@ -249,6 +243,9 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.LOGO_FIXTURE_URL) {
     throw new Error('LOGO_FIXTURE_URL is for tests only and cannot be used in production');
+  }
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.LEARNING_FIXTURE_URL) {
+    throw new Error('LEARNING_FIXTURE_URL is for tests only and cannot be used in production');
   }
   const d = parsed.data;
   if (d.STRIPE_SECRET_KEY && !d.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');

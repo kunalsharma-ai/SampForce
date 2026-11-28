@@ -9,19 +9,65 @@ import type { WorkspaceLevel } from './workspaces';
 
 // ───────────── Targets ─────────────
 
-/** The redesign (R7, ADR 0091) adds emails sent, follow-ups completed, meetings, RFQs and conversions. */
-export const TARGET_METRICS = ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE', 'EMAILS_SENT', 'FOLLOW_UPS_DONE', 'MEETINGS', 'RFQS', 'CONVERSIONS'] as const;
+/**
+ * The redesign (R7, ADR 0091) adds emails sent, follow-ups completed, meetings, RFQs and conversions. ADR 0096 adds
+ * qualified companies, contacts created, connected calls, deals created, deal value and RFQs converted. LEADS keeps
+ * counting every company the person created, as before.
+ */
+export const TARGET_METRICS = [
+  'LEADS',
+  'QUALIFIED_COMPANIES',
+  'CONTACTS',
+  'CALLS',
+  'CALLS_CONNECTED',
+  'EMAILS_SENT',
+  'FOLLOW_UPS_DONE',
+  'MEETINGS',
+  'DEALS_CREATED',
+  'DEAL_VALUE',
+  'DEALS_WON',
+  'REVENUE',
+  'RFQS',
+  'RFQS_CONVERTED',
+  'CONVERSIONS',
+] as const;
 export type TargetMetric = (typeof TARGET_METRICS)[number];
 export const TARGET_METRIC_LABEL: Record<TargetMetric, string> = {
-  LEADS: 'Leads generated',
+  LEADS: 'Companies created',
+  QUALIFIED_COMPANIES: 'Qualified companies created',
+  CONTACTS: 'Contacts created',
   CALLS: 'Calls',
-  DEALS_WON: 'Deals won',
-  REVENUE: 'Revenue',
+  CALLS_CONNECTED: 'Connected calls',
   EMAILS_SENT: 'Emails sent',
   FOLLOW_UPS_DONE: 'Follow-ups completed',
   MEETINGS: 'Meetings',
+  DEALS_CREATED: 'Deals created',
+  DEAL_VALUE: 'Deal value',
+  DEALS_WON: 'Deals won',
+  REVENUE: 'Revenue',
   RFQS: 'RFQs received',
+  RFQS_CONVERTED: 'RFQs converted',
   CONVERSIONS: 'Conversions',
+};
+/** Measures counted in money (the organisation's currency); the rest are counts. */
+export const MONEY_METRICS: ReadonlySet<TargetMetric> = new Set(['REVENUE', 'DEAL_VALUE']);
+/** How each measure is counted, shown next to every target, task and ranking so nobody has to guess. */
+export const METRIC_RULE: Record<TargetMetric, string> = {
+  LEADS: 'Companies the person created in the period. Deleted companies do not count.',
+  QUALIFIED_COMPANIES: 'Companies the person created that have a website, email, phone or LinkedIn and are not a repeat of a company already in SampForce.',
+  CONTACTS: 'Contacts the person created that have an email address or a phone number. Deleted contacts do not count.',
+  CALLS: 'Calls the person logged, including attempts that did not reach anyone.',
+  CALLS_CONNECTED: 'Logged calls where someone answered: connected, asked to call back or not interested.',
+  EMAILS_SENT: 'Emails the person sent from SampForce or a connected mailbox, and emails they logged as sent.',
+  FOLLOW_UPS_DONE: 'Follow-ups assigned to the person that they marked done.',
+  MEETINGS: 'Meetings the person logged.',
+  DEALS_CREATED: 'Deals the person owns that were created in the period. Deleted deals do not count.',
+  DEAL_VALUE: 'The value of the deals counted in Deals created, in the organisation’s currency.',
+  DEALS_WON: 'Deals credited to the person as won in the period.',
+  REVENUE: 'Won revenue credited to the person in the period, in the organisation’s currency.',
+  RFQS: 'RFQs received in the period on the person’s companies.',
+  RFQS_CONVERTED: 'RFQs on the person’s companies that were won in the period.',
+  CONVERSIONS: 'Companies of the person that became clients in the period.',
 };
 
 /** The redesign (R7) adds half-yearly and yearly targets. */
@@ -62,7 +108,12 @@ export const targetCreateSchema = z
 export type TargetCreateInput = z.infer<typeof targetCreateSchema>;
 
 export const targetUpdateSchema = z
-  .object({ amount: amount.optional(), note: z.string().trim().max(500).nullable().optional() })
+  .object({
+    amount: amount.optional(),
+    note: z.string().trim().max(500).nullable().optional(),
+    /** A new last day (ADR 0096): the deadline moves, the period becomes custom. */
+    endsOn: day.optional(),
+  })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'Change at least one thing');
 export type TargetUpdateInput = z.infer<typeof targetUpdateSchema>;
@@ -126,7 +177,18 @@ export interface TargetRow {
   parentTargetId: string | null;
   /** Counted from records owned by the people of the workspace and every workspace below it. */
   achieved: number;
+  /** Can pass 100 when the target is exceeded. */
   percent: number;
+  /** What is still missing (0 once reached). */
+  remaining: number;
+  /** UPCOMING (not started), RUNNING or ENDED. */
+  state: 'UPCOMING' | 'RUNNING' | 'ENDED';
+  /** Whole days left including today, while running. */
+  daysLeft: number | null;
+  /** The same measure over the period of the same length just before (ADR 0096), for comparison. */
+  previous: { achieved: number; percent: number } | null;
+  /** How each measure is counted. */
+  rule: string;
   /** Total of the parts already handed down from this target. */
   distributed: number;
   editable: boolean;
@@ -135,8 +197,20 @@ export interface TargetRow {
   createdAt: string;
 }
 
+/** Cumulative progress of a target, day by day, with the straight line that would reach it on time (ADR 0096). */
+export interface TargetTrend {
+  id: string;
+  points: { date: string; achieved: number; pace: number }[];
+  /** Earlier periods of the same length, newest first (up to six). */
+  history: { startsOn: string; endsOn: string; achieved: number; percent: number }[];
+}
+
 export interface TargetsView {
   targets: TargetRow[];
+  /** What the caller sees: everything (Super), its team and maybe other managers (Manager), or itself (Executive). */
+  scope: 'ORGANISATION' | 'TEAM' | 'SELF';
+  /** The caller's own workspace, to pick out "your targets". */
+  myWorkspaceId: string;
   /** Workspaces the caller may set targets for, with the workspace each reports to. */
   assignable: (WorkspaceRef & { parentId: string | null })[];
   currency: string;

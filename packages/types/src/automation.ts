@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 /** Domain events a workflow can start from. Each is published by the API in the same transaction as the change. */
 export const TRIGGER_EVENTS = {
-  'lead.created': { label: 'Lead is created', entity: 'lead' },
-  'lead.updated': { label: 'Lead is updated', entity: 'lead' },
-  'lead.assigned': { label: 'Lead is assigned', entity: 'lead' },
-  'lead.converted': { label: 'Lead is converted', entity: 'lead' },
+  'lead.created': { label: 'Inbound contact is created', entity: 'lead' },
+  'lead.updated': { label: 'Inbound contact is updated', entity: 'lead' },
+  'lead.assigned': { label: 'Inbound contact is assigned', entity: 'lead' },
+  'lead.converted': { label: 'Inbound contact is converted', entity: 'lead' },
   'contact.created': { label: 'Contact is created', entity: 'contact' },
   'company.created': { label: 'Company is created', entity: 'company' },
   'deal.created': { label: 'Deal is created', entity: 'deal' },
@@ -27,8 +27,6 @@ export const TRIGGER_EVENTS = {
   'email.failed': { label: 'Sending to them fails', entity: 'person' },
   'sequence.enrolled': { label: 'They are added to a sequence', entity: 'person' },
   'sequence.removed': { label: 'They are removed from a sequence', entity: 'person' },
-  // Website visitor intelligence: a known visitor's intent score reaches the workspace threshold.
-  'visitor.high_intent': { label: 'They show high intent on your website', entity: 'person' },
 } as const;
 export type TriggerEvent = keyof typeof TRIGGER_EVENTS;
 export type TriggerEntity = (typeof TRIGGER_EVENTS)[TriggerEvent]['entity'];
@@ -128,17 +126,6 @@ export const actionSchema = z.discriminatedUnion('type', [
   /** External: always requires an approval before it runs. */
   z.object({ type: z.literal('send_webhook'), url: z.string().url().max(2000) }),
   /**
-   * Posts a message to the workspace's connected chat app (Slack or Microsoft Teams). Internal team channel, so no approval is needed;
-   * an empty channel uses the default chosen when the app was connected.
-   */
-  z.object({
-    type: z.literal('post_to_chat'),
-    app: z.enum(['slack', 'teams']).default('slack'),
-    channelId: z.string().regex(/^([CG][A-Z0-9]{2,20}|tc_[a-f0-9]{12})$/).nullable().default(null),
-    channelName: z.string().max(80).nullable().default(null),
-    text: z.string().trim().min(1).max(3000),
-  }),
-  /**
    * External: one approved WhatsApp template to the contact's number, after approval, and only if their WhatsApp
    * consent is recorded. Params fill the template's {{1}}, {{2}}… in order and may use {{record.*}}.
    */
@@ -222,10 +209,10 @@ export const workflowDefinitionSchema = z
         ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}" waits with nothing after it; add a step after the wait` });
       }
       if (n.type === 'action' && n.action.type === 'add_tag' && TRIGGER_EVENTS[def.trigger.event].entity !== 'lead') {
-        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": tags can only be added to leads` });
+        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": tags can only be added to inbound contacts` });
       }
       if (n.type === 'action' && PERSON_ACTIONS.has(n.action.type) && !['lead', 'contact', 'person'].includes(TRIGGER_EVENTS[def.trigger.event].entity)) {
-        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": this action needs a lead or contact, so use a lead, contact or email trigger` });
+        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": this action needs a contact, so use an inbound contact, contact or email trigger` });
       }
     }
   });

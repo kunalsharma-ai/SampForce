@@ -11,6 +11,7 @@ import { HomeNotifications } from '@/components/notifications/home-notifications
 import { PageHeader } from '@/components/page-header';
 import { YourTargets } from '@/components/workspace-work/targets';
 import { TasksForYou } from '@/components/workspace-work/tasks';
+import { TodayTasksStrip } from '@/components/task-plans/task-plans';
 import { LevelDashboard } from '@/components/workspace-dashboard/level-dashboards';
 import { RoleDashboard } from '@/components/workspace-dashboard/role-dashboards';
 import { useHasFeature } from '@/lib/features';
@@ -18,6 +19,7 @@ import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
 
 /** The dashboards (ADR 0063), plus the dashboard of the workspace level (ADR 0071 part 6). */
 /** `workspace` is the role dashboard (redesign R6, ADR 0086); `overview` keeps the level dashboard it replaced. */
@@ -47,10 +49,17 @@ export function CommandCenter() {
   const hasTasks = useHasFeature('task_management');
   const hasTargets = useHasFeature('sales_target_management');
   const hasNotifications = useHasFeature('notifications');
+  const hasChat = useHasFeature('team_chat');
   const ctx = useCommandCenterContext(!!session && !session.restriction && canDashboard);
   if (!session || (canDashboard && ctx.isPending && !session.restriction))
     return <Skeleton className="h-96" aria-label={t('Loading')} />;
-  if (!ctx.data) return <AnalyticsDashboard />;
+  if (!ctx.data)
+    return (
+      <>
+        <BirthdayCelebration wishes={hasChat} className="mb-4" />
+        <AnalyticsDashboard />
+      </>
+    );
 
   const level = session.workspace?.level ?? 'SUPER';
   // The organisation overview is for the Super Workspace's administrators; managers and executives always have theirs.
@@ -99,6 +108,8 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
+      {/* Today's birthdays on every dashboard; the level's own dashboard shows them under its welcome banner. */}
+      {view !== 'workspace' && <BirthdayCelebration wishes={hasChat} className="mb-4" />}
       {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
       {view === 'overview' && level === 'SUPER' && <OnboardingChecklist />}
       {view === 'workspace' && <RoleDashboard level={level} />}
@@ -112,6 +123,7 @@ export function CommandCenter() {
         <div className={view === 'workspace' || view === 'overview' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
           {/* The home dashboard's way to notifications (ADR 0075). The role dashboard draws its own target rings. */}
           {hasNotifications && <HomeNotifications />}
+          {hasTasks && <TodayTasksStrip />}
           {hasTasks && <TasksForYou />}
           {hasTargets && view !== 'workspace' && <YourTargets />}
         </div>
@@ -120,7 +132,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Senior management dashboard"
-            description="The organisation's numbers for the period, how each department and team is doing, who leads, where revenue comes from, and what needs attention. Every number opens the records it counts."
+            description="The organisation’s numbers for the period, how each department and team is doing, who is ahead, where revenue comes from, and what needs attention. Every number opens the records it counts."
           />
           <OnboardingChecklist />
           <SeniorDashboard context={ctx.data} />
@@ -129,7 +141,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Manager dashboard"
-            description="Your team's leads, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
+            description="Your team’s companies, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
           />
           <ManagerDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>
@@ -137,7 +149,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Executive dashboard"
-            description="Your leads, work, pipeline and credited revenue for the period. Every number opens the records it counts."
+            description="Your companies, work, pipeline and credited revenue for the period. Every number opens the records it counts."
           />
           <ExecutiveDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>

@@ -413,8 +413,15 @@ export class OperatorService {
       else if (extra) details.push({ path: `values.${name}`, message: extra });
       else changes[name] = def?.normalize ? def.normalize(parsed.value) : parsed.value;
     }
+    // Website enquiries (ADR 0095): the receiving workspace must exist, by its web address name.
+    const receiving = changes.WEBSITE_ENQUIRY_WORKSPACE
+      ? await this.prisma.run({ operatorScan: true }, (tx) => tx.tenant.findFirst({ where: { slug: changes.WEBSITE_ENQUIRY_WORKSPACE!, deletedAt: null }, select: { id: true, name: true } }))
+      : null;
+    if (changes.WEBSITE_ENQUIRY_WORKSPACE && !receiving) details.push({ path: 'values.WEBSITE_ENQUIRY_WORKSPACE', message: `No workspace has the web address name "${changes.WEBSITE_ENQUIRY_WORKSPACE}". Copy it from the client's page in Clients.` });
     if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: details[0]!.message, details });
     const done = await this.keys.apply(changes, op.id);
+    // Naming the receiving workspace also switches the section on for it, so one step sets it up.
+    if (receiving) await this.setFeatureOverrides(op, receiving.id, { overrides: { website_enquiries: true }, reason: 'Receives the company website enquiries (Providers > Website enquiries).' }, ip);
     for (const d of done) {
       await this.log(op.id, d.action === 'set' ? 'provider_key.set' : 'provider_key.cleared', null, { provider: key, name: d.name, fingerprint: d.fingerprint, ...(MANAGED_KEYS[d.name].secret ? { last4: d.hint } : { value: d.hint }) }, ip);
     }
@@ -431,8 +438,8 @@ export class OperatorService {
       anthropic: () => this.tests.anthropic(),
       openai: () => this.tests.compatible('openai'), gemini: () => this.tests.compatible('gemini'), groq: () => this.tests.compatible('groq'),
       openrouter: () => this.tests.openrouter(), mistral: () => this.tests.compatible('mistral'), custom_ai: () => this.tests.compatible('custom_ai'), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
-      slack: () => this.tests.slack(), zoom: () => this.tests.zoom(), docusign: () => this.tests.docusign(),
-      smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
+      docusign: () => this.tests.docusign(),
+      smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), website_enquiries: () => this.tests.websiteEnquiries(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
     };
     const fingerprint = this.fingerprint(p);
     let result: StoredCheck;

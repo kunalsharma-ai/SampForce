@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
  */
 const FIRST = ['Avery', 'Jordan', 'Riley', 'Morgan', 'Casey', 'Quinn', 'Rowan', 'Harper', 'Emerson', 'Sasha', 'Kai', 'Noor', 'Arun', 'Mei', 'Tomas', 'Lena'];
 const LAST = ['Sample', 'Example', 'Demo', 'Placeholder', 'Testwood', 'Mockford', 'Trialson', 'Previewer'];
-const TITLES = ['Head of Operations', 'VP Sales', 'Procurement Manager', 'Chief Technology Officer', 'Marketing Director', 'Logistics Lead', 'Finance Manager', 'Founder and CEO'];
+const TITLES = ['Head of Operations', 'VP Sales', 'Procurement Manager', 'Chief Technology Officer', 'Marketing Director', 'Logistics Manager', 'Finance Manager', 'Founder and CEO'];
 const INDUSTRIES = ['Logistics', 'Software', 'Retail', 'Manufacturing', 'Healthcare', 'Financial services'];
 const COUNTRIES = ['India', 'United States', 'United Kingdom', 'Germany', 'Singapore', 'Australia'];
 

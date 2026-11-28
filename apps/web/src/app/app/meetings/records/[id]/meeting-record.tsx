@@ -114,7 +114,7 @@ export function MeetingRecordView({ id }: { id: string }) {
                 [
                   ['deal', 'deals', t('Linked deal'), t('Search deals'), r.deal],
                   ['contact', 'contacts', t('Linked contact'), t('Search contacts'), r.contact],
-                  ['lead', 'leads', t('Linked lead'), t('Search leads'), r.lead],
+                  ['lead', 'leads', t('Linked inbound contact'), t('Search inbound contacts…'), r.lead],
                 ] as const
               ).map(([key, entity, label, placeholder, value]) => (
                 <div key={key} className="space-y-1">
@@ -534,7 +534,7 @@ function UseIt({ r, analysis, blocked }: { r: MeetingRecord; analysis: MeetingAn
             {target ? t('Add summary to {target}', { target }) : t('Add summary to a record')}
           </Button>
         )}
-        {!target && !r.activityId && <span className="text-xs text-muted-foreground">{t('Link a deal, contact or lead above first.')}</span>}
+        {!target && !r.activityId && <span className="text-xs text-muted-foreground">{t('Link a deal or contact above first.')}</span>}
         <Button size="sm" variant="outline" disabled={!!blocked} onClick={() => setComposing(true)}>
           <Mail aria-hidden /> {t('Write follow-up email')}
         </Button>

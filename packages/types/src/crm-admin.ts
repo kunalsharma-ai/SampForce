@@ -99,17 +99,17 @@ export interface OptionRow {
  * are always sent.
  */
 export const NOTIFICATION_CATEGORIES = [
-  { key: 'lead_assigned', label: 'New lead assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
-  { key: 'lead_reassigned', label: 'Lead reassigned', types: ['company.reassigned', 'lead.reassigned'] },
+  { key: 'lead_assigned', label: 'New company assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
+  { key: 'lead_reassigned', label: 'Company reassigned', types: ['company.reassigned', 'lead.reassigned'] },
   { key: 'follow_up_assigned', label: 'Follow-up assigned', types: ['followup.assigned', 'task.assigned'] },
   { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'followup.daily', 'task.due_soon'] },
   { key: 'follow_up_overdue', label: 'Follow-up overdue', types: ['followup.overdue', 'task.overdue'] },
   // Redesign R10: the events added by the redesign get categories, so they can be muted and silenced like the rest.
-  { key: 'task_updates', label: 'Task progress and comments', types: ['task.updated', 'task.commented', 'task.completed'] },
-  { key: 'team_status', label: 'Team status: check-in, breaks and check-out', types: ['team.status'] },
+  { key: 'task_updates', label: 'Task progress and comments', types: ['task.updated', 'task.commented', 'task.completed', 'task.acknowledged', 'task.in_progress', 'task.blocked', 'task.half_completed', 'task.not_completed', 'task.cancelled'] },
+  { key: 'team_status', label: 'Team status: check-in, breaks and check-out', types: ['team.status', 'team.status.'] },
   { key: 'manager_remarks', label: 'Manager remarks', types: ['remark.', 'manager_remark.'] },
   { key: 'instructions', label: 'Senior management instructions', types: ['instruction.'] },
-  { key: 'lead_transfers', label: 'Lead transfer requests and decisions', types: ['lead_transfer.', 'transfer.'] },
+  { key: 'lead_transfers', label: 'Company transfer requests and decisions', types: ['lead_transfer.', 'transfer.'] },
   { key: 'rfqs', label: 'RFQ assigned', types: ['rfq.assigned', 'rfq.received'] },
   { key: 'rfq_deadline', label: 'RFQ deadline reminder', types: ['rfq.deadline'] },
   { key: 'concerns', label: 'Client concern escalation', types: ['escalation.', 'concern.'] },
@@ -123,9 +123,18 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'messages', label: 'Incoming SMS, WhatsApp and inbox', types: ['sms.received', 'whatsapp.received', 'inbox.'] },
   { key: 'portal', label: 'Client portal activity', types: ['portal.'] },
   { key: 'sequences', label: 'Sequence updates', types: ['sequence.'] },
-  { key: 'visitors', label: 'High-intent website visitors', types: ['visitor.'] },
+  { key: 'website_enquiries', label: 'New website enquiries', types: ['website_enquiry.'] },
   { key: 'gamification', label: 'Badges and competitions', types: ['gamification.'] },
   { key: 'workflows', label: 'Workflow notifications', types: ['workflow.notify'] },
+  // On-screen notifications (spec section 9): the team's new records, finished calls, approval decisions and SampBidx.
+  { key: 'records_created', label: 'New companies, contacts and deals from your team', types: ['company.created', 'contact.created', 'deal.created'] },
+  { key: 'calls', label: 'Calls completed by your team', types: ['call.'] },
+  { key: 'approval_decisions', label: 'Approval granted or rejected', types: ['approval.approved', 'approval.rejected', 'approval.granted', 'approval.cancelled'] },
+  { key: 'sampbidx', label: 'SampBidx transfers and updates', types: ['sampbidx.'] },
+  // Employee of the Month and improvement plans (ADR 0102).
+  { key: 'recognition', label: 'Employee of the Month targets and awards', types: ['recognition.'] },
+  { key: 'pip', label: 'Performance improvement plans', types: ['pip.'] },
+  { key: 'learning', label: 'Learning & Development', types: ['learning.'] },
 ] as const;
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORIES)[number]['key'];
 const CATEGORY_KEYS = NOTIFICATION_CATEGORIES.map((c) => c.key) as [NotificationCategoryKey, ...NotificationCategoryKey[]];

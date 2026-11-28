@@ -30,7 +30,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
 import { inLanguage, requestLanguage, tr } from '../common/request-language';
-import { hiddenFieldsFor, hiddenSectionsFor } from '@dealflow/types';
+import { hiddenSectionsFor } from '@dealflow/types';
 import { workspaceRulesFor } from '../workspaces/workspace-rules';
 import { type ChangePasswordInput, type ConfirmPasswordInput, type PasswordChanged, type LanguageCode, languageCodeSchema, type PasswordConfirmationIssued } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
@@ -564,7 +564,7 @@ export class AuthService {
       },
       role: auth.roleKey,
       permissions: auth.permissions,
-      workspace: { id: access.node.id, level: access.level, name: access.virtual || access.level === 'SUPER' ? tenant.name : access.node.name, designation: access.node.designation, actions: access.actions as Record<string, string[]>, hiddenFields: hiddenFieldsFor(access.level, rules), hiddenSections: hiddenSectionsFor(access.level, rules) },
+      workspace: { id: access.node.id, level: access.level, name: access.virtual || access.level === 'SUPER' ? tenant.name : access.node.name, designation: access.node.designation, actions: access.actions as Record<string, string[]>, hiddenFields: access.fieldAccess.hidden, lockedFields: access.fieldAccess.locked, hiddenSections: hiddenSectionsFor(access.level, rules) },
       memberships,
       authMethod: auth.authMethod,
       mfaEnabled: !!user.mfaEnabledAt,

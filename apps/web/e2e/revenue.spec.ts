@@ -62,8 +62,8 @@ test('quotes a deal from the price book, accepts it and records the signed contr
 test('captures a lead through a hosted form with consent and finds it in a segment', async ({ page, browser }) => {
   await signUp(page, 'Form Flow');
   await page.goto('/app/marketing');
-  await page.getByRole('tab', { name: 'Lead forms' }).click();
-  await page.getByRole('button', { name: 'New lead form' }).click();
+  await page.getByRole('tab', { name: 'Contact forms' }).click();
+  await page.getByRole('button', { name: 'New contact form' }).click();
   await page.getByLabel('Internal name').fill('Demo request');
   await page.getByLabel('Heading visitors see').fill('Book a demo');
   await expectNoA11yViolations(page);

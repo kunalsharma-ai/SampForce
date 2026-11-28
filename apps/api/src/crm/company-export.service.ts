@@ -188,10 +188,10 @@ export class CompanyExportService {
     const websites = (r: CompanyRow) => [...new Set([r.website, ...r.websites.map((w) => w.value)].filter((u): u is string => !!u))];
 
     const fixed: Column<CompanyRow>[] = [
-      { header: 'Lead number', value: (r) => r.leadNumber },
+      { header: 'Company number', value: (r) => r.leadNumber },
       { header: 'Company name', value: (r) => r.name },
       { header: 'Legal name', value: (r) => r.legalName },
-      { header: 'Lead status', value: (r) => r.status?.name },
+      { header: 'Company status', value: (r) => r.status?.name },
       { header: 'Operating status', value: (r) => r.operatingStatus },
       { header: 'Description', value: (r) => r.overview },
       { header: 'Industry', value: (r) => r.industry },
@@ -248,7 +248,7 @@ export class CompanyExportService {
     ];
     const cf = await this.customFieldColumns<CompanyRow>(tx, auth, 'COMPANY', (r) => r.customFields, taken);
     const after: Column<CompanyRow>[] = [
-      { header: uniqueHeader('Lead owner', taken), value: (r) => r.ownerPerson?.name ?? r.owner?.name },
+      { header: uniqueHeader('Company owner', taken), value: (r) => r.ownerPerson?.name ?? r.owner?.name },
       { header: uniqueHeader('Created by', taken), value: (r) => r.createdBy?.name },
       { header: uniqueHeader('Manager', taken), value: (r) => r.manager?.name },
       { header: uniqueHeader('Point of contact', taken), value: (r) => r.poc?.name },
@@ -282,7 +282,7 @@ export class CompanyExportService {
   private async employeeSheet(tx: TenantTx, auth: AuthContext, rows: ContactRow[], companies: Map<string, CompanyRow>): Promise<Sheet> {
     const company = (r: ContactRow) => (r.company ? companies.get(r.company.id) : undefined);
     const fixed: Column<ContactRow>[] = [
-      { header: 'Lead number', value: (r) => company(r)?.leadNumber },
+      { header: 'Company number', value: (r) => company(r)?.leadNumber },
       { header: 'Company name', value: (r) => r.company?.name },
       { header: 'Full name', value: (r) => r.fullName },
       { header: 'First name', value: (r) => r.firstName },
@@ -331,7 +331,7 @@ async function branchSheet(tx: TenantTx, tenantId: string, ids: string[], compan
   // Branch details follow the company's: hidden when its details are hidden.
   const shown = (r: Branch, value: string | null, contact = false) => (companies.get(r.companyId)?.restricted || (contact && noContact) ? null : value);
   const cols: Column<Branch>[] = [
-    { header: 'Lead number', value: (r) => companies.get(r.companyId)?.leadNumber },
+    { header: 'Company number', value: (r) => companies.get(r.companyId)?.leadNumber },
     { header: 'Company name', value: (r) => companies.get(r.companyId)?.name },
     { header: 'Branch name', value: (r) => r.name },
     { header: 'Country code', value: (r) => r.country },
@@ -361,7 +361,7 @@ async function interactionSheet(tx: TenantTx, tenantId: string, companies: Map<s
   const company = (r: Act) => companies.get(r.companyId ?? companyOf.get(r.contactId ?? '') ?? '');
   const shown = <T>(r: Act, value: T) => (company(r)?.restricted ? null : value);
   const cols: Column<Act>[] = [
-    { header: 'Lead number', value: (r) => company(r)?.leadNumber },
+    { header: 'Company number', value: (r) => company(r)?.leadNumber },
     { header: 'Company name', value: (r) => company(r)?.name },
     { header: 'Date', value: (r) => r.occurredAt },
     { header: 'Kind', value: (r) => titleCase(r.interaction ?? r.type) },

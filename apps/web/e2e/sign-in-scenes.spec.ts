@@ -25,7 +25,7 @@ async function axe(page: Page) {
 test.describe('animated sign-in', () => {
   for (const [level, headline, name] of [
     ['super', 'Your whole company, in one place', 'Super Workspace'],
-    ['manager', 'Lead your team to the next win', 'Manager Workspace'],
+    ['manager', 'Guide your team to the next win', 'Manager Workspace'],
     ['executive', 'Ready to close? Let’s sell.', 'Executive Workspace'],
   ] as const) {
     test(`the ${level} scene shows its own welcome and never blocks the form`, async ({ page }) => {
@@ -65,7 +65,7 @@ test.describe('animated sign-in', () => {
     const ctx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();
     await page.goto('/login?workspace=manager');
-    await expect(page.getByRole('heading', { name: 'Lead your team to the next win' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Guide your team to the next win' })).toBeVisible();
     // Every animation ends at once on its still frame (within a moment of the page appearing).
     await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length), { timeout: 2000 }).toBe(0);
     await axe(page);

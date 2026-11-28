@@ -1,8 +1,9 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
-import type { AppEventRow, AppStatus, PaymentsSettings, SampbidxSettings, SlackChannel, TeamsSettings, TwilioSettings, WhatsappSettings } from '@dealflow/types';
+import type { AppEventRow, AppStatus, PaymentsSettings, SampbidxSettings, TwilioSettings, WhatsappSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Select } from '@/components/crm/select';
@@ -33,7 +34,7 @@ function checkedLine(t: Translator, c: { connectedAt: string; connectedBy?: stri
   return c.connectedBy ? t('Credentials checked {time} by {name}.', { time: relativeTime(c.connectedAt), name: c.connectedBy }) : t('Credentials checked {time}.', { time: relativeTime(c.connectedAt) });
 }
 
-/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams, Zoom, DocuSign, card payments and WhatsApp. */
+/** Apps a workspace admin connects once for everyone: DocuSign, card payments, WhatsApp, SMS and SampBidx. */
 export function WorkspaceApps() {
   const t = useT();
   const params = useSearchParams();
@@ -49,283 +50,18 @@ export function WorkspaceApps() {
         </h2>
         <InfoTip topic="integrations.apps" />
       </div>
-      {app && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{app === 'zoom' ? t('Zoom is connected. Schedule meetings from any lead, contact or deal.') : app === 'docusign' ? t('DocuSign is connected. Send draft contracts for signature from the contract page.') : t('Connected. Choose a default channel below, then send a test message.')}</p>}
+      {app === 'docusign' && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{t('DocuSign is connected. Send draft contracts for signature from the contract page.')}</p>}
       {app && error && (
         <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
           {OUTCOME[error] ? t.maybe(OUTCOME[error]) : t('The connection did not complete ({error}).', { error })}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : a.key === 'whatsapp' ? <WhatsappCard key={a.key} app={a} /> : a.key === 'twilio' ? <TwilioCard key={a.key} app={a} /> : a.key === 'sampbidx' ? <SampbidxCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : a.key === 'whatsapp' ? <WhatsappCard key={a.key} app={a} /> : a.key === 'twilio' ? <TwilioCard key={a.key} app={a} /> : a.key === 'sampbidx' ? <SampbidxCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
 
-function SlackCard({ app }: { app: AppStatus }) {
-  const t = useT();
-  const qc = useQueryClient();
-  const canManage = useCan('integrations:manage');
-  const s = STATE[app.state];
-  const c = app.connection;
-  const settings = (c?.settings ?? {}) as { defaultChannelId?: string | null; defaultChannelName?: string | null };
-  const [channel, setChannel] = useState(settings.defaultChannelId ?? '');
-  useEffect(() => setChannel(settings.defaultChannelId ?? ''), [settings.defaultChannelId]);
-  const live = app.state === 'connected';
-  const channels = useQuery({ enabled: live && canManage, queryKey: ['apps', 'slack', 'channels'], queryFn: () => api<SlackChannel[]>('/apps/slack/channels') });
-  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'slack', 'events'], queryFn: () => api<AppEventRow[]>('/apps/slack/events') });
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['apps'] })]);
-  const connect = useMutation({ mutationFn: () => api<{ url: string }>('/apps/slack/connect', { method: 'POST' }), onSuccess: ({ url }) => window.location.assign(url) });
-  const save = useMutation({
-    mutationFn: () => {
-      const ch = channels.data?.find((x) => x.id === channel);
-      return api<AppStatus>('/apps/slack/settings', { method: 'PUT', json: { defaultChannelId: ch?.id ?? null, defaultChannelName: ch?.name ?? null } });
-    },
-    onSuccess: refresh,
-  });
-  const test = useMutation({ mutationFn: () => api('/apps/slack/test', { method: 'POST', json: {} }), onSettled: () => Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['apps', 'slack', 'events'] })]) });
-  const disconnect = useMutation({ mutationFn: () => api('/apps/slack', { method: 'DELETE' }), onSuccess: refresh });
-  const error = connect.error ?? save.error ?? test.error ?? disconnect.error ?? channels.error;
-
-  return (
-    <Card role="region" aria-labelledby="app-slack">
-      <CardHeader className="pb-2">
-        <CardTitle id="app-slack" className="flex flex-wrap items-center gap-2 text-sm">
-          {t.maybe(app.name)}
-          <Badge tone={s.tone}>{t.maybe(s.label)}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <p className="text-muted-foreground">{t.maybe(app.description)} {t('Add a “Post to Slack” step to any workflow.')}</p>
-        {app.state === 'pending_configuration' && (
-          <p className="text-muted-foreground">
-            {t('An operator must add {settings} (the SampForce Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig) })}
-          </p>
-        )}
-        {c && (
-          <div className="space-y-1">
-            <p>
-              {rich(t('Slack workspace: {name}'), { name: <strong>{c.accountName}</strong> })}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {connectedLine(t, c)} {c.lastUsedAt ? t('Last message {time}.', { time: relativeTime(c.lastUsedAt) }) : t('No messages yet.')}
-            </p>
-            {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
-          </div>
-        )}
-        {canManage && live && (
-          <form
-            className="flex flex-wrap items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save.mutate();
-            }}
-          >
-            <div className="min-w-56 flex-1 space-y-1.5">
-              <Label htmlFor="slack-default-channel">{t('Default channel')}</Label>
-              <Select id="slack-default-channel" value={channel} disabled={channels.isPending} onChange={(e) => setChannel(e.target.value)}>
-                <option value="">{t('None (each step names its channel)')}</option>
-                {channels.data?.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.isPrivate ? t('#{name} (private)', { name: ch.name }) : `#${ch.name}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button type="submit" size="sm" variant="outline" disabled={save.isPending || channel === (settings.defaultChannelId ?? '')}>
-              {t('Save')}
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={test.isPending || !settings.defaultChannelId} onClick={() => test.mutate()}>
-              {t('Send test message')}
-            </Button>
-          </form>
-        )}
-        {test.isSuccess && <p role="status" className="text-sm text-muted-foreground">{t('Test message posted to {channel}.', { channel: `#${settings.defaultChannelName ?? ''}` })}</p>}
-        {canManage && app.state !== 'pending_configuration' && (
-          <div className="flex flex-wrap gap-2">
-            {(!c || app.state === 'error') && (
-              <Button size="sm" onClick={() => connect.mutate()} disabled={connect.isPending}>
-                {c ? t('Reconnect Slack') : t('Connect Slack')}
-              </Button>
-            )}
-            {c && (
-              <Button size="sm" variant="ghost" disabled={disconnect.isPending} onClick={() => window.confirm(t('Disconnect Slack? Workflow steps that post to Slack will fail until it is connected again.')) && disconnect.mutate()}>
-                {t('Disconnect')}
-              </Button>
-            )}
-          </div>
-        )}
-        {!canManage && <p className="text-xs text-muted-foreground">{t('Workspace admins connect and configure apps.')}</p>}
-        {error && (
-          <p role="alert" className="text-sm text-critical">
-            {error.message}
-          </p>
-        )}
-        {events.data && events.data.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-medium">{t('Recent activity')}</p>
-            <ul className="space-y-1 text-xs" aria-label={t('Recent Slack activity')}>
-              {events.data.slice(0, 5).map((e) => (
-                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
-                  {relativeTime(e.createdAt)}: {e.summary}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * Teams: each channel is added with a URL from the Teams Workflows app. Nothing is saved until Teams accepts a
- * welcome card, so every listed channel has worked at least once.
- */
-function TeamsCard({ app }: { app: AppStatus }) {
-  const t = useT();
-  const qc = useQueryClient();
-  const canManage = useCan('integrations:manage');
-  const c = app.connection;
-  const settings = (c?.settings ?? { channels: [], defaultChannelId: null }) as unknown as TeamsSettings;
-  const channels = settings.channels ?? [];
-  const [name, setName] = useState('');
-  const [url, setUrl] = useState('');
-  const [def, setDef] = useState(settings.defaultChannelId ?? '');
-  useEffect(() => setDef(settings.defaultChannelId ?? ''), [settings.defaultChannelId]);
-  const s = app.state === 'error' ? { label: t('Needs attention'), tone: 'critical' as const } : STATE[app.state];
-  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'teams', 'events'], queryFn: () => api<AppEventRow[]>('/apps/teams/events') });
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['apps'] })]);
-  const add = useMutation({
-    mutationFn: () => api<AppStatus>('/apps/teams/channels', { method: 'POST', json: { name, webhookUrl: url } }),
-    onSuccess: () => {
-      setName('');
-      setUrl('');
-      return refresh();
-    },
-  });
-  const remove = useMutation({ mutationFn: (id: string) => api<AppStatus>(`/apps/teams/channels/${id}`, { method: 'DELETE' }), onSuccess: refresh });
-  const save = useMutation({ mutationFn: () => api<AppStatus>('/apps/teams/settings', { method: 'PUT', json: { defaultChannelId: def || null } }), onSuccess: refresh });
-  const test = useMutation({ mutationFn: (channelId: string) => api<{ channel: string }>('/apps/teams/test', { method: 'POST', json: { channelId } }), onSettled: () => refresh() });
-  const error = add.error ?? remove.error ?? save.error ?? test.error;
-
-  return (
-    <Card role="region" aria-labelledby="app-teams">
-      <CardHeader className="pb-2">
-        <CardTitle id="app-teams" className="flex flex-wrap items-center gap-2 text-sm">
-          {t.maybe(app.name)}
-          <Badge tone={s.tone}>{t.maybe(s.label)}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <p className="text-muted-foreground">{t.maybe(app.description)} {t('Add a “Post to Slack or Teams” step to any workflow and choose Microsoft Teams.')}</p>
-        {c?.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
-        {channels.length > 0 && (
-          <ul className="divide-y divide-border rounded-md border" aria-label={t('Teams channels')}>
-            {channels.map((ch) => (
-              <li key={ch.id} className="flex flex-wrap items-center gap-2 p-2">
-                <span className="font-medium">{ch.name}</span>
-                {ch.id === settings.defaultChannelId && <Badge>{t('Default')}</Badge>}
-                {ch.lastError && <Badge tone="critical">{t('Not accepting messages')}</Badge>}
-                <span className="text-xs text-muted-foreground">{t('Added {time}', { time: relativeTime(ch.addedAt) })}</span>
-                {canManage && (
-                  <span className="ms-auto flex gap-1">
-                    <Button size="sm" variant="outline" disabled={test.isPending} onClick={() => test.mutate(ch.id)} aria-label={t('Send test message to {name}', { name: ch.name })}>
-                      {t('Test')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={remove.isPending}
-                      aria-label={t('Remove {name}', { name: ch.name })}
-                      onClick={() => window.confirm(t('Remove {name}? Workflow steps that post there will fail. Also turn off its workflow in Teams.', { name: ch.name })) && remove.mutate(ch.id)}
-                    >
-                      {t('Remove')}
-                    </Button>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {test.isSuccess && <p role="status" className="text-sm text-muted-foreground">{t('Test message posted to {channel}.', { channel: test.data.channel })}</p>}
-        {canManage && channels.length > 1 && (
-          <form
-            className="flex flex-wrap items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save.mutate();
-            }}
-          >
-            <div className="min-w-56 flex-1 space-y-1.5">
-              <Label htmlFor="teams-default-channel">{t('Default Teams channel')}</Label>
-              <Select id="teams-default-channel" value={def} onChange={(e) => setDef(e.target.value)}>
-                {channels.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button type="submit" size="sm" variant="outline" disabled={save.isPending || def === (settings.defaultChannelId ?? '')}>
-              {t('Save')}
-            </Button>
-          </form>
-        )}
-        {canManage && (
-          <form
-            className="space-y-2 rounded-md border border-dashed p-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              add.mutate();
-            }}
-          >
-            <p className="text-xs text-muted-foreground">
-              {rich(t('In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. SampForce posts a welcome card to check it before saving. The URL is stored encrypted.'), { menu: <strong>{t('Workflows')}</strong> })}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-[12rem_1fr]">
-              <div className="space-y-1.5">
-                <Label htmlFor="teams-channel-name">{t('Channel name')}</Label>
-                <Input id="teams-channel-name" value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="teams-webhook-url">{t('Workflow URL')}</Label>
-                <Input id="teams-webhook-url" type="url" autoComplete="off" value={url} maxLength={2000} required onChange={(e) => setUrl(e.target.value)} />
-              </div>
-            </div>
-            <Button type="submit" size="sm" disabled={add.isPending || !name.trim() || !url.trim()}>
-              {add.isPending ? t('Checking with Teams…') : t('Add channel')}
-            </Button>
-          </form>
-        )}
-        {!canManage && <p className="text-xs text-muted-foreground">{t('Workspace admins add Teams channels.')}</p>}
-        {error && (
-          <p role="alert" className="text-sm text-critical">
-            {error.message}
-          </p>
-        )}
-        {events.data && events.data.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-medium">{t('Recent activity')}</p>
-            <ul className="space-y-1 text-xs" aria-label={t('Recent Teams activity')}>
-              {events.data.slice(0, 5).map((e) => (
-                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
-                  {relativeTime(e.createdAt)}: {e.summary}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-const OAUTH_COPY: Record<'zoom' | 'docusign', { blurb: string; credentials: string; privacy: string; disconnect: string }> = {
-  zoom: {
-    blurb: 'Meetings are created in each person’s own Zoom user, matched by their SampForce email.',
-    credentials: 'the SampForce Zoom app’s credentials',
-    privacy: 'Only meetings scheduled from SampForce with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.',
-    disconnect: 'Disconnect Zoom? Scheduling from records stops; meetings already scheduled stay in Zoom.',
-  },
+const OAUTH_COPY: Record<'docusign', { blurb: string; credentials: string; privacy: string; disconnect: string }> = {
   docusign: {
     blurb: 'Contracts go out from this DocuSign account, one envelope per contract, only after the sender confirms.',
     credentials: 'the SampForce DocuSign app’s integration key and secret',
@@ -334,10 +70,10 @@ const OAUTH_COPY: Record<'zoom' | 'docusign', { blurb: string; credentials: stri
   },
 };
 
-/** Zoom and DocuSign: an admin connects the company's account once through the provider's OAuth. */
+/** DocuSign: an admin connects the company's account once through the provider's OAuth. */
 function OAuthAppCard({ app }: { app: AppStatus }) {
   const t = useT();
-  const copy = OAUTH_COPY[app.key as 'zoom' | 'docusign'];
+  const copy = OAUTH_COPY[app.key as 'docusign'];
   const qc = useQueryClient();
   const canManage = useCan('integrations:manage');
   const s = STATE[app.state];
@@ -871,7 +607,8 @@ function SampbidxCard({ app }: { app: AppStatus }) {
   const [apiKey, setApiKey] = useState('');
   const [editing, setEditing] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
-  const s = app.state === 'error' ? { label: t('Needs a new API key'), tone: 'critical' as const } : STATE[app.state];
+  // A refused key needs a new one; any other failed test or call is a connection problem (ADR 0099).
+  const s = app.state === 'error' ? { label: c?.lastError?.includes('refused the API key') ? t('Needs a new API key') : t('Connection problem'), tone: 'critical' as const } : STATE[app.state];
   const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'sampbidx', 'events'], queryFn: () => api<AppEventRow[]>('/apps/sampbidx/events') });
   const secret = useQuery({ enabled: !!c && canManage && showSecret, queryKey: ['apps', 'sampbidx', 'secret'], queryFn: () => api<{ callbackUrl: string; secret: string }>('/apps/sampbidx/callback-secret') });
   const refresh = () => qc.invalidateQueries({ queryKey: ['apps'] });
@@ -991,6 +728,11 @@ function SampbidxCard({ app }: { app: AppStatus }) {
               {t('Disconnect')}
             </Button>
           </div>
+        )}
+        {canManage && (
+          <Link href="/app/integrations/sampbidx" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+            {t('SampBidx settings: test the connection, sync status, errors and field mapping')}
+          </Link>
         )}
         {!canManage && <p className="text-xs text-muted-foreground">{t('Workspace admins connect SampBidx.')}</p>}
         {error && (

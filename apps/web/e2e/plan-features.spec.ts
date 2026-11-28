@@ -18,7 +18,7 @@ test('a Free workspace sees what its plan leaves out, and gets it when the plan 
   // The sidebar marks modules outside the plan, and the page itself explains the plan instead of failing.
   const nav = page.getByRole('navigation', { name: 'Main' }).first();
   await expect(nav.getByRole('link', { name: /^Email Sequences/ }).locator('[data-nav-locked]')).toBeVisible();
-  await expect(nav.getByRole('link', { name: /^Leads/ }).locator('[data-nav-locked]')).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: /^Inbound contacts/ }).locator('[data-nav-locked]')).toHaveCount(0);
   await page.goto('/app/sequences');
   const locked = page.locator('[data-feature-locked="sequences"]');
   await expect(locked.getByText('Email sequences is not in your plan')).toBeVisible();

@@ -355,11 +355,11 @@ export const engagement = {
     'ما يُسمح لكل وكيل به وما لا يُسمح، وهل يمكنه العمل الآن، وكم كلّف هذا الشهر. الوكلاء يقترحون؛ والناس يقررون.',
   ],
   'Campaigns': ['Campañas', 'Campagnes', 'Kampagnen', 'الحملات'],
-  'Track campaigns and the leads, deals and revenue they brought in. Attribution is first touch: a lead counts for the campaign whose form captured it, that it was linked to, or whose UTM value it carries.': [
-    'Sigue las campañas y los leads, oportunidades e ingresos que aportaron. La atribución es de primer contacto: un lead cuenta para la campaña cuyo formulario lo captó, a la que se vinculó o cuyo valor UTM lleva.',
-    'Suivez les campagnes et les prospects, opportunités et revenus qu’elles ont apportés. L’attribution se fait au premier contact : un prospect compte pour la campagne dont le formulaire l’a capté, à laquelle il a été lié ou dont il porte la valeur UTM.',
-    'Verfolgen Sie Kampagnen und die Leads, Verkaufschancen und Umsätze, die sie gebracht haben. Die Zuordnung erfolgt nach Erstkontakt: Ein Lead zählt für die Kampagne, deren Formular ihn erfasst hat, mit der er verknüpft wurde oder deren UTM-Wert er trägt.',
-    'تابع الحملات والعملاء المحتملين والصفقات والإيرادات التي جلبتها. الإسناد حسب أول تواصل: يُحتسب العميل المحتمل للحملة التي التقطه نموذجها أو التي رُبط بها أو التي يحمل قيمة UTM الخاصة بها.',
+  'Track campaigns and the contacts, deals and revenue they brought in. Attribution is first touch: an inbound contact counts for the campaign whose form captured it, that it was linked to, or whose UTM value it carries.': [
+    'Sigue las campañas y los contactos, oportunidades e ingresos que trajeron. La atribución es de primer contacto: un contacto entrante cuenta para la campaña cuyo formulario lo captó, a la que se vinculó o cuyo valor UTM lleva.',
+    'Suivez les campagnes et les contacts, opportunités et revenus qu’elles ont apportés. L’attribution est au premier contact : un contact entrant compte pour la campagne dont le formulaire l’a capté, à laquelle il a été lié ou dont il porte la valeur UTM.',
+    'Verfolgen Sie Kampagnen und die Kontakte, Verkaufschancen und Umsätze, die sie gebracht haben. Zugeordnet wird nach dem ersten Kontakt: Ein Eingangskontakt zählt für die Kampagne, deren Formular ihn erfasst hat, mit der er verknüpft wurde oder deren UTM-Wert er trägt.',
+    'تتبّع الحملات وجهات الاتصال والصفقات والإيرادات التي جلبتها. النسب حسب أول تفاعل: تُحتسب جهة الاتصال الواردة للحملة التي التقطها نموذجها، أو رُبطت بها، أو تحمل قيمة UTM الخاصة بها.',
   ],
   'Email Finder': ['Buscador de correos', 'Recherche d’e-mails', 'E-Mail-Suche', 'البحث عن البريد'],
   'Find work addresses for a company, or for one person there. SampForce reads the company’s public website, works out how its addresses are written, and checks that the domain receives email.': [
@@ -424,11 +424,11 @@ export const engagement = {
     'تُقدَّم مواصفة OpenAPI 3.1 على /api/v1/openapi.json، مع مستكشف تفاعلي على /api/v1/docs.',
   ],
   'Marketing': ['Marketing', 'Marketing', 'Marketing', 'التسويق'],
-  'Audience segments built from your leads and contacts, and hosted lead-capture forms that record consent. SampForce does not send marketing email yet.': [
-    'Segmentos de audiencia creados a partir de tus leads y contactos, y formularios de prospectos alojados que registran el consentimiento. SampForce aún no envía correo de marketing.',
-    'Des segments d’audience construits à partir de vos prospects et contacts, et des formulaires de capture hébergés qui enregistrent le consentement. SampForce n’envoie pas encore d’e-mails marketing.',
-    'Zielgruppensegmente aus Ihren Leads und Kontakten sowie gehostete Lead-Formulare, die Einwilligungen erfassen. SampForce versendet noch keine Marketing-E-Mails.',
-    'شرائح جمهور مبنية من عملائك المحتملين وجهات اتصالك، ونماذج التقاط مستضافة تسجل الموافقة. لا يرسل SampForce بريدًا تسويقيًا بعد.',
+  'Audience segments built from your inbound contacts and contacts, and hosted contact forms that record consent. SampForce does not send marketing email yet.': [
+    'Segmentos de audiencia creados a partir de tus contactos entrantes y contactos, y formularios de contacto alojados que registran el consentimiento. SampForce aún no envía correo de marketing.',
+    'Segments d’audience construits à partir de vos contacts entrants et contacts, et formulaires de contact hébergés qui enregistrent le consentement. SampForce n’envoie pas encore d’e-mails marketing.',
+    'Zielgruppensegmente aus Ihren Eingangskontakten und Kontakten sowie gehostete Kontaktformulare, die die Einwilligung erfassen. SampForce versendet noch keine Marketing-E-Mails.',
+    'شرائح جمهور مبنية من جهات الاتصال الواردة وجهات الاتصال، ونماذج جهات اتصال مستضافة تسجّل الموافقة. لا يرسل SampForce رسائل تسويقية بعد.',
   ],
   'Stages, their win probabilities and the default pipeline for new deals. The number of pipelines depends on your plan.': [
     'Etapas, sus probabilidades de cierre y el embudo predeterminado para nuevas oportunidades. El número de embudos depende de tu plan.',
@@ -450,7 +450,7 @@ export const engagement = {
     'Personen, die Sie vielleicht kontaktieren möchten, außerhalb des CRM, bis Sie sie hinzufügen. Fügen Sie sie manuell, aus CSV- oder Excel-Dateien, über die Browsererweiterung oder aus Apollo.io hinzu, senden Sie dann eine Liste an eine Sequenz und verfolgen Sie die Ergebnisse.',
     'أشخاص قد ترغب في التواصل معهم، يبقون خارج CRM حتى تضيفهم. أضفهم يدويًا أو من ملفات CSV أو Excel أو من إضافة المتصفح أو من Apollo.io، ثم أرسل القائمة إلى تسلسل وتابع نتائجها.',
   ],
-  'Website Visitors': ['Visitantes del sitio web', 'Visiteurs du site', 'Website-Besucher', 'زوار الموقع'],
+  'Website Enquiry': ['Consultas del sitio web', 'Demandes du site web', 'Website-Anfragen', 'استفسارات الموقع'],
   'Visits to your own website from a consent-aware tracking script: important pages, repeat visits, campaigns and enquiries, linked to your leads and contacts.': [
     'Visitas a tu propio sitio web registradas por un script de seguimiento que respeta el consentimiento: páginas importantes, visitas repetidas, campañas y consultas, vinculadas a tus leads y contactos.',
     'Les visites de votre propre site web via un script de suivi respectueux du consentement : pages importantes, visites répétées, campagnes et demandes, liées à vos prospects et contacts.',
@@ -519,12 +519,12 @@ export const engagement = {
     'Rollen oder Sicherheitseinstellungen ändern',
     'تغيير الأدوار أو إعدادات الأمان',
   ],
-  'Lead Qualification': ['Calificación de leads', 'Qualification des prospects', 'Lead-Qualifizierung', 'تأهيل العملاء المحتملين'],
-  'Scores a lead from explainable signals and writes a short qualification summary.': [
-    'Puntúa un lead con señales explicables y redacta un breve resumen de calificación.',
-    'Note un prospect à partir de signaux explicables et rédige un court résumé de qualification.',
-    'Bewertet einen Lead anhand nachvollziehbarer Signale und schreibt eine kurze Qualifizierungszusammenfassung.',
-    'يقيّم العميل المحتمل من إشارات قابلة للتفسير ويكتب ملخص تأهيل قصيرًا.',
+  'Contact Qualification': ['Calificación de contactos', 'Qualification des contacts', 'Kontaktqualifizierung', 'تأهيل جهات الاتصال'],
+  'Scores an inbound contact from explainable signals and writes a short qualification summary.': [
+    'Puntúa un contacto entrante a partir de señales explicables y escribe un breve resumen de calificación.',
+    'Note un contact entrant à partir de signaux explicables et rédige un court résumé de qualification.',
+    'Bewertet einen Eingangskontakt anhand nachvollziehbarer Signale und schreibt eine kurze Qualifizierungszusammenfassung.',
+    'يقيّم جهة اتصال واردة من إشارات قابلة للتفسير ويكتب ملخص تأهيل قصيرًا.',
   ],
   'fast': ['rápido', 'rapide', 'schnell', 'سريع'],
   'The rule-based score and its signals are still calculated; only the written summary needs the AI provider.': [
@@ -533,20 +533,20 @@ export const engagement = {
     'Die regelbasierte Punktzahl und ihre Signale werden weiterhin berechnet; nur die schriftliche Zusammenfassung braucht den KI-Anbieter.',
     'لا تزال الدرجة القائمة على القواعد وإشاراتها تُحسب؛ الملخص المكتوب فقط يحتاج إلى مزوّد الذكاء الاصطناعي.',
   ],
-  'Read the lead and its activity': ['Leer el lead y su actividad', 'Lire le prospect et son activité', 'Den Lead und seine Aktivitäten lesen', 'قراءة العميل المحتمل ونشاطه'],
+  'Read the inbound contact and its activity': ['Leer el contacto entrante y su actividad', 'Lire le contact entrant et son activité', 'Eingangskontakt und seine Aktivitäten lesen', 'قراءة جهة الاتصال الواردة ونشاطها'],
   'Store a score with the signals behind it': [
     'Guardar una puntuación con las señales que la justifican',
     'Enregistrer un score avec les signaux qui le justifient',
     'Eine Punktzahl mit den zugrunde liegenden Signalen speichern',
     'حفظ درجة مع الإشارات التي تستند إليها',
   ],
-  'Change the lead status or owner': [
-    'Cambiar el estado o el propietario del lead',
-    'Modifier le statut ou le propriétaire du prospect',
-    'Status oder Inhaber des Leads ändern',
-    'تغيير حالة العميل المحتمل أو مالكه',
+  'Change the inbound contact’s status or owner': [
+    'Cambiar el estado o el responsable del contacto entrante',
+    'Changer le statut ou le responsable du contact entrant',
+    'Status oder Zuständigkeit des Eingangskontakts ändern',
+    'تغيير حالة جهة الاتصال الواردة أو مسؤولها',
   ],
-  'Contact the lead': ['Contactar con el lead', 'Contacter le prospect', 'Den Lead kontaktieren', 'التواصل مع العميل المحتمل'],
+  'Contact the person': ['Contactar con la persona', 'Contacter la personne', 'Die Person kontaktieren', 'التواصل مع الشخص'],
   'Deal Intelligence': ['Inteligencia de oportunidades', 'Intelligence des opportunités', 'Analyse von Verkaufschancen', 'ذكاء الصفقات'],
   'Checks deal health from activity, stage age and dates, and recommends a next step.': [
     'Revisa la salud de la oportunidad según la actividad, la antigüedad en la etapa y las fechas, y recomienda un siguiente paso.',
@@ -669,11 +669,11 @@ export const engagement = {
     'Vorlagen, Platzhalterfelder und die regelbasierten Sequenztipps funktionieren weiterhin; Entwerfen und Lesen von E-Mails braucht den KI-Anbieter.',
     'لا تزال القوالب وحقول الدمج ونصائح التسلسل القائمة على القواعد تعمل؛ صياغة الرسائل وقراءتها تحتاج إلى مزوّد الذكاء الاصطناعي.',
   ],
-  'Read the lead, contact or deal and its recent email': [
-    'Leer el lead, contacto u oportunidad y su correo reciente',
-    'Lire le prospect, le contact ou l’opportunité et ses e-mails récents',
-    'Den Lead, Kontakt oder die Verkaufschance und die letzten E-Mails lesen',
-    'قراءة العميل المحتمل أو جهة الاتصال أو الصفقة وبريدها الأخير',
+  'Read the contact or deal and its recent email': [
+    'Leer el contacto u oportunidad y su correo reciente',
+    'Lire le contact ou l’opportunité et ses e-mails récents',
+    'Kontakt oder Verkaufschance und die letzten E-Mails lesen',
+    'قراءة جهة الاتصال أو الصفقة وبريدها الأخير',
   ],
   'Write a draft into the editor for you to review': [
     'Escribir un borrador en el editor para que lo revises',
@@ -689,11 +689,11 @@ export const engagement = {
     'اختلاق أسعار أو تواريخ أو التزامات',
   ],
   'Voice Assistant': ['Asistente de voz', 'Assistant vocal', 'Sprachassistent', 'المساعد الصوتي'],
-  'Turns a dictated or recorded voice note into proposed tasks, notes, leads and contacts, and finds the summary of your last call.': [
-    'Convierte una nota de voz dictada o grabada en tareas, notas, leads y contactos propuestos, y encuentra el resumen de tu última llamada.',
-    'Transforme une note vocale dictée ou enregistrée en tâches, notes, prospects et contacts proposés, et retrouve le résumé de votre dernier appel.',
-    'Macht aus einer diktierten oder aufgenommenen Sprachnotiz vorgeschlagene Aufgaben, Notizen, Leads und Kontakte und findet die Zusammenfassung Ihres letzten Anrufs.',
-    'يحوّل ملاحظة صوتية مُملاة أو مسجّلة إلى مهام وملاحظات وعملاء محتملين وجهات اتصال مقترحة، ويجد ملخص آخر مكالمة لك.',
+  'Turns a dictated or recorded voice note into proposed tasks, notes and contacts, and finds the summary of your last call.': [
+    'Convierte una nota de voz dictada o grabada en tareas, notas y contactos propuestos, y encuentra el resumen de tu última llamada.',
+    'Transforme une note vocale dictée ou enregistrée en tâches, notes et contacts proposés, et retrouve le résumé de votre dernier appel.',
+    'Macht aus einer diktierten oder aufgenommenen Sprachnotiz vorgeschlagene Aufgaben, Notizen und Kontakte und findet die Zusammenfassung Ihres letzten Anrufs.',
+    'يحوّل ملاحظة صوتية مُملاة أو مسجّلة إلى مهام وملاحظات وجهات اتصال مقترحة، ويجد ملخص مكالمتك الأخيرة.',
   ],
   'You can still dictate or type a note and add tasks and notes by hand; turning a note into actions needs the AI provider.': [
     'Puedes seguir dictando o escribiendo una nota y añadir tareas y notas a mano; convertir una nota en acciones necesita el proveedor de IA.',
@@ -707,11 +707,11 @@ export const engagement = {
     'Die diktierte Notiz und den zugehörigen Datensatz lesen',
     'قراءة الملاحظة التي تمليها والسجل الذي تخصه',
   ],
-  'Propose tasks, notes, leads and contacts for you to check and confirm': [
-    'Proponer tareas, notas, leads y contactos para que los revises y confirmes',
-    'Proposer des tâches, notes, prospects et contacts à vérifier et confirmer',
-    'Aufgaben, Notizen, Leads und Kontakte zur Prüfung und Bestätigung vorschlagen',
-    'اقتراح مهام وملاحظات وعملاء محتملين وجهات اتصال لتتحقق منها وتؤكدها',
+  'Propose tasks, notes and contacts for you to check and confirm': [
+    'Proponer tareas, notas y contactos para que los revises y confirmes',
+    'Proposer des tâches, notes et contacts à vérifier et confirmer',
+    'Aufgaben, Notizen und Kontakte zum Prüfen und Bestätigen vorschlagen',
+    'اقتراح مهام وملاحظات وجهات اتصال لتراجعها وتؤكدها',
   ],
   'Save anything without your confirmation': [
     'Guardar algo sin tu confirmación',
@@ -850,9 +850,9 @@ export const engagement = {
   'per note': ['por nota', 'par note', 'pro Notiz', 'لكل ملاحظة'],
   'Task completed': ['Tarea completada', 'Tâche terminée', 'Aufgabe erledigt', 'مهمة مكتملة'],
   'per task': ['por tarea', 'par tâche', 'pro Aufgabe', 'لكل مهمة'],
-  'Lead added': ['Lead añadido', 'Prospect ajouté', 'Lead hinzugefügt', 'عميل محتمل مضاف'],
-  'per lead': ['por lead', 'par prospect', 'pro Lead', 'لكل عميل محتمل'],
-  'Lead converted': ['Lead convertido', 'Prospect converti', 'Lead konvertiert', 'عميل محتمل محوَّل'],
+  'Company added': ['Empresa añadida', 'Entreprise ajoutée', 'Unternehmen hinzugefügt', 'تمت إضافة شركة'],
+  'per company': ['por empresa', 'par entreprise', 'pro Unternehmen', 'لكل شركة'],
+  'Company converted': ['Empresa convertida', 'Entreprise convertie', 'Unternehmen umgewandelt', 'تم تحويل الشركة'],
   'per conversion': ['por conversión', 'par conversion', 'pro Konvertierung', 'لكل تحويل'],
   'Deal created': ['Oportunidad creada', 'Opportunité créée', 'Verkaufschance erstellt', 'صفقة مُنشأة'],
   'per deal': ['por oportunidad', 'par opportunité', 'pro Verkaufschance', 'لكل صفقة'],

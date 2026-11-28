@@ -29,11 +29,12 @@ export const MOBILE_NOTIFICATION_LABEL: Record<string, string> = {
   task_due_soon: 'Task due soon',
   task_overdue: 'Task overdue',
   chat_message: 'New chat message',
-  lead_assigned: 'Lead assigned',
+  lead_assigned: 'Company assigned',
   follow_up_reminder: 'Follow-up reminder',
   target_update: 'Target update',
   announcement: 'Announcement',
   account_status: 'Account status changes',
+  approval: 'Approval requests and decisions',
 };
 
 export const MOBILE_PHONE_ACTION_LABEL: Record<string, string> = { call: 'Call', email: 'Email', whatsapp: 'WhatsApp', directions: 'Directions', share: 'Share' };

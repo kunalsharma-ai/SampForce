@@ -60,8 +60,8 @@ test('German translates email sequences, templates and the template designer, an
   await expect(main.locator('iframe[title="E-Mail-Vorschau in Smartphone-Breite"]')).toHaveJSProperty('offsetWidth', 375);
   await axe(page);
 
-  // Preview for a lead and save: the stored template shows as designed.
-  await main.getByLabel('Vorschau für einen Lead').fill('Jonas');
+  // Preview for a contact and save: the stored template shows as designed.
+  await main.getByLabel('Vorschau für einen Kontakt').fill('Jonas');
   await page.getByRole('option', { name: /Jonas Becker/ }).click();
   await main.getByRole('button', { name: 'Vorschau', exact: true }).click();
   await expect(main.locator('iframe[title="E-Mail-Vorschau für Jonas Becker"]')).toBeVisible();

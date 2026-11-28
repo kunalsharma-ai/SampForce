@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Calls' };
 export default function CallsPage() {
   return (
     <div className="max-w-7xl">
-      <PageHeader title="Calls" description="Call any company or employee through your own dialer, with their details on the call card. Log what happened, add remarks and schedule the next call." />
+      <PageHeader title="Calls" description="Call any company or employee through any dialer, with their details on the call card. Log what happened, add notes and plan the follow-up." />
       <Suspense>
         <CallsWorkspace />
       </Suspense>

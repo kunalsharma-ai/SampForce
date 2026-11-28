@@ -2,7 +2,6 @@ import type { PhraseTable } from './types';
 
 /** The Calls section (ADR 0088): the call card, dialers, logging calls and the history. */
 export const calls = {
-  'Call any company or employee through your own dialer, with their details on the call card. Log what happened, add remarks and schedule the next call.': ['Llama a cualquier empresa o empleado con tu propio marcador, con sus datos en la ficha de llamada. Registra qué pasó, añade comentarios y programa la próxima llamada.', 'Appelez n’importe quelle entreprise ou n’importe quel employé avec votre propre composeur, avec ses détails sur la fiche d’appel. Notez ce qui s’est passé, ajoutez des remarques et planifiez le prochain appel.', 'Rufen Sie jedes Unternehmen und jeden Mitarbeiter über Ihren eigenen Dialer an, mit allen Angaben auf der Anrufkarte. Halten Sie das Ergebnis fest, ergänzen Sie Bemerkungen und planen Sie den nächsten Anruf.', 'اتصل بأي شركة أو موظف عبر برنامج الاتصال الخاص بك، مع بياناتهم على بطاقة المكالمة. سجّل ما حدث وأضف ملاحظاتك وحدد موعد المكالمة التالية.'],
   'Call card': ['Ficha de llamada', 'Fiche d’appel', 'Anrufkarte', 'بطاقة المكالمة'],
   'Call history': ['Historial de llamadas', 'Historique des appels', 'Anrufverlauf', 'سجل المكالمات'],
   'Next calls': ['Próximas llamadas', 'Prochains appels', 'Nächste Anrufe', 'المكالمات التالية'],

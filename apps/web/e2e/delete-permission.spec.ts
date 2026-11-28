@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { autoConfirmDeletion, signUp, workspaceAction } from './helpers';
+import { autoConfirmDeletion, signUp, workspaceAction, perWorkspaceDelete } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -20,6 +20,8 @@ async function shot(page: Page, name: string) {
 test('a new Manager Workspace cannot delete until the Super Workspace turns Delete on', async ({ page, browser }) => {
   test.setTimeout(150_000);
   await signUp(page, 'Delete Rights Ltd');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   const created = await (
     await page.request.post('/api/v1/workspaces', { data: { level: 'MANAGER', name: 'North Sales', person: { inviteEmail: `north.${Date.now()}@example.com` } }, headers: ORIGIN })
   ).json();
@@ -36,7 +38,7 @@ test('a new Manager Workspace cannot delete until the Super Workspace turns Dele
   await manager.goto(`/app/leads/${lead.id}`);
   await expect(manager.getByRole('heading', { name: 'Ravi Menon', level: 1 })).toBeVisible();
   await expect(manager.getByRole('button', { name: 'Edit' })).toBeVisible();
-  await expect(manager.getByRole('button', { name: 'Delete lead' })).toHaveCount(0);
+  await expect(manager.getByRole('button', { name: 'Delete inbound contact' })).toHaveCount(0);
   await shot(manager, '04-manager-sees-no-delete');
   const direct = await manager.request.delete(`/api/v1/leads/${lead.id}`, { headers: ORIGIN });
   expect(direct.status()).toBe(403);
@@ -57,7 +59,7 @@ test('a new Manager Workspace cannot delete until the Super Workspace turns Dele
 
   // The manager now sees the button, and deleting still asks for the password.
   await manager.reload();
-  await manager.getByRole('button', { name: 'Delete lead' }).click();
+  await manager.getByRole('button', { name: 'Delete inbound contact' }).click();
   await manager.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(manager).toHaveURL(/\/app\/leads$/);
   expect((await manager.request.get(`/api/v1/leads/${lead.id}`, { headers: ORIGIN })).status()).toBe(404);
