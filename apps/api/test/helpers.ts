@@ -7,7 +7,16 @@ import { createApp } from '../src/bootstrap';
 
 export const ORIGIN = 'http://localhost:3000';
 
+/** When this test file started: helpers load once per file, since vitest isolates each file's modules. */
+const FILE_STARTED_AT = new Date();
+
 export async function startApp(): Promise<INestApplication> {
+  // Test files share one database and run one after another. Earlier files leave company auto-fill runs queued for
+  // made-up websites; this file's worker would claim them and app.close() would wait out each look-up (up to about
+  // 30 seconds), timing out the afterAll hook. Runs queued before this file started are closed first.
+  const db = ownerClient();
+  await db.companyEnrichment.updateMany({ where: { status: 'PENDING', createdAt: { lt: FILE_STARTED_AT } }, data: { status: 'FAILED', error: 'Closed by the test set-up: queued by an earlier test file.' } });
+  await db.$disconnect();
   const app = await createApp();
   await app.init();
   return app;
