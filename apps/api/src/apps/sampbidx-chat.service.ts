@@ -36,7 +36,7 @@ const BACKOFF_MS = [30_000, 2 * 60_000, 10 * 60_000, 30 * 60_000, 2 * 3600_000];
 /** A try still running after this long is taken as interrupted (the server stopped mid-send). */
 const LEASE_MS = 2 * 60_000;
 /** SampBidx refusals that trying again will not change. */
-const FINAL = new Set(['invalid', 'too_large', 'address', 'not_found', 'auth']);
+const FINAL = new Set(['invalid', 'too_large', 'address', 'not_found', 'auth', 'forbidden']);
 const PREVIEW_MAX = 140;
 const PEOPLE_KEPT = 20;
 

@@ -2,7 +2,7 @@ import { createServer, type AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import type { SampbidxBatchRow, SampbidxBulkPreview, SampbidxDiagnosis, SampbidxOverview } from '@dealflow/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SBX, startSampbidxFixture, type SampbidxFixture } from './fixtures/sampbidx-fixture';
+import { SBX, sbxSign, startSampbidxFixture, type SampbidxFixture } from './fixtures/sampbidx-fixture';
 import { SECRET_BOX, type SecretBox } from '../src/common/crypto';
 import { api, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser } from './helpers';
 
@@ -94,6 +94,38 @@ describe('SampBidx settings and bulk sends (stand-in)', () => {
     const p = await preview({ kind: 'DEALS', ids: [(await deal({ name: 'Early deal', amount: 100, companyId: acme.companyId })).id] });
     expect(p.connectionProblem).toContain('SampBidx is not connected');
     expect((await api(rep).post('/apps/sampbidx/batches', { kind: 'DEALS', ids: [acme.companyId] }).expect(400)).body.error.message).toContain('SampBidx is not connected');
+  });
+
+  it('gives the callback URL and signing secret before there is a key, and keeps them when the key is saved', async () => {
+    const setup = (u: TestUser) => api(u).post('/apps/sampbidx/callback-setup', {});
+    await setup(rep).expect(403);
+    const first = (await setup(owner).expect(200)).body as { callbackUrl: string; secret: string };
+    expect(first.callbackUrl).toMatch(/\/api\/v1\/apps\/sampbidx\/callbacks\/[a-f0-9]{24}$/);
+    expect(first.secret.length).toBeGreaterThanOrEqual(16);
+    expect((await setup(owner).expect(200)).body).toEqual(first);
+    expect((await api(owner).get('/apps/sampbidx/callback-secret').expect(200)).body).toEqual(first);
+
+    // Still "not connected": nothing can be sent, nothing claims an account, and a test does not mark it broken.
+    const o = (await api(owner).get('/apps/sampbidx/overview').expect(200)).body as SampbidxOverview;
+    expect(o).toMatchObject({ state: 'NOT_CONNECTED', baseUrl: null, accountName: null, keyHint: null, connectedAt: null, connectedBy: null, callbackUrl: first.callbackUrl });
+    const d = (await diagnose(owner, {}).expect(200)).body as SampbidxDiagnosis;
+    expect(d).toMatchObject({ ok: false, saved: false });
+    expect((await api(owner).get('/apps/sampbidx/overview').expect(200)).body.state).toBe('NOT_CONNECTED');
+    const apps = (await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[];
+    expect(apps.find((a) => a.key === 'sampbidx')!.state).toBe('not_connected');
+    expect((await preview({ kind: 'WON_COMPANIES', ids: [acme.companyId] })).connectionProblem).toBeTruthy();
+
+    // SampBidx's signed status updates are refused until the key is saved.
+    const body = JSON.stringify({ event: 'transfer.status', transferId: '00000000-0000-4000-8000-000000000000', status: 'RECEIVED' });
+    const { timestamp, signature } = sbxSign(first.secret, body);
+    await owner.agent.post(new URL(first.callbackUrl).pathname).set('content-type', 'application/json').set('x-sampbidx-timestamp', timestamp).set('x-sampbidx-signature', signature).send(body).expect(401);
+
+    // Saving the key keeps the same URL and secret, so what was typed into SampBidx stays right.
+    await owner.agent.post('/api/v1/apps/sampbidx/keys').set('origin', ORIGIN).set('x-forwarded-for', `198.51.100.${++ip}`).send({ baseUrl: base(), apiKey: SBX.key }).expect(200);
+    expect((await api(owner).get('/apps/sampbidx/callback-secret').expect(200)).body).toEqual(first);
+    expect((await setup(owner).expect(200)).body).toEqual(first);
+    const audit = await asTenant(owner.tenantId, (tx) => tx.auditLog.findMany({ where: { action: { in: ['app.callback_prepared', 'app.connected', 'app.keys_replaced'] } }, orderBy: { createdAt: 'asc' } }));
+    expect(audit.map((a) => a.action)).toEqual(['app.callback_prepared', 'app.connected']);
   });
 
   it('shows the saved connection as it really is: connected after a passing test, an error after a failing one', async () => {
@@ -224,5 +256,27 @@ describe('SampBidx settings and bulk sends (stand-in)', () => {
     expect(o.sync.find((s) => s.kind === 'CLIENT')!.sent).toBeGreaterThanOrEqual(3);
     expect(o.batches[0]).toMatchObject({ kind: 'WON_COMPANIES', status: 'DONE' });
     expect(o.errors).toEqual([]);
+  });
+
+  it('tells a refused path from a refused key, and keeps the connection usable', async () => {
+    // A SampBidx that takes the key at /v1/ping but has not allowed (or built) client sends.
+    const won = await lead('Brandscapes Test', { firstName: 'Asha', lastName: 'Rao', emails: [{ value: 'asha@brandscapes.example' }], timezone: 'Asia/Kolkata' });
+    await asTenant(owner.tenantId, (tx) => tx.company.update({ where: { id: won.companyId }, data: { country: 'IN' } }));
+    await deal({ name: 'Brandscapes tracker', amount: 5000, companyId: won.companyId, contactId: won.priyaId });
+    await api(rep).post(`/companies/${won.companyId}/won`).expect(200);
+    sbx.forbidden.add('/v1/clients');
+    try {
+      const b = await send({ kind: 'WON_COMPANIES', ids: [won.companyId] });
+      expect(b.counts).toMatchObject({ failed: 1 });
+      const reason = b.items[0]!.reason!;
+      expect(reason).toContain('SampBidx accepts the API key but refused the client (403 at PUT /v1/clients): Not allowed for this key.');
+      expect(reason).not.toContain('Paste a current key');
+      const o = (await api(owner).get('/apps/sampbidx/overview').expect(200)).body as SampbidxOverview;
+      expect(o).toMatchObject({ state: 'CONNECTED', lastError: null });
+      const apps = (await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[];
+      expect(apps.find((a) => a.key === 'sampbidx')!.state).toBe('connected');
+    } finally {
+      sbx.forbidden.clear();
+    }
   });
 });

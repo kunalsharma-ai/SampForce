@@ -127,6 +127,16 @@ export class SampbidxClient {
     return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null };
   }
 
+  /** Whether SampBidx still takes the key at /v1/ping, to tell a refused key from a refused path. */
+  private async keyStillAccepted(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>): Promise<boolean> {
+    try {
+      await this.call(keys, 'GET', '/v1/ping', undefined, {}, 15_000);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST' | 'PUT', path: string, body?: Buffer, headers: Record<string, string> = {}, timeoutMs = 60_000): Promise<T> {
     let res: Response;
     try {
@@ -144,10 +154,22 @@ export class SampbidxClient {
     const data = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } | string; message?: string };
     if (res.ok) return data;
     const detail = typeof data.error === 'string' ? data.error : (data.error?.message ?? data.message ?? '');
-    if (res.status === 401 || res.status === 403) throw new SampbidxError('auth', 'SampBidx refused the API key. Paste a current key from SampBidx.', true);
-    if (res.status === 404) throw new SampbidxError('not_found', 'SampBidx has no API at that address. Check the address ends where the /v1 paths begin.');
-    if (res.status === 413) throw new SampbidxError('too_large', 'SampBidx refused the files as too large. Send fewer or smaller attachments.');
     const what = path.startsWith('/v1/clients') ? 'the client' : path.startsWith('/v1/deals') ? 'the deal' : 'the RFQ';
+    if (res.status === 401 || res.status === 403) {
+      // A key SampBidx takes at /v1/ping but refuses for one kind of send is not a stale key: that path is not
+      // allowed for it (or not built). Saying "paste a new key" there sent people round in circles, and marking
+      // the whole connection broken stopped RFQ sends that work.
+      if (path !== '/v1/ping' && (await this.keyStillAccepted(keys))) {
+        const route = `${method} /v1/${path.split('/')[2]}`;
+        throw new SampbidxError(
+          'forbidden',
+          `SampBidx accepts the API key but refused ${what} (${res.status} at ${route})${detail ? `: ${String(detail).slice(0, 300)}` : ''}. SampBidx must allow ${route} for this key; a new key does not change this.`,
+        );
+      }
+      throw new SampbidxError('auth', 'SampBidx refused the API key. Paste a current key from SampBidx.', true);
+    }
+    if (res.status === 404) throw new SampbidxError('not_found', path === '/v1/ping' ? 'SampBidx has no API at that address. Check the address ends where the /v1 paths begin.' : `SampBidx has not built ${method} /v1/${path.split('/')[2]} yet (404).`);
+    if (res.status === 413) throw new SampbidxError('too_large', 'SampBidx refused the files as too large. Send fewer or smaller attachments.');
     if (res.status === 400 || res.status === 422) throw new SampbidxError('invalid', detail ? `SampBidx refused ${what}: ${String(detail).slice(0, 300)}` : `SampBidx refused ${what} as incomplete.`);
     if (res.status === 409) throw new SampbidxError('conflict', detail ? `SampBidx reported a duplicate: ${String(detail).slice(0, 300)}` : `SampBidx reported ${what} as a duplicate.`);
     if (res.status === 429) throw new SampbidxError('busy', 'SampBidx is busy. Try again in a minute.');

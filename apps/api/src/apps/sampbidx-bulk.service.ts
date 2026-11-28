@@ -226,7 +226,8 @@ export class SampbidxBulkService {
       else set('callback', null, 'SampBidx has not sent a signed status update yet. Sending works without it, but bid progress will not show in SampForce.', 'Give SampBidx the callback URL and secret shown on this page.');
     }
     const checkedAt = new Date();
-    if (saved && conn) {
+    // A connection prepared for SampBidx's callback form but never saved with a key stays not connected.
+    if (saved && conn && conn.status !== 'DISCONNECTED') {
       // The saved connection's state is the test's real answer, never assumed.
       const settings = { ...(conn.settings as object), lastCheck: { at: checkedAt.toISOString(), ok: !failure, message: failure } };
       await this.prisma.run({ tenantId: auth.tenantId }, (tx) =>
@@ -236,7 +237,7 @@ export class SampbidxBulkService {
         }),
       );
     }
-    return { ok: !failure, steps: [...steps.values()], accountName, latencyMs, checkedAt: checkedAt.toISOString(), saved: saved && !!conn };
+    return { ok: !failure, steps: [...steps.values()], accountName, latencyMs, checkedAt: checkedAt.toISOString(), saved: saved && !!conn && conn.status !== 'DISCONNECTED' };
   }
 
   /** The settings page: the saved connection as it really is, what has been synced, the recent errors and bulk sends. */
@@ -244,22 +245,24 @@ export class SampbidxBulkService {
     const conn = await this.connection(auth.tenantId);
     const settings = (conn?.settings ?? {}) as Partial<SampbidxSettings>;
     const keys = conn ? this.sampbidx.keys(conn) : null;
+    // A row made only for the callback URL and secret (before a key) is "not connected": no account, no connected by.
+    const live = !!conn && conn.status !== 'DISCONNECTED';
     const [counts, last, errors, connectedBy] = await this.prisma.run(auth, async (tx) =>
       Promise.all([
         tx.sampbidxTransfer.groupBy({ by: ['kind', 'delivery'], where: { tenantId: auth.tenantId }, _count: { _all: true } }),
         tx.sampbidxTransfer.groupBy({ by: ['kind'], where: { tenantId: auth.tenantId, delivery: 'SENT' }, _max: { sentAt: true } }),
         tx.sampbidxTransfer.findMany({ where: { tenantId: auth.tenantId, delivery: 'FAILED' }, orderBy: { updatedAt: 'desc' }, take: 20, omit: { emailFileData: true } }).then((rows) => this.sampbidx.rows(tx, auth.tenantId, rows)),
-        conn?.connectedById ? personRefs(tx, auth.tenantId, [conn.connectedById]).then((m) => m.get(conn.connectedById!)?.name ?? null) : Promise.resolve(null),
+        live && conn?.connectedById ? personRefs(tx, auth.tenantId, [conn.connectedById]).then((m) => m.get(conn.connectedById!)?.name ?? null) : Promise.resolve(null),
       ]),
     );
     const kinds = [...new Set(counts.map((c) => c.kind))] as SampbidxTransferKind[];
     const n = (kind: string, delivery: string) => counts.find((c) => c.kind === kind && c.delivery === delivery)?._count._all ?? 0;
     return {
       state: !conn || conn.status === 'DISCONNECTED' ? 'NOT_CONNECTED' : conn.status === 'ERROR' ? 'ERROR' : 'CONNECTED',
-      baseUrl: keys?.baseUrl ?? null,
-      accountName: conn?.accountName ?? null,
+      baseUrl: keys?.baseUrl || null,
+      accountName: live ? (conn?.accountName ?? null) : null,
       keyHint: keys?.apiKey ? `…${keys.apiKey.slice(-4)}` : null,
-      connectedAt: conn?.createdAt.toISOString() ?? null,
+      connectedAt: live ? (conn?.createdAt.toISOString() ?? null) : null,
       connectedBy,
       lastCheckedAt: settings.lastCheck?.at ?? null,
       lastError: conn?.status === 'ERROR' ? conn.lastError : null,

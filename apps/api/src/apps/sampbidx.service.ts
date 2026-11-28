@@ -108,11 +108,49 @@ export class SampbidxService {
     };
     await this.prisma.run(auth, async (tx) => {
       const row = await tx.appConnection.upsert({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: 'SAMPBIDX' } }, create: { tenantId: auth.tenantId, provider: 'SAMPBIDX', ...data }, update: data });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: existing ? 'app.keys_replaced' : 'app.connected', entityType: 'app_connection', entityId: row.id, metadata: { app: 'sampbidx', baseUrl }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: existing && existing.status !== 'DISCONNECTED' ? 'app.keys_replaced' : 'app.connected', entityType: 'app_connection', entityId: row.id, metadata: { app: 'sampbidx', baseUrl }, meta });
     });
     const conn = await this.apps.requireConnection(auth.tenantId, 'sampbidx');
     await this.apps.recordEvent(auth.tenantId, conn, { kind: 'keys.checked', ok: true, externalId: null, summary: `API key checked with ${checked.accountName} at ${baseUrl}`, actorUserId: auth.userId });
     return (await this.apps.status(auth)).find((a) => a.key === 'sampbidx')!;
+  }
+
+  /**
+   * The callback URL and signing secret before there is an API key (ADR 0099). SampBidx asks for both before it
+   * creates the key, so SampForce makes them first: a connection row that stays "not connected" (DISCONNECTED, no
+   * address, no key) until "Check and save" succeeds, which keeps the same URL and secret. Callbacks to it are refused
+   * until then. Calling it again returns the same pair.
+   */
+  async prepareCallback(auth: AuthContext, meta: RequestMeta): Promise<{ callbackUrl: string; secret: string }> {
+    const existing = await this.prisma.run(auth, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: 'SAMPBIDX' } } }));
+    if (existing) return { callbackUrl: this.callbackUrl(existing.externalAccountId), secret: this.keys(existing).callbackSecret };
+    const hookId = randomBytes(12).toString('hex');
+    const keys: SampbidxKeys = { baseUrl: '', apiKey: '', callbackSecret: newSecret() };
+    const settings: SampbidxSettings = { baseUrl: '', accountName: '', callbackUrl: this.callbackUrl(hookId), lastCallbackAt: null };
+    try {
+      await this.prisma.run(auth, async (tx) => {
+        const row = await tx.appConnection.create({
+          data: {
+            tenantId: auth.tenantId,
+            provider: 'SAMPBIDX',
+            externalAccountId: hookId,
+            accountName: 'SampBidx',
+            scopes: [],
+            credentialsEncrypted: this.box.seal(JSON.stringify(keys)),
+            settings: settings as unknown as Prisma.InputJsonValue,
+            status: 'DISCONNECTED',
+            connectedById: auth.userId,
+          },
+        });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.callback_prepared', entityType: 'app_connection', entityId: row.id, metadata: { app: 'sampbidx' }, meta });
+      });
+    } catch (e) {
+      // Two clicks at once: the other request made the row first, so hand back its pair.
+      if ((e as { code?: string }).code !== 'P2002') throw e;
+      const conn = await this.connection(auth.tenantId);
+      return { callbackUrl: this.callbackUrl(conn.externalAccountId), secret: this.keys(conn).callbackSecret };
+    }
+    return { callbackUrl: this.callbackUrl(hookId), secret: keys.callbackSecret };
   }
 
   /** The callback signing secret, for an admin to paste into SampBidx. */

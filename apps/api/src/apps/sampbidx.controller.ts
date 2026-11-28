@@ -146,6 +146,15 @@ export class SampbidxController {
     return plain(() => this.sampbidx.connect(auth, body, meta));
   }
 
+  /** The callback URL and signing secret before there is a key, since SampBidx asks for them first (ADR 0099). */
+  @Post('callback-setup')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @RequirePermissions('integrations:manage')
+  callbackSetup(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {
+    return this.sampbidx.prepareCallback(auth, meta);
+  }
+
   @Get('callback-secret')
   @RequirePermissions('integrations:manage')
   secret(@Auth() auth: AuthContext) {
