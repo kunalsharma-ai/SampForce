@@ -3,7 +3,7 @@
 import { Badge, Card, cn } from '@dealflow/ui';
 import { type ConsoleSubscriptionEvent, SUBSCRIPTION_EVENT_LABEL, SUBSCRIPTION_STATE_LABEL, type SubscriptionEventKind } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Ban, CalendarClock, CirclePause, CirclePlay, FlaskConical, Pencil, RefreshCw, Sparkles, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Ban, CalendarClock, CirclePause, CirclePlay, FlaskConical, Pencil, RefreshCw, Sparkles, TriangleAlert, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { fmtLocale } from '@/lib/i18n/locale';
 
@@ -22,6 +22,8 @@ const ICON: Record<SubscriptionEventKind, { icon: typeof Sparkles; tone: string 
   REACTIVATED: { icon: CirclePlay, tone: 'bg-success/10 text-success' },
   SUSPENDED: { icon: CirclePause, tone: 'bg-critical/10 text-critical' },
   RESUMED: { icon: CirclePlay, tone: 'bg-success/10 text-success' },
+  TRIAL_ENDED: { icon: FlaskConical, tone: 'bg-muted text-muted-foreground' },
+  PAYMENT_FAILED: { icon: TriangleAlert, tone: 'bg-critical/10 text-critical' },
 };
 
 /**

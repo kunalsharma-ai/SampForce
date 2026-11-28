@@ -247,6 +247,13 @@ describe('trials and plan entitlements', () => {
     const notes = (await api(owner).get('/notifications').expect(200)).body.items as { type: string }[];
     expect(notes.some((x) => x.type === 'billing.trial_ended')).toBe(true);
     expect((await api(owner).post('/billing/trial', { planCode: 'growth' }).expect(409)).body.error.code).toBe('TRIAL_USED');
+    // The client's own trial and its end are in the subscription history the Console shows (control center K4).
+    const events = await asTenant(owner.tenantId, (tx) => tx.subscriptionEvent.findMany({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: 'asc' } }));
+    expect(events.map((e) => [e.kind, e.fromPlan, e.toPlan, e.operatorEmail])).toEqual([
+      ['TRIAL_STARTED', 'free', 'professional', null],
+      ['TRIAL_ENDED', 'professional', 'free', null],
+    ]);
+    expect(events[1]).toMatchObject({ fromState: 'EXPIRED', toState: 'ACTIVE' });
   });
 
   it('custom roles: Professional and above, system roles fixed, no granting what you lack', async () => {

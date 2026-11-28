@@ -71,7 +71,10 @@ export class ConsoleClientsListService {
     }
     // State and payment status are worked out from the subscription, so they are filtered after loading.
     const rows = (await this.console.rows({ AND: and }, LIST_MAX)).filter(
-      (r) => (!q.state || r.state === q.state) && (!q.payment || (q.payment === 'NONE' ? !r.subscription?.paymentStatus : r.subscription?.paymentStatus === q.payment)),
+      (r) =>
+        (!q.state || r.state === q.state) &&
+        (!q.payment || (q.payment === 'NONE' ? !r.subscription?.paymentStatus : r.subscription?.paymentStatus === q.payment)) &&
+        (!q.subscription || (q.subscription === 'NONE' ? !r.subscription : r.subscription?.state === q.subscription)),
     );
     const key = SORT_KEY[q.sort];
     const sign = q.dir === 'asc' ? 1 : -1;
@@ -206,6 +209,6 @@ const CSV_HEADER = ['Customer ID', 'Client', 'Status', 'Country', 'City', 'Plan'
 
 function filtersOf(q: Partial<ConsoleClientListQuery>): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const k of ['state', 'plan', 'billing', 'country', 'payment', 'health', 'createdFrom', 'createdTo'] as const) if (q[k]) out[k] = String(q[k]);
+  for (const k of ['state', 'plan', 'billing', 'country', 'payment', 'subscription', 'health', 'createdFrom', 'createdTo'] as const) if (q[k]) out[k] = String(q[k]);
   return out;
 }

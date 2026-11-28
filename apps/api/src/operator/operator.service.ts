@@ -22,6 +22,7 @@ import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue
 import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
 import type { OperatorContext } from './operator-auth';
 import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
+import { recordSubscriptionChange } from './subscription-events';
 
 type ScanTx = Prisma.TransactionClient;
 
@@ -204,6 +205,7 @@ export class OperatorService {
           pastDueSince: input.status === 'PAST_DUE' || input.status === 'UNPAID' ? (before.pastDueSince ?? now) : null,
         },
       });
+      await recordSubscriptionChange(tx, { tenantId: id, before, reason: input.reason, operator: op, changes: ['Plan set by hand'] });
       await this.audit.record(tx, {
         tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.plan_overridden', entityType: 'subscription', entityId: before.id,
         metadata: { operator: op.email, reason: input.reason, from: { planCode: before.planCode, seats: before.seats, status: before.status }, to: { planCode: input.planCode, seats: input.seats, status: input.status } },

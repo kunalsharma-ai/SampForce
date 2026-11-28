@@ -20,6 +20,8 @@ import {
   PAYMENT_STATUS_LABEL,
   HEALTH_BANDS,
   PAYMENT_STATUSES,
+  SUBSCRIPTION_STATE_LABEL,
+  SUBSCRIPTION_STATES,
   PLAN_CATALOG,
 } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
@@ -55,6 +57,7 @@ const FILTERS = [
   'billing',
   'country',
   'payment',
+  'subscription',
   'health',
   'createdFrom',
   'createdTo',
@@ -293,6 +296,16 @@ function ClientsList() {
           options={[
             ...PAYMENT_STATUSES.map((p) => [p, PAYMENT_STATUS_LABEL[p]] as [string, string]),
             ['NONE', 'No payment status'],
+          ]}
+        />
+        <FilterSelect
+          id="op-subscription"
+          label="Subscription"
+          value={f('subscription')}
+          onChange={(v) => setParams({ subscription: v })}
+          options={[
+            ...SUBSCRIPTION_STATES.map((p) => [p, SUBSCRIPTION_STATE_LABEL[p]] as [string, string]),
+            ['NONE', 'No subscription'],
           ]}
         />
         <FilterSelect

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ClientSubscriptionState } from './console-subscription';
+import { type ClientSubscriptionState, SUBSCRIPTION_STATES } from './console-subscription';
 import { emailSchema } from './auth';
 import { ENRICH_FIELDS, type EnrichField, type EnrichmentPreview, FIELD_SOURCES } from './company-enrichment';
 import { type ClientHealthSummary, HEALTH_BANDS } from './console-health';
@@ -466,6 +466,8 @@ export const consoleClientListQuerySchema = z.object({
   country: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()).optional().or(z.literal('').transform(() => undefined)),
   /** A payment status, or NONE for clients without one. */
   payment: optionalEnum([...PAYMENT_STATUSES, 'NONE'] as const),
+  /** Where the subscription stands (control center K4), or NONE for clients without one. */
+  subscription: optionalEnum([...SUBSCRIPTION_STATES, 'NONE'] as const),
   createdFrom: isoDay.optional().or(z.literal('').transform(() => undefined)),
   /** A health band, or NONE for clients not measured yet. */
   health: optionalEnum([...HEALTH_BANDS, 'NONE'] as const),
