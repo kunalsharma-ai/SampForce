@@ -115,10 +115,10 @@ test('Console Overview: figures follow the platform, charts, Action Required and
     .getByRole('link', { name: 'Overview' })
     .click();
   await quick.getByRole('link', { name: 'New client' }).click();
-  const dialog = ops.getByRole('dialog', { name: 'New client organisation' });
-  await expect(dialog).toBeVisible();
+  await expect(ops).toHaveURL(/\/operator\/clients\/new$/);
+  await expect(ops.getByRole('heading', { level: 1, name: 'Create client' })).toBeVisible();
   await shot(ops, '34-console-overview-new-client');
-  await ops.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await expect(ops).not.toHaveURL(/new=1/);
+  // An old link with ?new=1 lands on Create client too.
+  await ops.goto('/operator/clients?new=1');
+  await expect(ops).toHaveURL(/\/operator\/clients\/new$/);
 });

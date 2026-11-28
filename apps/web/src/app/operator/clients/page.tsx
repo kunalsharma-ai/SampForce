@@ -4,10 +4,6 @@ import {
   Badge,
   Button,
   Card,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
   Input,
   Skeleton,
 } from '@dealflow/ui';
@@ -16,7 +12,6 @@ import {
   CONSOLE_BULK_ACTIONS,
   CONSOLE_CLIENT_PAGE_SIZES,
   type ConsoleBulkAction,
-  type ConsoleClientCreated,
   type ConsoleClientPage,
   type ConsoleClientSort,
   type ConsolePlanRow,
@@ -25,17 +20,15 @@ import {
   PAYMENT_STATUS_LABEL,
   HEALTH_BANDS,
   PAYMENT_STATUSES,
-  type PaymentStatus,
   PLAN_CATALOG,
 } from '@dealflow/types';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Download,
   Plus,
   X,
@@ -48,11 +41,11 @@ import { BULK_TITLE, BulkDialog } from '@/components/console/client-bulk';
 import { CountrySelect } from '@/components/forms/inputs';
 import { CountryFlag } from '@/components/crm/status-chip';
 import { PageHeader } from '@/components/page-header';
-import { ErrorText, Field } from '@/components/revenue/tabs';
-import { api, ApiError, downloadFile } from '@/lib/api';
+import { ErrorText } from '@/components/revenue/tabs';
+import { api, downloadFile } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { HEALTH_BAND_LABEL, HealthPill } from '@/components/console/client-health';
-import { PaymentBadge, price, selectClass, StateBadge, toCents, toLimit } from '../console-ui';
+import { PaymentBadge, price, selectClass, StateBadge } from '../console-ui';
 import { can, useOperator } from '../operator-shell';
 
 const FILTERS = [
@@ -116,13 +109,12 @@ export default function ConsoleClientsPage() {
 function ClientsList() {
   const me = useOperator();
   const params = useSearchParams();
-  // The Overview's "New client" opens the list with the dialog open.
-  const [creating, setCreating] = useState(() => params.get('new') === '1');
-  // The menu's "Create client" adds ?new=1 while the list may already be open.
+  const router = useRouter();
+  // Old links to the list with ?new=1 (bookmarks, notifications) go to Create client (control-center K2).
   const asked = params.get('new') === '1';
   useEffect(() => {
-    if (asked) setCreating(true);
-  }, [asked]);
+    if (asked) router.replace('/operator/clients/new');
+  }, [asked, router]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<ConsoleBulkAction | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -236,9 +228,11 @@ function ClientsList() {
               Export CSV
             </Button>
             {can(me.data, 'clients.edit') && (
-              <Button onClick={() => setCreating(true)}>
-                <Plus className="size-4" aria-hidden />
-                New client
+              <Button asChild>
+                <Link href="/operator/clients/new">
+                  <Plus className="size-4" aria-hidden />
+                  New client
+                </Link>
               </Button>
             )}
           </div>
@@ -575,14 +569,6 @@ function ClientsList() {
           </div>
         </div>
       </Card>
-      {creating && (
-        <NewClientDialog
-          onClose={() => {
-            setCreating(false);
-            if (params.get('new')) setParams({ new: null }, true);
-          }}
-        />
-      )}
       {bulk && (
         <BulkDialog
           action={bulk}
@@ -664,288 +650,5 @@ function AwaitingPayment() {
         ))}
       </ul>
     </Card>
-  );
-}
-
-function NewClientDialog({ onClose }: { onClose: () => void }) {
-  const qc = useQueryClient();
-  const router = useRouter();
-  const plans = useQuery({
-    queryKey: ['operator', 'console-plans'],
-    queryFn: () => api<ConsolePlanRow[]>('/operator/console-plans'),
-  });
-  const offered = (plans.data ?? []).filter((p) => p.terms.available);
-  const [f, setF] = useState({
-    org: '',
-    adminName: '',
-    adminEmail: '',
-    designation: 'Client Administrator',
-    planCode: '',
-    seats: '10',
-    startsOn: new Date().toISOString().slice(0, 10),
-    months: '',
-    price: '',
-    currency: '',
-    paymentStatus: 'PENDING' as PaymentStatus,
-    managers: '',
-    executives: '',
-    superExecutives: true,
-    anotherSuper: false,
-  });
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setF({ ...f, [k]: e.target.value });
-  const plan = offered.find((p) => p.code === f.planCode) ?? offered[0];
-  const [created, setCreated] = useState<ConsoleClientCreated | null>(null);
-  const create = useMutation({
-    mutationFn: () =>
-      api<ConsoleClientCreated>('/operator/clients', {
-        method: 'POST',
-        json: {
-          organisation: { name: f.org },
-          administrator: {
-            name: f.adminName,
-            email: f.adminEmail,
-            ...(f.designation.trim() ? { designation: f.designation } : {}),
-          },
-          planCode: plan?.code ?? '',
-          seats: Number(f.seats) || 1,
-          startsOn: f.startsOn,
-          ...(f.months ? { durationMonths: Number(f.months) } : {}),
-          ...(f.price.trim() ? { priceCents: toCents(f.price) } : {}),
-          ...(f.currency.trim() ? { currency: f.currency } : {}),
-          paymentStatus: f.paymentStatus,
-          ...(f.managers.trim() ? { maxManagerWorkspaces: toLimit(f.managers) } : {}),
-          ...(f.executives.trim() ? { maxExecutiveWorkspaces: toLimit(f.executives) } : {}),
-          superCanCreateExecutives: f.superExecutives,
-          ...(f.anotherSuper ? { allowAnotherSuper: true } : {}),
-          reason: 'New client',
-        },
-      }),
-    onSuccess: (r) => {
-      setCreated(r);
-      void qc.invalidateQueries({ queryKey: ['operator', 'clients'] });
-      void qc.invalidateQueries({ queryKey: ['operator', 'overview'] });
-    },
-  });
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="top-[5%] max-h-[85vh] max-w-2xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">
-          {created ? 'Client created' : 'New client organisation'}
-        </DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">
-          {created
-            ? 'Send this link to the administrator. It works once and for seven days; you can send a new one from the client’s page.'
-            : 'Creates the organisation, its Super Workspace and subscription, and an invitation for the administrator, who joins as the Super Workspace’s owner.'}
-        </DialogDescription>
-        {created ? (
-          <div className="mt-4 space-y-4">
-            <div className="flex gap-2">
-              <Input
-                readOnly
-                value={created.inviteUrl}
-                aria-label="Administrator invitation link"
-              />
-              <Button
-                variant="outline"
-                onClick={() => void navigator.clipboard?.writeText(created.inviteUrl)}
-              >
-                <Copy className="size-4" aria-hidden />
-                Copy
-              </Button>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <Button onClick={() => router.push(`/operator/clients/${created.client.id}`)}>
-                Open client
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            className="mt-4 space-y-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              create.mutate();
-            }}
-          >
-            <fieldset className="grid gap-3 sm:grid-cols-2">
-              <legend className="mb-2 text-sm font-semibold">Organisation and administrator</legend>
-              <Field id="nc-org" label="Organisation name" className="sm:col-span-2">
-                <Input id="nc-org" required minLength={2} value={f.org} onChange={set('org')} />
-              </Field>
-              <Field id="nc-admin" label="Administrator’s name">
-                <Input id="nc-admin" required value={f.adminName} onChange={set('adminName')} />
-              </Field>
-              <Field id="nc-email" label="Administrator’s email">
-                <Input
-                  id="nc-email"
-                  type="email"
-                  required
-                  value={f.adminEmail}
-                  onChange={set('adminEmail')}
-                />
-              </Field>
-              <Field
-                id="nc-designation"
-                label="Administrator’s designation"
-                hint="Shown in their profile. It grants nothing by itself."
-                className="sm:col-span-2"
-              >
-                <Input id="nc-designation" value={f.designation} onChange={set('designation')} />
-              </Field>
-            </fieldset>
-            <fieldset className="grid gap-3 sm:grid-cols-3">
-              <legend className="mb-2 text-sm font-semibold">Subscription</legend>
-              <Field id="nc-plan" label="Plan" className="sm:col-span-2">
-                <select
-                  id="nc-plan"
-                  className={selectClass}
-                  value={plan?.code ?? ''}
-                  onChange={set('planCode')}
-                >
-                  {offered.map((p) => (
-                    <option key={p.code} value={p.code}>
-                      {p.name.replace('SampForce ', '')} · {p.features.length} features ·{' '}
-                      {price(p.terms.priceCents, p.terms.currency, p.terms.billingFrequency)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field id="nc-seats" label="Seats">
-                <Input
-                  id="nc-seats"
-                  type="number"
-                  min={1}
-                  required
-                  value={f.seats}
-                  onChange={set('seats')}
-                />
-              </Field>
-              <Field id="nc-start" label="Starts on">
-                <Input
-                  id="nc-start"
-                  type="date"
-                  required
-                  value={f.startsOn}
-                  onChange={set('startsOn')}
-                />
-              </Field>
-              <Field
-                id="nc-months"
-                label="Term in months"
-                hint={plan ? `Plan: ${plan.terms.durationMonths}` : undefined}
-              >
-                <Input
-                  id="nc-months"
-                  type="number"
-                  min={1}
-                  max={120}
-                  value={f.months}
-                  onChange={set('months')}
-                  placeholder={plan ? String(plan.terms.durationMonths) : ''}
-                />
-              </Field>
-              <Field id="nc-payment" label="Payment">
-                <select
-                  id="nc-payment"
-                  className={selectClass}
-                  value={f.paymentStatus}
-                  onChange={set('paymentStatus')}
-                >
-                  {PAYMENT_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {PAYMENT_STATUS_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field
-                id="nc-price"
-                label="Agreed price per period"
-                hint={
-                  plan ? `Plan: ${price(plan.terms.priceCents, plan.terms.currency)}` : undefined
-                }
-              >
-                <Input
-                  id="nc-price"
-                  inputMode="decimal"
-                  value={f.price}
-                  onChange={set('price')}
-                  placeholder="Plan price"
-                />
-              </Field>
-              <Field id="nc-currency" label="Currency">
-                <Input
-                  id="nc-currency"
-                  maxLength={3}
-                  value={f.currency}
-                  onChange={set('currency')}
-                  placeholder={plan?.terms.currency ?? 'USD'}
-                />
-              </Field>
-            </fieldset>
-            <fieldset className="grid gap-3 sm:grid-cols-2">
-              <legend className="mb-2 text-sm font-semibold">Workspace limits and authority</legend>
-              <Field
-                id="nc-managers"
-                label="Manager Workspaces"
-                hint={`Empty: the plan’s limit (${plan?.limits.maxManagerWorkspaces ?? 'none'})`}
-              >
-                <Input
-                  id="nc-managers"
-                  type="number"
-                  min={0}
-                  value={f.managers}
-                  onChange={set('managers')}
-                />
-              </Field>
-              <Field
-                id="nc-executives"
-                label="Executive Workspaces"
-                hint={`Empty: the plan’s limit (${plan?.limits.maxExecutiveWorkspaces ?? 'none'})`}
-              >
-                <Input
-                  id="nc-executives"
-                  type="number"
-                  min={0}
-                  value={f.executives}
-                  onChange={set('executives')}
-                />
-              </Field>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={f.superExecutives}
-                  onChange={(e) => setF({ ...f, superExecutives: e.target.checked })}
-                />
-                The Super Workspace may create Executive Workspaces itself
-              </label>
-            </fieldset>
-            {(create.error instanceof ApiError && create.error.code === 'SUPER_WORKSPACE_LIMIT') || f.anotherSuper ? (
-              <label className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm" data-allow-another-super>
-                <input type="checkbox" className="mt-0.5" checked={f.anotherSuper} onChange={(e) => setF({ ...f, anotherSuper: e.target.checked })} />
-                <span>
-                  <span className="block font-medium">Allow another Super Workspace</span>
-                  <span className="text-muted-foreground">One person owns one Super Workspace. Tick this only if {f.adminEmail || 'this administrator'} should own this client’s Super Workspace as well; it is written to the audit log.</span>
-                </span>
-              </label>
-            ) : null}
-            <ErrorText error={create.error ?? plans.error} />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={create.isPending || !plan}>
-                Create client
-              </Button>
-            </div>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }

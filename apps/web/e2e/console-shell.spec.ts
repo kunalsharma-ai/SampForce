@@ -91,10 +91,10 @@ test('the Console shell: menu, palettes, sound and global search', async ({ brow
   await expect(ops.locator('[data-quick-action="client"]')).toBeVisible();
   await shot(ops, '06-console-quick-actions');
   await ops.locator('[data-quick-action="client"]').click();
-  await expect(ops).toHaveURL(/\/operator\/clients\?new=1/);
-  await expect(ops.getByRole('dialog')).toBeVisible();
-  await ops.keyboard.press('Escape');
-  await expect(ops.getByRole('dialog')).toBeHidden();
+  await expect(ops).toHaveURL(/\/operator\/clients\/new$/);
+  await expect(ops.getByRole('heading', { level: 1, name: 'Create client' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Create client' })).toHaveAttribute('aria-current', 'page');
+  await expect(menu.getByRole('link', { name: 'All clients' })).not.toHaveAttribute('aria-current', 'page');
   await menu.getByRole('link', { name: 'Overview' }).click();
   await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 

@@ -56,21 +56,27 @@ test('the Console Admin creates a client on a plan, sets its limits and changes 
   await shot(ops, '05-console-plans');
 
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Clients' }).click();
-  await ops.getByRole('button', { name: 'New client' }).click();
-  const dialog = ops.getByRole('dialog');
+  await ops.getByRole('link', { name: 'New client' }).click();
+  // Create client (control-center K2): the company, then the details (skipped here), the plan, then approve.
+  await expect(ops.getByRole('heading', { level: 1, name: 'Create client' })).toBeVisible();
   const client = `Frequent Research ${suffix}`;
-  await dialog.getByLabel('Organisation name').fill(client);
-  await dialog.getByLabel('Administrator’s name').fill('Kavya Iyer');
-  await dialog.getByLabel('Administrator’s email').fill(`kavya-${suffix}@client.test`);
-  await dialog.getByLabel('Administrator’s designation').fill('Head of Sales Operations');
-  const option = dialog.getByLabel('Plan').locator('option', { hasText: planName });
-  await dialog.getByLabel('Plan').selectOption((await option.getAttribute('value'))!);
-  await dialog.getByLabel('Seats').fill('25');
-  await dialog.getByLabel('Payment').selectOption('PAID');
+  await ops.getByLabel('Company name').fill(client);
+  await ops.getByLabel('Company email').fill(`info-${suffix}@frequent.example`);
+  await ops.getByLabel('Website').fill('frequent.example');
+  await ops.getByRole('button', { name: 'Skip, I’ll enter the details' }).click();
+  await ops.getByRole('button', { name: 'Approve details' }).click();
+  await ops.getByLabel('Administrator’s name').fill('Kavya Iyer');
+  await ops.getByLabel('Administrator’s email').fill(`kavya-${suffix}@client.test`);
+  await ops.getByLabel('Administrator’s designation').fill('Head of Sales Operations');
+  const option = ops.getByLabel('Plan').locator('option', { hasText: planName });
+  await ops.getByLabel('Plan').selectOption((await option.getAttribute('value'))!);
+  await ops.getByLabel('Seats').fill('25');
+  await ops.getByLabel('Payment').selectOption('PAID');
   await shot(ops, '06-console-new-client');
-  await dialog.getByRole('button', { name: 'Create client' }).click();
-  await expect(dialog.getByLabel('Administrator invitation link')).toHaveValue(/\/invite\//);
-  await dialog.getByRole('button', { name: 'Open client' }).click();
+  await ops.getByRole('button', { name: 'Continue' }).click();
+  await ops.getByRole('button', { name: 'Approve & create client' }).click();
+  await expect(ops.getByLabel('Administrator invitation link')).toHaveValue(/\/invite\//);
+  await ops.getByRole('button', { name: 'Open client' }).click();
 
   await expect(ops.getByRole('heading', { level: 1, name: client })).toBeVisible();
   await expect(ops.locator('[data-usage="Manager Workspaces"]')).toHaveText('0 / 4 used');

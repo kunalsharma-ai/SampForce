@@ -22,7 +22,7 @@ interface QuickAction {
 }
 
 const ACTIONS: QuickAction[] = [
-  { key: 'client', label: 'Create client', href: '/operator/clients?new=1', icon: UserPlus, permission: 'clients.edit' },
+  { key: 'client', label: 'Create client', href: '/operator/clients/new', icon: UserPlus, permission: 'clients.edit' },
   { key: 'plan', label: 'Manage plans', href: '/operator/plans', icon: CreditCard, permission: 'plans.manage' },
   { key: 'operator', label: 'Add an operator', href: '/operator/operators', icon: UserCog, permission: 'operators.manage' },
   { key: 'tickets', label: 'Open support tickets', href: '/operator/support', icon: Ticket, permission: 'support.handle' },

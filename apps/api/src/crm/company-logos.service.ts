@@ -7,7 +7,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { claimDue, errorMessage } from '../worker/queue';
-import { findLogo, LOGO_MAX_BYTES, LOGO_MIN_WIDTH, type LogoFetcher, logoDomain, sniffImage } from './company-logo-finder';
+import { findLogo, LOGO_MAX_BYTES, LOGO_MIN_WIDTH, type LogoFetcher, type LookupResult, logoDomain, sniffImage } from './company-logo-finder';
 import { notFound } from './crm-helpers';
 import { BROWSER_USER_AGENT, siteFetcher } from './site-fetch';
 import { canSeeDetails, companyScope, visibility } from './visibility';
@@ -226,6 +226,14 @@ export class CompanyLogosService {
     } catch (err) {
       this.log.error({ err: errorMessage(err), tenantId: c.tenantId }, 'saving a company logo failed');
     }
+  }
+
+  /**
+   * Looks a website's logo up without saving it, for the Console's Create Client review (control-center K2). The same
+   * finder and fetch rules as the automatic company logos.
+   */
+  lookUpDomain(domain: string): Promise<LookupResult> {
+    return findLogo(domain, this.fetcher()).catch((err: unknown) => ({ status: 'UNREACHABLE' as const, error: errorMessage(err) }));
   }
 
   /** The look-up's only way out: public https addresses, every redirect checked, sizes and times capped (site-fetch.ts). */

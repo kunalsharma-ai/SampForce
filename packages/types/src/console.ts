@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
+import { ENRICH_FIELDS, type EnrichField, type EnrichmentPreview, FIELD_SOURCES } from './company-enrichment';
 import { type ClientHealthSummary, HEALTH_BANDS } from './console-health';
 import type { OperatorPermission } from './console-security';
 import { FEATURE_KEYS, type FeatureKey, featureKeySchema } from './features';
@@ -256,6 +257,69 @@ export const consoleClientProfileSchema = z
   .strict();
 export type ConsoleClientProfileInput = z.infer<typeof consoleClientProfileSchema>;
 
+// ───────────── Create Client with company extraction (control-center K2) ─────────────
+
+/**
+ * POST /operator/clients/extract: the Console's "Find company details". It runs the same company auto-fill engine the
+ * workspaces use for Create Company (ADR 0076/0079: the company's own website, then Wikidata; no AI) and stores
+ * nothing. The administrator reviews what was found before the client is created.
+ */
+export const consoleClientExtractSchema = z
+  .object({
+    name: z.string().trim().min(2, 'Enter the company name').max(200),
+    website: z.string().trim().min(3, 'Enter the company website').max(500),
+    email: z.string().trim().max(254).optional(),
+  })
+  .strict();
+export type ConsoleClientExtractInput = z.infer<typeof consoleClientExtractSchema>;
+
+export interface ConsoleClientExtract extends EnrichmentPreview {
+  /** The website's own logo, when one was found: a data: URL for the review screen, uploaded after creation. */
+  logo: { contentType: string; dataUrl: string; sourceUrl: string; width: number | null } | null;
+  /** The domain the look-up read, or null when the website could not be understood. */
+  domain: string | null;
+}
+
+/** The review screen's fields, in the order shown; every one is the same field Create Company fills. */
+export const CLIENT_DETAIL_FIELDS: readonly EnrichField[] = [
+  'legalName', 'overview', 'industry', 'businessCategory', 'foundedYear', 'companySize', 'employeeCount', 'companyType',
+  'headquarters', 'country', 'city', 'address', 'postalCode', 'primaryEmail', 'emails', 'primaryPhone', 'phones',
+  'contactPageUrl', 'linkedinUrl', 'socialLinks', 'services', 'products', 'industriesServed', 'certifications',
+];
+
+const detailValue = z.union([z.string().trim().max(4000), z.array(z.string().trim().min(1).max(500)).max(60)]);
+
+/**
+ * The company details the administrator approved, kept on the client: values by field, and where each came from (the
+ * website, Wikidata, or USER when typed or corrected on the review screen). Same field names and sources as a CRM
+ * company's Business Information.
+ */
+export const consoleClientDetailsSchema = z
+  .object({
+    values: z.record(z.enum(ENRICH_FIELDS), detailValue),
+    sources: z.record(z.enum(ENRICH_FIELDS), z.object({ source: z.enum(FIELD_SOURCES), url: z.string().trim().max(1000).nullable() }).strict()),
+  })
+  .strict();
+export type ConsoleClientDetails = z.infer<typeof consoleClientDetailsSchema>;
+
+/**
+ * POST /operator/clients with the wizard's extra steps: the company email and profile from step 1, and the approved
+ * details from the review. Everything added here is optional, so the shorter form keeps working.
+ */
+export const consoleClientCreateWithDetailsSchema = consoleClientCreateSchema.extend({
+  companyEmail: z
+    .string()
+    .trim()
+    .max(254)
+    .transform((v) => v.toLowerCase() || null)
+    .refine((v) => v === null || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Use an email address such as info@example.com')
+    .nullable()
+    .optional(),
+  profile: consoleClientProfileSchema.omit({ name: true }).partial().optional(),
+  details: consoleClientDetailsSchema.optional(),
+});
+export type ConsoleClientCreateWithDetailsInput = z.input<typeof consoleClientCreateWithDetailsSchema>;
+
 /** The client's company details as the Console keeps them. */
 export interface ConsoleClientProfile {
   legalName: string | null;
@@ -270,6 +334,10 @@ export interface ConsoleClientProfile {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  /** The company's own email address (control-center K2). */
+  companyEmail: string | null;
+  /** The company details approved when the client was created, with their sources; null for older clients. */
+  details: ConsoleClientDetails | null;
 }
 
 export interface ConsoleClientRow {

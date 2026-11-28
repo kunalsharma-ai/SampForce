@@ -414,7 +414,7 @@ function Hero({
   ).toUpperCase();
   const quick = [
     ...(canCreate
-      ? [{ label: 'New client', href: '/operator/clients?new=1', icon: UserPlus }]
+      ? [{ label: 'New client', href: '/operator/clients/new', icon: UserPlus }]
       : []),
     ...(canPlans ? [{ label: 'New plan', href: '/operator/plans', icon: Plus }] : []),
     ...(canBill

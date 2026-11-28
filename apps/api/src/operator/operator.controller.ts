@@ -6,7 +6,9 @@ import {
   type ReopenCompanyInput,
   reopenCompanySchema,
   consoleAuthoritySchema,
-  consoleClientCreateSchema,
+  consoleClientCreateWithDetailsSchema,
+  consoleClientExtractSchema,
+  type ConsoleClientExtractInput,
   consoleClientStateSchema,
   type ConsolePreferencesUpdate,
   consolePreferencesUpdateSchema,
@@ -48,6 +50,7 @@ import { Operator, type OperatorContext, OperatorGuard, OperatorAny, OperatorNoA
 import { ConsoleService } from './console.service';
 import { ConsoleShellService } from './console-shell.service';
 import { OperatorService } from './operator.service';
+import { ConsoleClientCreateService } from './console-client-create.service';
 
 const ip = (req: Request) => req.ip ?? null;
 
@@ -62,6 +65,7 @@ export class OperatorController {
     private readonly console: ConsoleService,
     private readonly shell: ConsoleShellService,
     private readonly closures: CompanyClosureService,
+    private readonly create: ConsoleClientCreateService,
   ) {}
 
   // ───── Console Admin (ADR 0071): platform overview, client organisations, plans and workspace limits ─────
@@ -82,8 +86,19 @@ export class OperatorController {
   /** A new client organisation with its Super Workspace, subscription and an invitation for its administrator. */
   @Post('clients')
   @OperatorPermission('clients.edit')
-  createClient(@Operator() op: OperatorContext, @Body(new ZodPipe(consoleClientCreateSchema)) body: z.output<typeof consoleClientCreateSchema>, @Req() req: Request) {
+  createClient(@Operator() op: OperatorContext, @Body(new ZodPipe(consoleClientCreateWithDetailsSchema)) body: z.output<typeof consoleClientCreateWithDetailsSchema>, @Req() req: Request) {
     return this.console.createClient(op, body, ip(req));
+  }
+
+  /**
+   * Create Client's "Find company details" (control-center K2): the company auto-fill engine and the website logo
+   * finder, as Create Company uses them. Nothing is stored; the look-up itself is written to the audit log.
+   */
+  @Post('clients/extract')
+  @HttpCode(200)
+  @OperatorPermission('clients.edit')
+  extractClient(@Operator() op: OperatorContext, @Body(new ZodPipe(consoleClientExtractSchema)) body: ConsoleClientExtractInput, @Req() req: Request) {
+    return this.create.extract(op, body, ip(req));
   }
 
   @Get('clients/:id')
