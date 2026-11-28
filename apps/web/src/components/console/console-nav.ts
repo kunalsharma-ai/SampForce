@@ -43,6 +43,8 @@ export interface ConsoleNavItem {
   also?: string[];
   /** Match only the exact path, not the pages under it. */
   exact?: boolean;
+  /** Pages under this one that belong to another menu item. */
+  except?: string[];
   badge?: ConsoleBadge;
   children?: ConsoleNavItem[];
   /** Shown only to operators whose role has this permission (ADR 0074); the API refuses the page otherwise. */
@@ -79,9 +81,10 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
         href: '/operator/clients',
         icon: Building2,
         also: ['/operator/tenants'],
+        except: ['/operator/clients/new'],
         permission: 'clients.view',
       },
-      { key: 'create-client', label: 'Create client', href: '/operator/clients?new=1', icon: UserPlus, permission: 'clients.edit' },
+      { key: 'create-client', label: 'Create client', href: '/operator/clients/new', icon: UserPlus, permission: 'clients.edit' },
       { key: 'plans', label: 'Plans & subscriptions', href: '/operator/plans', icon: CreditCard, permission: 'clients.view' },
       { key: 'mobile', label: 'Mobile app', href: '/operator/mobile', icon: Smartphone, permission: 'clients.view' },
     ],
@@ -164,6 +167,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
 
 export function navItemActive(item: ConsoleNavItem, path: string): boolean {
   if (item.children) return item.children.some((c) => navItemActive(c, path));
+  if (item.except?.some((p) => path === p || path.startsWith(`${p}/`))) return false;
   const paths = [item.href, ...(item.also ?? [])];
   return paths.some((p) => path === p || (!item.exact && path.startsWith(`${p}/`)));
 }

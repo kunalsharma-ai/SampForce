@@ -137,8 +137,7 @@ export class CompanyEnrichmentService implements OnModuleDestroy {
   }
 
   /** A few look-ups a minute per person (Find details and Find people together). */
-  private throttle(auth: AuthContext): void {
-    const key = auth.userId || auth.tenantId;
+  private throttle(key: string): void {
     const now = Date.now();
     const recent = (this.previews.get(key) ?? []).filter((at) => now - at < 60_000);
     if (recent.length >= PREVIEWS_PER_MINUTE) {
@@ -159,7 +158,7 @@ export class CompanyEnrichmentService implements OnModuleDestroy {
     });
     const domain = logoDomain(company.domain);
     if (!domain && !this.wikidataOn()) throw new ConflictException({ code: 'NO_WEBSITE', message: 'Add the company’s website first.' });
-    this.throttle(auth);
+    this.throttle(auth.userId || auth.tenantId);
     const collected = await Promise.race([
       this.collect(company.name, domain),
       new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.', people: [] }), RUN_DEADLINE_MS).unref()),
@@ -177,9 +176,23 @@ export class CompanyEnrichmentService implements OnModuleDestroy {
     await this.prisma.run(auth, async (tx) => {
       if (!(await hasFeature(tx, auth.tenantId, 'company_enrichment'))) throw featureNotIncluded('company_enrichment');
     });
+    this.throttle(auth.userId || auth.tenantId);
+    return this.lookUp(req);
+  }
+
+  /**
+   * The same look-up for the Console's Create Client (control-center K2): the client organisation does not exist yet, so
+   * there is no workspace, plan or permission to check here; the operator route checks clients.edit. Throttled per
+   * operator like Find details is per person.
+   */
+  previewForConsole(operatorId: string, req: EnrichmentPreviewRequest): Promise<EnrichmentPreview> {
+    this.throttle(`operator:${operatorId}`);
+    return this.lookUp(req);
+  }
+
+  private async lookUp(req: EnrichmentPreviewRequest): Promise<EnrichmentPreview> {
     const domain = logoDomain(req.website ?? null);
     if (!domain && !this.wikidataOn()) throw new ConflictException({ code: 'NO_WEBSITE', message: 'Add the company’s website first.' });
-    this.throttle(auth);
     const collected = await Promise.race([
       this.collect(req.name, domain),
       new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.', people: [] }), RUN_DEADLINE_MS).unref()),

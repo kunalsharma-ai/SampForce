@@ -63,6 +63,11 @@ type Entry = { type: string; body: Buffer | string; status?: number } | { redire
  * Nothing here is real.
  */
 export const LOGO_SITES: Record<string, Record<string, Entry>> = {
+  // The auto-fill site Northwind Insights (company-sites.ts) publishes its logo at the usual path only: the Console's
+  // Create Client shows it on the review step (control-center K2).
+  'www.northwind-insights.example': {
+    '/apple-touch-icon.png': { type: 'image/png', body: png(180, [13, 148, 136]) },
+  },
   // Declares a large apple-touch-icon and a small favicon: the large one wins.
   'brightwave.example': {
     '/': { type: 'text/html; charset=utf-8', body: html('<link rel="icon" href="/favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" sizes="180x180" href="/static/touch.png">') },

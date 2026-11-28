@@ -1540,6 +1540,30 @@ export const organizationHelp = {
       'استخدمه عندما لا تظهر مدينة العميل أو يُكتب الاسم بشكل مختلف عمّا يكتبه العميل.',
     ],
   },
+  'page.operatorCreateClient': {
+    title: 'Create client',
+    what: [
+      'Four steps to add a client: the company, the details SampForce found about it, the plan and administrator, and a final check before the client is created.',
+      'Cuatro pasos para añadir un cliente: la empresa, los datos que SampForce encontró sobre ella, el plan y el administrador, y una revisión final antes de crear el cliente.',
+      'Quatre étapes pour ajouter un client : l’entreprise, les informations trouvées par SampForce, le forfait et l’administrateur, puis une dernière vérification avant la création.',
+      'Vier Schritte zum Anlegen eines Kunden: das Unternehmen, die von SampForce gefundenen Angaben, Tarif und Administrator und eine letzte Prüfung vor dem Anlegen.',
+      'أربع خطوات لإضافة عميل: الشركة، والبيانات التي وجدتها SampForce عنها، والخطة والمسؤول، ومراجعة أخيرة قبل إنشاء العميل.',
+    ],
+    how: [
+      'Enter the company name, email and website, then Find company details. SampForce reads the company’s own website and Wikidata, as Create Company does. Correct, remove or add anything on the review step; nothing is saved until you approve.',
+      'Escribe el nombre, el correo y la web de la empresa y pulsa Buscar datos de la empresa. SampForce lee su web y Wikidata, como en Crear empresa. Corrige, quita o añade lo que quieras; nada se guarda hasta que lo apruebes.',
+      'Saisissez le nom, l’e-mail et le site de l’entreprise, puis Rechercher les informations. SampForce lit son site et Wikidata, comme Créer une entreprise. Corrigez, retirez ou ajoutez ; rien n’est enregistré avant votre approbation.',
+      'Geben Sie Name, E-Mail und Website ein und wählen Sie Unternehmensdaten suchen. SampForce liest die Website und Wikidata wie bei Unternehmen anlegen. Korrigieren, entfernen oder ergänzen Sie alles; gespeichert wird erst nach Ihrer Freigabe.',
+      'أدخل اسم الشركة وبريدها وموقعها ثم اختر البحث عن بيانات الشركة. تقرأ SampForce موقع الشركة نفسه وWikidata كما في إنشاء شركة. صحّح أو احذف أو أضف ما تريد في خطوة المراجعة؛ لا يُحفظ شيء حتى توافق.',
+    ],
+    where: [
+      'Use it for every new client. Details that could not be found are shown as not found, never guessed, and each value keeps where it came from.',
+      'Úsalo para cada cliente nuevo. Los datos que no se encontraron aparecen como no encontrados, nunca se inventan, y cada valor guarda su origen.',
+      'Utilisez-le pour chaque nouveau client. Les informations introuvables sont indiquées comme non trouvées, jamais devinées, et chaque valeur garde sa source.',
+      'Nutzen Sie es für jeden neuen Kunden. Nicht gefundene Angaben werden als nicht gefunden angezeigt, nie geraten, und jeder Wert behält seine Quelle.',
+      'استخدمه لكل عميل جديد. تظهر البيانات غير الموجودة على أنها غير موجودة ولا تُخمَّن أبدًا، ويحتفظ كل قيمة بمصدرها.',
+    ],
+  },
   'page.operatorOperators': {
     title: 'Operators',
     what: [

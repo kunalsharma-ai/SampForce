@@ -477,6 +477,11 @@ model Tenant {
   contactName           String?           @map("contact_name")
   contactEmail          String?           @map("contact_email")
   contactPhone          String?           @map("contact_phone")
+  /// The company's own email (control-center K2), entered on Create Client.
+  companyEmail          String?           @map("company_email")
+  /// Company details approved on Create Client (control-center K2): consoleClientDetailsSchema in @dealflow/types,
+  /// i.e. { values, sources } keyed by the company auto-fill field names. Null for clients created before it.
+  companyDetails        Json?             @map("company_details")
   /// The client's readable number, shown as SF-000123; given once, in order, from the counter "client.customer".
   customerNumber        Int?              @map("customer_number")
   /// The latest health score (ADR 0074, C5): 0-100, its band (HEALTHY, AT_RISK, CRITICAL) and when the worker

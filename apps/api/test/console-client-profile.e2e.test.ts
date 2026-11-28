@@ -114,6 +114,8 @@ describe('Console client profile and locations', () => {
     expect(detail.profile).toEqual({
       legalName: `${org} Private Limited`, website: 'https://profilemills.example', industry: 'Manufacturing', countryCode: 'IN', regionCode: 'MH', city: 'Pune',
       addressLine1: '12 Mill Road', addressLine2: null, postalCode: '411001', contactName: 'Priya Rao', contactEmail: 'priya@profilemills.example', contactPhone: '+91 20 5555 0101',
+      // Set by Create Client (control-center K2); a profile edit leaves them alone.
+      companyEmail: null, details: null,
     });
 
     const log = (await op(admin).get(`/audit-log?targetType=client&targetId=${owner.tenantId}&action=client.profile_updated`).expect(200)).body as { before: Record<string, unknown>; after: Record<string, unknown> }[];

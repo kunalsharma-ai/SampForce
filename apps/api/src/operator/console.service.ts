@@ -31,7 +31,8 @@ import {
   type PlanEntitlements,
   SUPPORT_LEVELS,
   type z,
-  type consoleClientCreateSchema,
+  type consoleClientCreateWithDetailsSchema,
+  consoleClientDetailsSchema,
   type ClientHealthBand,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -46,7 +47,7 @@ import type { OperatorContext } from './operator-auth';
 import { changedFields, writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 const DAY = 86_400_000;
-type ClientCreate = z.output<typeof consoleClientCreateSchema>;
+type ClientCreate = z.output<typeof consoleClientCreateWithDetailsSchema>;
 type PlanRow = { code: string; name: string; custom: boolean; terms: unknown; entitlements: unknown; updatedAt: Date };
 
 /** Platform-log actions that make up a client's subscription history. */
@@ -362,7 +363,8 @@ export class ConsoleService {
     const history = await this.history(id);
     const tenant = await this.prisma.run({ tenantId: id }, (tx) => tx.tenant.findUniqueOrThrow({ where: { id } }));
     if (op) await this.log(op.id, 'client.viewed', id, {}, ip);
-    return { ...row, ...detail, profile: profileOf(tenant), history };
+    const details = consoleClientDetailsSchema.safeParse(tenant.companyDetails ?? null);
+    return { ...row, ...detail, profile: { ...profileOf(tenant), companyEmail: tenant.companyEmail ?? null, details: details.success ? details.data : null }, history };
   }
 
   private async history(tenantId: string): Promise<ConsoleHistoryRow[]> {
@@ -427,10 +429,26 @@ export class ConsoleService {
       `Manager Workspaces: ${input.maxManagerWorkspaces ?? planLimit(defs[plan.code]?.maxManagerWorkspaces)}`,
       `Executive Workspaces: ${input.maxExecutiveWorkspaces ?? planLimit(defs[plan.code]?.maxExecutiveWorkspaces)}`,
       `Super Workspace creates Executive Workspaces: ${input.superCanCreateExecutives ? 'yes' : 'no'}`,
+      ...(input.companyEmail ? [`Company email: ${input.companyEmail}`] : []),
+      ...(input.profile?.website ? [`Website: ${input.profile.website}`] : []),
+      ...(input.details ? [`Company details approved: ${Object.keys(input.details.values).length} fields (${Object.values(input.details.sources).filter((x) => x && x.source !== 'USER').length} found automatically)`] : []),
       ...(owns.length ? [`Another Super Workspace allowed for ${input.administrator.email} (already owns ${owns.join(', ')})`] : []),
     ];
     const inviteUrl = await this.prisma.run({ tenantId }, async (tx) => {
       await provisionTenant(tx, { tenantId, name: input.organisation.name, slug, planCode: plan.code });
+      // The company details from the Create Client wizard (control-center K2): step 1's profile and the approved review.
+      const profile = input.profile ?? {};
+      const profileData = Object.fromEntries(PROFILE_FIELDS.flatMap((f) => (profile[f] !== undefined ? [[f, profile[f] ?? null]] : [])));
+      if (profileData.countryCode === null || profileData.countryCode === undefined) delete profileData.regionCode;
+      if (Object.keys(profileData).length || input.companyEmail || input.details)
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: {
+            ...profileData,
+            ...(input.companyEmail ? { companyEmail: input.companyEmail } : {}),
+            ...(input.details ? { companyDetails: input.details as unknown as Prisma.InputJsonValue } : {}),
+          },
+        });
       if (input.organisation.currency || input.organisation.timezone)
         await tx.tenant.update({ where: { id: tenantId }, data: { ...(input.organisation.currency ? { defaultCurrency: input.organisation.currency } : {}), ...(input.organisation.timezone ? { defaultTimezone: input.organisation.timezone } : {}) } });
       await tx.subscription.update({

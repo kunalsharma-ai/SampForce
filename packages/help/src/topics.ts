@@ -115,6 +115,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/marketplace': 'page.marketplace',
   '/operator': 'page.consoleOverview',
   '/operator/clients': 'page.operatorWorkspaces',
+  '/operator/clients/new': 'page.operatorCreateClient',
   '/operator/clients/[id]': 'page.consoleClient',
   '/operator/tenants/[id]': 'page.operatorWorkspace',
   '/operator/plans': 'page.operatorPlans',
