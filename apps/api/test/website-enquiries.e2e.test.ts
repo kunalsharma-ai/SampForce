@@ -315,6 +315,13 @@ describe('Website enquiries in the operator Console', () => {
     expect((await row()).env.find((f: { name: string }) => f.name === 'WEBSITE_ENQUIRY_WORKSPACE')).toMatchObject({ hint: slug });
     const checked = (await post('/providers/website_enquiries/check').expect(200)).body as Row;
     expect(checked).toMatchObject({ state: 'verified', lastCheck: { ok: true, message: expect.stringContaining('"Sampforce production"') } });
+    expect(checked.lastCheck!.message).toContain('Website Enquiry is on for Receiving Org.');
+    // A section switched off for the receiving workspace is switched back on by Test connection.
+    await asTenant(owner.tenantId, (tx) => tx.tenantFeatureOverride.deleteMany({ where: { tenantId: owner.tenantId, feature: 'website_enquiries' } }));
+    await api(owner).get('/website-enquiries/summary').expect(403);
+    const healed = (await post('/providers/website_enquiries/check').expect(200)).body as Row;
+    expect(healed.lastCheck!.message).toContain('Website Enquiry was off for Receiving Org and is now switched on.');
+    await api(owner).get('/website-enquiries/summary').expect(200);
     // The key is stored in the database, not shown back in full.
     const db = appClient();
     const stored = await db.platformSecret.findFirst({ where: { name: 'WEBSITE_API_KEY' } });

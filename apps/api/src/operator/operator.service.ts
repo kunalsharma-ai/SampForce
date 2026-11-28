@@ -447,7 +447,7 @@ export class OperatorService {
       openai: () => this.tests.compatible('openai'), gemini: () => this.tests.compatible('gemini'), groq: () => this.tests.compatible('groq'),
       openrouter: () => this.tests.openrouter(), mistral: () => this.tests.compatible('mistral'), custom_ai: () => this.tests.compatible('custom_ai'), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
       docusign: () => this.tests.docusign(),
-      smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), website_enquiries: () => this.tests.websiteEnquiries(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
+      smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), website_enquiries: async () => `${await this.tests.websiteEnquiries()} ${await this.ensureEnquiryWorkspace(op, ip)}`, stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
     };
     const fingerprint = this.fingerprint(p);
     let result: StoredCheck;
@@ -461,6 +461,20 @@ export class OperatorService {
     await this.prisma.platformSetting.upsert({ where: { key: k }, create: { key: k, value: JSON.stringify(result), updatedById: op.id }, update: { value: JSON.stringify(result), updatedById: op.id } });
     await this.log(op.id, 'provider.checked', null, { provider: key, ok: result.ok, message: result.message }, ip);
     return (await this.providers()).find((r) => r.key === key)!;
+  }
+
+  /**
+   * Website enquiries (ADR 0095): Test connection also checks the receiving workspace and makes sure the Website
+   * Enquiry section is switched on for it, so a section switched off (or a save that never granted it) heals here.
+   */
+  private async ensureEnquiryWorkspace(op: OperatorContext, ip: string | null): Promise<string> {
+    const slug = this.env.WEBSITE_ENQUIRY_WORKSPACE?.trim().toLowerCase();
+    const tenant = slug ? await this.prisma.run({ operatorScan: true }, (tx) => tx.tenant.findFirst({ where: { slug, deletedAt: null }, select: { id: true, name: true } })) : null;
+    if (!tenant) throw new Error(`No workspace has the web address name "${slug ?? ''}". Pick the receiving workspace from the list again.`);
+    const row = await this.prisma.run({ tenantId: tenant.id }, (tx) => tx.tenantFeatureOverride.findUnique({ where: { tenantId_feature: { tenantId: tenant.id, feature: 'website_enquiries' } }, select: { enabled: true } }));
+    if (row?.enabled) return `Website Enquiry is on for ${tenant.name}.`;
+    await this.setFeatureOverrides(op, tenant.id, { overrides: { website_enquiries: true }, reason: 'Receives the company website enquiries (Providers > Website enquiries, Test connection).' }, ip);
+    return `Website Enquiry was off for ${tenant.name} and is now switched on.`;
   }
 
   async log(operatorId: string | null, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
