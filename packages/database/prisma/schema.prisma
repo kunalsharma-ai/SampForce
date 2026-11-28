@@ -5676,3 +5676,113 @@ model PhoneCall {
   @@index([tenantId, twilioSid])
   @@map("phone_calls")
 }
+
+/// Team approvals (ADR 0098): an Executive Workspace asks its manager before deleting (and, when the Super Workspace
+/// switches them on, before other guarded changes); free-form requests about tasks, targets and data use the same
+/// inbox. A guarded request is tied to the exact action (method, path, body hash) and, for one record or a list of
+/// ids, to a fingerprint of the records as they were when the request was made.
+model TeamApproval {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  /// Readable number per organisation (APR-12).
+  number            Int
+  /// delete, record_edit, task_change, target_change or other.
+  category          String
+  /// PENDING, APPROVED, REJECTED, CANCELLED, EXPIRED or COMPLETED.
+  status            String    @default("PENDING")
+  requesterId       String    @map("requester_id")
+  /// The requester's workspace (null = Super Workspace).
+  requesterNodeId   String?   @map("requester_node_id")
+  /// The workspace that decides (null = the Super Workspace).
+  approverNodeId    String?   @map("approver_node_id")
+  escalationLevel   Int       @default(0) @map("escalation_level")
+  escalatedAt       DateTime? @map("escalated_at")
+  recordType        String?   @map("record_type")
+  recordName        String?   @map("record_name")
+  recordId          String?   @map("record_id")
+  recordCount       Int?      @map("record_count")
+  recordFingerprint String?   @map("record_fingerprint")
+  method            String?
+  path              String?
+  body              Json?
+  bodyHash          String?   @map("body_hash")
+  title             String?
+  reason            String
+  decisionNote      String?   @map("decision_note")
+  decidedById       String?   @map("decided_by_id")
+  decidedAt         DateTime? @map("decided_at")
+  cancelledAt       DateTime? @map("cancelled_at")
+  /// An approved guarded request can be carried out until then.
+  approvedUntil     DateTime? @map("approved_until")
+  /// Set while the approved action runs, so it runs once.
+  claimedAt         DateTime? @map("claimed_at")
+  completedAt       DateTime? @map("completed_at")
+  /// The deleted-items batch the approved delete made, for restoring it.
+  recycleBatchId    String?   @map("recycle_batch_id")
+  expiresAt         DateTime  @map("expires_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, requesterId, createdAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@map("team_approvals")
+}
+
+/// The Super Workspace's approval rules (ADR 0098). One row per organisation; missing = the defaults.
+model TeamApprovalSettings {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @unique @map("tenant_id")
+  settings    Json     @default("{}")
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("team_approval_settings")
+}
+
+/// Deleted items (ADR 0098): what one delete request removed, so it can be restored until purgeAfter.
+model RecycleBatch {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  actorUserId  String    @map("actor_user_id")
+  actorNodeId  String?   @map("actor_node_id")
+  method       String
+  path         String
+  /// The main kind of record removed (company, deal...) and its name, or a count for a bulk delete.
+  recordType   String    @map("record_type")
+  label        String
+  count        Int
+  /// { model: count } of everything the request removed, follow-on records included.
+  models       Json      @default("{}")
+  /// True when the request removed more than the bin keeps; those extra records cannot come back.
+  partial      Boolean   @default(false)
+  approvalId   String?   @map("approval_id")
+  restoredAt   DateTime? @map("restored_at")
+  restoredById String?   @map("restored_by_id")
+  /// Records that could not be put back (a unique value taken again meanwhile).
+  restoreFailed Int      @default(0) @map("restore_failed")
+  purgeAfter   DateTime  @map("purge_after")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([purgeAfter])
+  @@map("recycle_batches")
+}
+
+/// One record removed by a RecycleBatch: SOFT (its deletedAt was set; restoring clears it) or HARD (the document
+/// itself, restored by inserting it again).
+model RecycleEntry {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  batchId   String   @map("batch_id")
+  seq       Int
+  model     String
+  recordId  String   @map("record_id")
+  kind      String
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([batchId, seq])
+  @@map("recycle_entries")
+}

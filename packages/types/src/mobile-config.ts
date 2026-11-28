@@ -171,7 +171,7 @@ export const MOBILE_DASHBOARD_CARD_DEFS: Record<MobileDashboardCard, { label: st
   announcements: { label: 'Announcements', description: 'Important notices from the organisation.', levels: ['SUPER', 'MANAGER', 'EXECUTIVE'], module: 'notifications' },
 };
 
-export const MOBILE_NOTIFICATION_TYPES = ['task_assigned', 'task_due_soon', 'task_overdue', 'chat_message', 'lead_assigned', 'follow_up_reminder', 'target_update', 'announcement', 'account_status'] as const;
+export const MOBILE_NOTIFICATION_TYPES = ['task_assigned', 'task_due_soon', 'task_overdue', 'chat_message', 'lead_assigned', 'follow_up_reminder', 'target_update', 'announcement', 'account_status', 'approval'] as const;
 export type MobileNotificationType = (typeof MOBILE_NOTIFICATION_TYPES)[number];
 
 /** Things the phone can do with a record beyond editing it. */

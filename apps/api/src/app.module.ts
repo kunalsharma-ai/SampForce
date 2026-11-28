@@ -46,6 +46,9 @@ import { MailModule } from './mail/mail.module';
 import { OwnServersModule } from './own-servers/own-servers.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { FieldAccessInterceptor } from './workspaces/field-access.interceptor';
+import { ApprovalGuard } from './team-approvals/approval.guard';
+import { ApprovalInterceptor } from './team-approvals/approval.interceptor';
+import { TeamApprovalsModule } from './team-approvals/team-approvals.module';
 import { HierarchyGuard } from './workspaces/hierarchy.guard';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
@@ -82,6 +85,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     TenantsModule,
     WorkspacesModule,
     WorkspaceWorkModule,
+    TeamApprovalsModule,
     AvailabilityModule,
     AchievementsModule,
     DashboardModule,
@@ -127,10 +131,14 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     { provide: APP_GUARD, useClass: FeatureGuard },
     // After FeatureGuard: the caller's workspace must have the route's features and action (ADR 0071).
     { provide: APP_GUARD, useClass: HierarchyGuard },
+    // After the workspace checks: an Executive Workspace needs its manager's approval to delete (ADR 0098).
+    { provide: APP_GUARD, useClass: ApprovalGuard },
     // Last: a destructive route needs a fresh password confirmation, checked after every right to act on it.
     { provide: APP_GUARD, useClass: PasswordConfirmationGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     // Console writes must write a platform audit entry (ADR 0074, C3).
+    // Deletes are kept in Deleted items, and approved requests run once (ADR 0098).
+    { provide: APP_INTERCEPTOR, useClass: ApprovalInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditRequiredInterceptor },
     // Record fields the Console withholds from Manager and Executive Workspaces (R8, ADR 0092).
     { provide: APP_INTERCEPTOR, useClass: FieldAccessInterceptor },

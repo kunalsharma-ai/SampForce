@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
 import { FEATURE_BY_KEY, FEATURE_KEYS } from '@dealflow/types';
-import { signUp, workspaceAction } from './helpers';
+import { signUp, workspaceAction, perWorkspaceDelete } from './helpers';
 
 /** Every feature a plan can carry; opt-in ones (such as SampBidx chat) come only from the Console Admin. */
 const PLAN_FEATURES = FEATURE_KEYS.filter((k) => !FEATURE_BY_KEY[k].optIn);
@@ -36,6 +36,8 @@ async function post(req: APIRequestContext, path: string, data: object) {
 test('shows the workspace in the header and refuses a module the workspace was not given', async ({ page, browser }) => {
   test.setTimeout(120_000);
   await signUp(page, 'Frequent Research Fieldwork Solutions');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   await page.goto('/app');
   await expect(page.getByRole('banner').getByText('Super Workspace')).toBeVisible();
   await page.getByRole('button', { name: /account menu/i }).click();
@@ -80,6 +82,8 @@ async function axe(page: Page) {
 test('the Permission Center hands features and actions down, and a manager cannot grant what it lacks', async ({ page, browser }) => {
   test.setTimeout(150_000);
   await signUp(page, 'Frequent Research Panels');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   await page.goto('/app/settings');
   await page.getByRole('link', { name: /^Workspaces/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();

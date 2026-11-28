@@ -7,6 +7,8 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplica
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
 import { ApprovalsService } from '../automation/approvals.service';
+import { RecycleBinService } from '../team-approvals/recycle-bin.service';
+import { TeamApprovalsService } from '../team-approvals/team-approvals.service';
 import { EventRelay } from '../automation/event-relay.service';
 import { WorkflowExecutor } from '../automation/executor.service';
 import { ContractsService } from '../commercial/contracts.service';
@@ -28,6 +30,9 @@ import { ConsoleHealthService } from '../operator/console-health.service';
 import { ConsoleOverviewService } from '../operator/console-overview.service';
 
 export interface WorkerTick {
+  /** Team approvals expired or escalated, and deleted items past their keep period removed (ADR 0098). */
+  teamApprovals: number;
+  deletedItemsPurged: number;
   events: number;
   executions: number;
   deliveries: number;
@@ -81,6 +86,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly executor: WorkflowExecutor,
     private readonly deliverer: WebhookDeliverer,
     private readonly approvals: ApprovalsService,
+    private readonly teamApprovals: TeamApprovalsService,
+    private readonly recycleBin: RecycleBinService,
     private readonly integrations: IntegrationsService,
     private readonly aiRunner: AiRunner,
     private readonly contracts: ContractsService,
@@ -146,6 +153,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const executions = await this.executor.runDue();
     const deliveries = await this.deliverer.deliverDue();
     const approvalsExpired = await this.approvals.expireDue();
+    const teamApprovals = await this.teamApprovals.sweep();
+    const deletedItemsPurged = await this.recycleBin.sweep();
     const syncs = await this.integrations.syncDue();
     const aiRuns = await this.aiRunner.runDue();
     const contracts = await this.contracts.runDue();
@@ -174,7 +183,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
+    return { teamApprovals, deletedItemsPurged, events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth, sampbidxChat };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

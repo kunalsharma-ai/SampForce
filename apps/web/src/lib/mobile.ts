@@ -34,6 +34,7 @@ export const MOBILE_NOTIFICATION_LABEL: Record<string, string> = {
   target_update: 'Target update',
   announcement: 'Announcement',
   account_status: 'Account status changes',
+  approval: 'Approval requests and decisions',
 };
 
 export const MOBILE_PHONE_ACTION_LABEL: Record<string, string> = { call: 'Call', email: 'Email', whatsapp: 'WhatsApp', directions: 'Directions', share: 'Share' };

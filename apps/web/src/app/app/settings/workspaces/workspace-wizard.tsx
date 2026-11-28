@@ -22,6 +22,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
+import { useApprovalOverview } from '@/lib/team-approvals';
 import { useWorkspaceMutations } from '@/lib/workspaces';
 
 /*
@@ -87,16 +88,28 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
   const parent: WorkspaceRow = (level === 'EXECUTIVE' && parentId ? tree.workspaces.find((w) => w.id === parentId) : undefined) ?? tree.mine;
   const modules = useMemo(() => FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0), [parent]);
   const [groups, setGroups] = useState<Set<FeatureGroup>>(new Set(FEATURE_GROUPS));
-  const [actions, setActions] = useState<ActionGrants>(() => defaultChildActions(level, parent.actions));
+  const rules = tree.rules;
+  const ruleBlocksDelete = level === 'MANAGER' ? !rules.managerDelete : !rules.executiveDelete;
+  // When the Super Workspace lets Manager and Executive Workspaces delete (Approvals > Rules, ADR 0098), a new one
+  // starts with Delete wherever it gets Edit and the parent can hand Delete down; otherwise Delete starts off (W2).
+  const lowerLevelsDelete = useApprovalOverview().data?.settings.lowerLevelsDelete ?? false;
+  const startingActions = useMemo(() => {
+    const base = defaultChildActions(level, parent.actions);
+    if (!lowerLevelsDelete || ruleBlocksDelete) return base;
+    const out = { ...base } as Record<string, string[]>;
+    for (const [g, list] of Object.entries(base)) {
+      if (list?.includes('edit') && (parent.actions[g as FeatureGroup] ?? []).includes('delete') && !list.includes('delete')) out[g] = [...list, 'delete'];
+    }
+    return out as ActionGrants;
+  }, [level, parent, lowerLevelsDelete, ruleBlocksDelete]);
+  const [actions, setActions] = useState<ActionGrants>(startingActions);
   const [accessLevel, setAccessLevel] = useState<WorkspaceAccessLevel>('TEAM');
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [created, setCreated] = useState<string | null>(null);
 
-  // A new level or parent starts again from what that parent can hand down, Delete off.
-  useEffect(() => setActions(defaultChildActions(level, parent.actions)), [level, parent]);
+  // A new level or parent starts again from what that parent can hand down.
+  useEffect(() => setActions(startingActions), [startingActions]);
 
-  const rules = tree.rules;
-  const ruleBlocksDelete = level === 'MANAGER' ? !rules.managerDelete : !rules.executiveDelete;
   const ruleModules = level === 'MANAGER' ? rules.managerModules : rules.executiveModules;
   const emailTaken = check.result?.available === false;
   const emailValid = !email.trim() || EMAIL.test(email.trim());
