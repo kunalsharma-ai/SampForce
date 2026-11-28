@@ -141,6 +141,6 @@ describe('multi-column sorting and bulk actions', () => {
     await api(owner).post('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'status', status: 'CONVERTED' }).expect(400);
     await api(owner).post('/records/bulk', { entity: 'deals', ids: [leads.Di], action: 'status', status: 'WON' }).expect(400);
     await api(owner).post('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'assign' }).expect(400);
-    await api(owner).postConfirmed('/records/bulk', { entity: 'leads', ids: Array.from({ length: 101 }, () => leads.Di), action: 'delete' }).expect(400);
+    await api(owner).postConfirmed('/records/bulk', { entity: 'leads', ids: Array.from({ length: 1_001 }, () => leads.Di), action: 'delete' }).expect(400);
   });
 });
