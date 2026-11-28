@@ -45,12 +45,12 @@ test('sorts by several columns, hides and moves columns, and highlights search m
   await expect(table(page).getByRole('columnheader', { name: 'Updated' })).toBeVisible();
 
   // Search narrows the rows and marks the match.
-  await page.getByLabel('Search contacts').fill('tanaka');
+  await page.getByLabel('Search inbound contacts').fill('tanaka');
   await expect(table(page).locator('tbody tr')).toHaveCount(1);
   await expect(table(page).locator('mark').first()).toHaveText(/tanaka/i);
 
   // Column width by keyboard.
-  await page.getByLabel('Search contacts').fill('');
+  await page.getByLabel('Search inbound contacts').fill('');
   const handle = table(page).getByRole('separator', { name: 'Resize Status column' });
   const before = Number(await handle.getAttribute('aria-valuenow'));
   await handle.focus();
@@ -78,23 +78,23 @@ test('saved views keep the layout, can be shared, and reopen next time', async (
   await page.getByLabel('View name').fill('Qualified contacts');
   await page.getByLabel('Share with everyone in this workspace').check();
   await page.getByRole('button', { name: 'Save view' }).click();
-  await expect(page.getByRole('button', { name: 'View: Qualified leads' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View: Qualified contacts' })).toBeVisible();
 
   // Back to the default view, then reload: the last used view reopens.
   await page.getByRole('button', { name: /^View:/ }).click();
   await page.getByRole('menuitemradio', { name: 'Default view' }).click();
   await expect(table(page).locator('tbody tr')).toHaveCount(4);
   await page.getByRole('button', { name: /^View:/ }).click();
-  await page.getByRole('menuitemradio', { name: /Qualified leads/ }).click();
+  await page.getByRole('menuitemradio', { name: /Qualified contacts/ }).click();
   await expect(table(page).locator('tbody tr')).toHaveCount(2);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'View: Qualified leads' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View: Qualified contacts' })).toBeVisible();
   await expect(table(page).locator('tbody tr')).toHaveCount(2);
   await expect(page.getByLabel('Filter by status')).toHaveValue('QUALIFIED');
 
   // Saving changes back to the view.
   await page.getByLabel('Filter by status').selectOption('NEW');
-  await page.getByRole('button', { name: 'View: Qualified leads (changed)' }).click();
+  await page.getByRole('button', { name: 'View: Qualified contacts (changed)' }).click();
   await page.getByRole('menuitem', { name: 'Discard changes' }).click();
   await expect(page.getByLabel('Filter by status')).toHaveValue('QUALIFIED');
 
@@ -114,8 +114,8 @@ test('saved views keep the layout, can be shared, and reopen next time', async (
   for (const l of qualified) expect((await page.request.patch(`/api/v1/leads/${l.id}`, { data: { ownerId: mate.userId }, headers: ORIGIN })).ok()).toBe(true);
   await p2.goto('/app/leads');
   await p2.getByRole('button', { name: /^View:/ }).click();
-  await expect(p2.getByRole('menuitemradio', { name: /Qualified leads/ })).toBeVisible();
-  await p2.getByRole('menuitemradio', { name: /Qualified leads/ }).click();
+  await expect(p2.getByRole('menuitemradio', { name: /Qualified contacts/ })).toBeVisible();
+  await p2.getByRole('menuitemradio', { name: /Qualified contacts/ }).click();
   await expect(p2.getByRole('table', { name: 'Inbound contacts' }).locator('tbody tr')).toHaveCount(2);
   await p2.getByRole('button', { name: /^View:/ }).click();
   await expect(p2.getByRole('menuitem', { name: /Delete/ })).toHaveCount(0);

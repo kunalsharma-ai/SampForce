@@ -114,7 +114,7 @@ export function MeetingRecordView({ id }: { id: string }) {
                 [
                   ['deal', 'deals', t('Linked deal'), t('Search deals'), r.deal],
                   ['contact', 'contacts', t('Linked contact'), t('Search contacts'), r.contact],
-                  ['lead', 'leads', t('Linked contact'), t('Search contacts'), r.lead],
+                  ['lead', 'leads', t('Linked inbound contact'), t('Search inbound contacts…'), r.lead],
                 ] as const
               ).map(([key, entity, label, placeholder, value]) => (
                 <div key={key} className="space-y-1">

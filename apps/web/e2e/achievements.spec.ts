@@ -193,13 +193,13 @@ test('converting a company, an RFQ SampBidx accepted and a cleared task list are
   await expectNoCelebration(page);
 });
 
-test('the daily lead target counts only valid new companies, with 25, 50 and 75 percent milestones', async ({ page }) => {
+test('the daily company target counts only valid new companies, with 25, 50 and 75 percent milestones', async ({ page }) => {
   test.setTimeout(150_000);
   await optIn(page);
   await signUp(page, 'Lead Quota Research');
 
   await page.goto('/app/achievements');
-  await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('0 valid leads. No target set.');
+  await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('0 valid companies. No target set.');
   await page.getByLabel('Companies per day').fill('4');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
@@ -218,7 +218,7 @@ test('the daily lead target counts only valid new companies, with 25, 50 and 75 
   await add('Alpha Insights Copy', { domain: 'alpha.example' });
   await page.reload();
   await expectNoCelebration(page);
-  await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('1 of 4 valid leads');
+  await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('1 of 4 valid companies');
   await expect(page.locator('[data-lead-progress="DAY"]')).toContainText('2 not counted');
 
   await add('Beta Panels', { primaryEmail: 'hello@beta.example' });

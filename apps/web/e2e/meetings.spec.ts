@@ -41,7 +41,7 @@ test('turns a calendar meeting into reviewed notes, tasks and a timeline summary
   const banner = page.getByLabel('Recording transcription status');
   await expect(banner.getByText('Pending Configuration')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Transcribe recording' })).toBeDisabled();
-  await expect(page.getByLabel('Linked contact')).toHaveValue('Tom Ops');
+  await expect(page.getByLabel('Linked contact', { exact: true })).toHaveValue('Tom Ops');
 
   await page.getByLabel('Linked deal').fill('Pilot');
   await page.getByRole('option', { name: /Pilot rollout/ }).click();

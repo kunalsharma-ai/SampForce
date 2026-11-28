@@ -44,6 +44,7 @@ export const meetings = {
   'Meeting link': ['Enlace de la reunión', 'Lien de la réunion', 'Meeting-Link', 'رابط الاجتماع'],
   'Delete these meeting notes? Tasks and timeline notes already created stay.': ['¿Eliminar estas notas de reunión? Las tareas y notas de la cronología ya creadas se conservan.', 'Supprimer ces notes de réunion ? Les tâches et notes de chronologie déjà créées restent.', 'Diese Meeting-Notizen löschen? Bereits erstellte Aufgaben und Verlaufsnotizen bleiben erhalten.', 'هل تريد حذف ملاحظات الاجتماع هذه؟ تبقى المهام وملاحظات الخط الزمني التي أُنشئت.'],
   'Delete notes': ['Eliminar notas', 'Supprimer les notes', 'Notizen löschen', 'حذف الملاحظات'],
+  'Linked inbound contact': ['Contacto entrante vinculado', 'Contact entrant lié', 'Verknüpfter Eingangskontakt', 'جهة الاتصال الواردة المرتبطة'],
   'Not linked to a record.': ['Sin vincular a un registro.', 'Non liées à une fiche.', 'Mit keinem Datensatz verknüpft.', 'غير مرتبطة بسجل.'],
   'Notes and transcript': ['Notas y transcripción', 'Notes et transcription', 'Notizen und Transkript', 'الملاحظات والنص المكتوب'],
   Notes: ['Notas', 'Notes', 'Notizen', 'الملاحظات'],
