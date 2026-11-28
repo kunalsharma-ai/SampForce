@@ -2,6 +2,8 @@
 
 import { Button, Skeleton } from '@dealflow/ui';
 import { AlertTriangle, Inbox, Lock, type LucideIcon, RotateCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BrandLoader } from '@/components/loading/sampforce-loader';
 import { ApiError } from '@/lib/api';
 
 /**
@@ -10,16 +12,31 @@ import { ApiError } from '@/lib/api';
  */
 
 export function ConsoleLoading({ label = 'Loading', rows = 3 }: { label?: string; rows?: number }) {
+  // Skeletons at once; the SampForce logo over them after half a second, so quick loads never flash it.
+  const [showLogo, setShowLogo] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLogo(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
   return (
-    <div role="status" aria-label={label} className="space-y-4" data-console-state="loading">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+    <div role="status" aria-label={label} aria-busy="true" className="relative" data-console-state="loading">
+      <div aria-hidden className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        {Array.from({ length: rows }, (_, i) => (
+          <Skeleton key={i} className="h-16 rounded-xl" />
         ))}
       </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-16 rounded-xl" />
-      ))}
+      {showLogo && (
+        <div className="absolute inset-x-0 top-6 flex justify-center px-4">
+          <div className="rounded-3xl border border-border/70 bg-background/90 px-8 py-5 shadow-xl backdrop-blur-md">
+            <BrandLoader compact label={label} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

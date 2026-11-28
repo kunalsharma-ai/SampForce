@@ -331,7 +331,7 @@ test('Help settings: hidden menu, missing features explained, Help switched off 
   await ops.getByLabel('Email').fill(email);
   await ops.getByLabel('Password').fill('operator-password-1');
   await ops.getByRole('button', { name: 'Sign in' }).click();
-  await ops.getByRole('link', { name: 'Clients', exact: true }).click();
+  await ops.getByRole('link', { name: 'All clients', exact: true }).click();
   await ops.getByLabel('Search clients').fill(org);
   await ops.locator('[data-console-clients]').getByRole('link', { name: org }).click();
   const helpCard = ops.locator('[data-client-help]');

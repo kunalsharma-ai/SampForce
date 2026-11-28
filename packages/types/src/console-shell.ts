@@ -168,3 +168,21 @@ export interface ConsoleSearchResult {
   q: string;
   hits: ConsoleSearchHit[];
 }
+
+/**
+ * GET /operator/system/status: the light status shown in the Console header. The database is pinged, the worker's
+ * heartbeat (written by the worker about every 30 seconds) is read, and the event backlog counted. "degraded" means the
+ * platform works but background work is late; "down" means the database cannot be reached.
+ */
+export const SYSTEM_STATES = ['ok', 'degraded', 'down'] as const;
+export type SystemState = (typeof SYSTEM_STATES)[number];
+
+export interface ConsoleSystemStatus {
+  status: SystemState;
+  checkedAt: string;
+  database: { ok: boolean; latencyMs: number | null };
+  /** Null lastBeatAt = the worker has never written a heartbeat on this server. */
+  worker: { ok: boolean; lastBeatAt: string | null };
+  /** Domain events waiting for the worker, and how long the oldest has waited. */
+  backlog: { events: number; oldestSeconds: number | null };
+}

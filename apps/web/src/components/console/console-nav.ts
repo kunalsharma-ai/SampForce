@@ -6,6 +6,7 @@ import {
   Layers,
   Building2,
   CreditCard,
+  Gauge,
   HelpCircle,
   LayoutDashboard,
   LifeBuoy,
@@ -15,16 +16,20 @@ import {
   Network,
   PenSquare,
   Plug,
+  Server,
   Settings,
   ShieldCheck,
   Smartphone,
   Ticket,
   UserCog,
+  UserPlus,
 } from 'lucide-react';
 
 /**
- * The Console sidebar (ADR 0074): groups in the order of the spec, each item a page that exists today. Items for the
- * pages still to come (Workspaces, Users, Features, Billing...) are added as each part ships, never as dead links.
+ * The Console sidebar (ADR 0074, regrouped by the control-center plan K1): Command Center, Clients, Workspaces,
+ * Integrations, Support, Platform Management and System. Each item is a page that exists today; the pages still to
+ * come (Feature Management, Billing, Integration Center, Users, System Health...) join their group as each part
+ * ships, never as dead links.
  */
 
 export type ConsoleBadge = 'chat' | 'tickets' | 'notifications';
@@ -47,45 +52,61 @@ export interface ConsoleNavItem {
 export interface ConsoleNavGroup {
   key: string;
   label: string;
+  /** Shown beside the group's title in the menu. */
+  icon: LucideIcon;
   items: ConsoleNavItem[];
 }
 
 export const CONSOLE_NAV: ConsoleNavGroup[] = [
   {
     key: 'command',
-    label: 'Command',
+    label: 'Command Center',
+    icon: Gauge,
     items: [
       { key: 'overview', label: 'Overview', href: '/operator', icon: LayoutDashboard, exact: true, permission: 'clients.view' },
+      { key: 'audit', label: 'Activity & audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
       { key: 'notifications', label: 'Notifications', href: '/operator/notifications', icon: Bell, badge: 'notifications' },
     ],
   },
   {
-    key: 'customers',
-    label: 'Customers',
+    key: 'clients',
+    label: 'Clients',
+    icon: Building2,
     items: [
       {
         key: 'clients',
-        label: 'Clients',
+        label: 'All clients',
         href: '/operator/clients',
         icon: Building2,
         also: ['/operator/tenants'],
         permission: 'clients.view',
       },
-      { key: 'workspaces', label: 'Workspace Management', href: '/operator/workspaces', icon: Layers, permission: 'workspaces.view' },
-      { key: 'workspace-rules', label: 'Workspace rules', href: '/operator/workspace-rules', icon: Network, permission: 'workspaces.view' },
+      { key: 'create-client', label: 'Create client', href: '/operator/clients?new=1', icon: UserPlus, permission: 'clients.edit' },
+      { key: 'plans', label: 'Plans & subscriptions', href: '/operator/plans', icon: CreditCard, permission: 'clients.view' },
       { key: 'mobile', label: 'Mobile app', href: '/operator/mobile', icon: Smartphone, permission: 'clients.view' },
     ],
   },
   {
-    key: 'commercial',
-    label: 'Commercial',
+    key: 'workspaces',
+    label: 'Workspaces',
+    icon: Layers,
     items: [
-      { key: 'plans', label: 'Plans & subscriptions', href: '/operator/plans', icon: CreditCard, permission: 'clients.view' },
+      { key: 'workspaces', label: 'Workspace Management', href: '/operator/workspaces', icon: Layers, permission: 'workspaces.view' },
+      { key: 'workspace-rules', label: 'Workspace rules', href: '/operator/workspace-rules', icon: Network, permission: 'workspaces.view' },
+    ],
+  },
+  {
+    key: 'integrations',
+    label: 'Integrations',
+    icon: Plug,
+    items: [
+      { key: 'providers', label: 'Providers', href: '/operator/providers', icon: Plug, permission: 'system.view' },
     ],
   },
   {
     key: 'support',
     label: 'Support',
+    icon: LifeBuoy,
     items: [
       {
         key: 'support',
@@ -120,20 +141,20 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     ],
   },
   {
-    key: 'governance',
-    label: 'Governance',
+    key: 'platform',
+    label: 'Platform Management',
+    icon: UserCog,
     items: [
-      { key: 'audit', label: 'Activity & audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
       { key: 'operators', label: 'Operators', href: '/operator/operators', icon: UserCog, permission: 'operators.manage' },
       { key: 'roles', label: 'Roles & permissions', href: '/operator/roles', icon: KeyRound, permission: 'operators.manage' },
-      { key: 'security', label: 'Security', href: '/operator/security', icon: ShieldCheck, permission: 'security.manage' },
     ],
   },
   {
-    key: 'platform',
-    label: 'Platform',
+    key: 'system',
+    label: 'System',
+    icon: Server,
     items: [
-      { key: 'providers', label: 'Providers', href: '/operator/providers', icon: Plug, permission: 'system.view' },
+      { key: 'security', label: 'Security', href: '/operator/security', icon: ShieldCheck, permission: 'security.manage' },
       { key: 'settings', label: 'Settings', href: '/operator/settings', icon: Settings, permission: 'system.view' },
       { key: 'locations', label: 'Locations', href: '/operator/locations', icon: MapPin, permission: 'settings.manage' },
       { key: 'help', label: 'Help', href: '/operator/help', icon: HelpCircle, exact: true },
