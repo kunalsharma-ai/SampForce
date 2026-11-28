@@ -6661,6 +6661,8 @@ model LearningSettings {
   signatoryTitle      String? @map("signatory_title")
   template            String  @default("CLASSIC")
   accentColor         String  @default("#2563eb") @map("accent_color")
+  /// Certificates take their colours from My Organization's brand colours (null counts as on); off = accentColor.
+  useBrandColors      Boolean? @map("use_brand_colors")
   defaultPassingScore Int     @default(80) @map("default_passing_score")
   defaultMaxAttempts  Int     @default(3) @map("default_max_attempts")
   reminderDaysBefore  Int[]   @map("reminder_days_before")

@@ -1,3 +1,4 @@
+import { LEARNING_LOGO_URL, learningBrand } from './branding';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { nextSequenceValue, type TenantTx } from '@dealflow/database';
 import {
@@ -45,13 +46,16 @@ export async function settingsOf(tx: TenantTx, tenantId: string) {
 
 export async function settingsView(tx: TenantTx, tenantId: string): Promise<LearningSettingsView> {
   const s = await settingsOf(tx, tenantId);
-  const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+  const { brand } = await learningBrand(tx, tenantId, LEARNING_LOGO_URL);
   return {
-    issuerName: s.issuerName ?? tenant?.name ?? 'SampForce',
+    // The settings' issuer name, else My Organization's brand name, else the workspace name.
+    issuerName: brand.name,
     signatoryName: s.signatoryName ?? null,
     signatoryTitle: s.signatoryTitle ?? null,
     template: s.template as CertificateTemplate,
     accentColor: s.accentColor,
+    useBrandColors: s.useBrandColors !== false,
+    brand,
     defaultPassingScore: s.defaultPassingScore,
     defaultMaxAttempts: s.defaultMaxAttempts,
     reminderDaysBefore: s.reminderDaysBefore,
@@ -813,6 +817,7 @@ export class LearningModulesService {
           ...(input.signatoryTitle !== undefined ? { signatoryTitle: input.signatoryTitle || null } : {}),
           ...(input.template !== undefined ? { template: input.template } : {}),
           ...(input.accentColor !== undefined ? { accentColor: input.accentColor } : {}),
+          ...(input.useBrandColors !== undefined ? { useBrandColors: input.useBrandColors } : {}),
           ...(input.defaultPassingScore !== undefined ? { defaultPassingScore: input.defaultPassingScore } : {}),
           ...(input.defaultMaxAttempts !== undefined ? { defaultMaxAttempts: input.defaultMaxAttempts } : {}),
           ...(input.reminderDaysBefore !== undefined ? { reminderDaysBefore: input.reminderDaysBefore } : {}),

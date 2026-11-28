@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { Workbook } from 'exceljs';
-import type { AttemptView, CertificateRow, CertificateVerification, GenerateResult, LearningManageView, LearningModuleDetail, MarkingDetail, MarkingRow, MyLearningView, PlayerView, QuestionView, VideoInfo } from '@dealflow/types';
+import type { AttemptView, CertificateRow, CertificateVerification, GenerateResult, LearningBrand, LearningSettingsView, LearningManageView, LearningModuleDetail, MarkingDetail, MarkingRow, MyLearningView, PlayerView, QuestionView, VideoInfo } from '@dealflow/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { LearningRemindersService } from '../src/learning/reminders.service';
@@ -301,6 +301,60 @@ describe('learning & development', () => {
     expect(ok).toMatchObject({ valid: true, recipientName: 'Ravi Executive', moduleTitle: 'Sales communication essentials', score: 100, issuerName: 'Learning Org' });
     expect((await anon.get('/api/v1/learning/verify/AAAA-BBBB-CCCC').expect(200)).body).toEqual({ valid: false });
     expect((await anon.get('/api/v1/learning/verify/not-a-code').expect(200)).body).toEqual({ valid: false });
+  });
+
+  it('brands the certificate with each organisation’s own logo, name and colours from My Organization', async () => {
+    const pdfOf = async (u: TestUser, id: string) =>
+      (await api(u).get(`/learning/certificates/${id}/pdf`).buffer(true).parse((res, cb) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => cb(null, Buffer.concat(chunks)));
+      }).expect(200)).body as Buffer;
+    const images = (pdf: Buffer) => (pdf.toString('latin1').match(/\/Subtype \/Image/g) ?? []).length;
+
+    // Before My Organization is filled in: the workspace name, no logo, the settings' accent colour.
+    let brand = (await api(exec).get('/learning/brand').expect(200)).body as LearningBrand;
+    expect(brand).toMatchObject({ name: 'Learning Org', logoUrl: null, colorSource: 'SETTINGS', primary: '#2563eb', brandColors: [] });
+    const plain = images(await pdfOf(exec, certificateId));
+
+    // The Super Workspace fills in the company profile: name, tagline, brand colours and an SVG logo.
+    await api(owner).put('/organization/profile', { brandName: 'Learning Org Academy', tagline: 'Grow every day', brandColors: ['#0F766E', '#f59e0b'] }).expect(200);
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" fill="#ffffff"/><rect x="10" y="20" width="60" height="60" rx="12" fill="#0f766e"/><rect x="90" y="40" width="190" height="24" fill="#0f172a"/></svg>');
+    await owner.agent.put('/api/v1/organization/logo').set('origin', ORIGIN).set('content-type', 'image/svg+xml').send(svg).expect(200);
+
+    brand = (await api(exec).get('/learning/brand').expect(200)).body as LearningBrand;
+    expect(brand).toMatchObject({ name: 'Learning Org Academy', tagline: 'Grow every day', colorSource: 'ORGANIZATION', primary: '#0f766e', secondary: '#f59e0b', brandColors: ['#0f766e', '#f59e0b'] });
+    expect(brand.logoUrl).toMatch(/^\/api\/v1\/learning\/brand\/logo\?v=/);
+    // The white edge of the logo is trimmed away; what is left keeps its shape (wider than tall).
+    expect(brand.logoRatio).toBeGreaterThan(2);
+    const logo = await exec.agent.get(brand.logoUrl!).buffer(true).expect(200);
+    expect(logo.headers['content-type']).toBe('image/png');
+    expect((logo.body as Buffer).subarray(1, 4).toString()).toBe('PNG');
+    // The PDF now carries the logo (in the header and as the faint watermark) besides the QR code.
+    expect(images(await pdfOf(exec, certificateId))).toBeGreaterThan(plain);
+
+    // The public check page shows the issuer's branding, with the logo served without sign-in.
+    const anon = request(app.getHttpServer());
+    const v = (await anon.get(`/api/v1/learning/verify/${certificateCode}`).expect(200)).body as CertificateVerification;
+    expect(v.brand).toMatchObject({ name: 'Learning Org Academy', primary: '#0f766e' });
+    expect(v.brand!.logoUrl).toContain(`/api/v1/learning/verify/${certificateCode}/logo`);
+    const pub = await anon.get(v.brand!.logoUrl!).buffer(true).expect(200);
+    expect(pub.headers['content-type']).toBe('image/png');
+    await anon.get('/api/v1/learning/verify/AAAA-BBBB-CCCC/logo').expect(404);
+
+    // Another organisation's certificates never borrow this branding.
+    const other = (await api(otherOrg).get('/learning/brand').expect(200)).body as LearningBrand;
+    expect(other).toMatchObject({ name: 'Other Learning Org', logoUrl: null, colorSource: 'SETTINGS' });
+
+    // The settings can switch to their own accent colour; the logo and name stay.
+    let settings = (await api(owner).put('/learning/settings', { useBrandColors: false, accentColor: '#7c3aed' }).expect(200)).body as LearningSettingsView;
+    expect(settings).toMatchObject({ useBrandColors: false, issuerName: 'Learning Org Academy' });
+    expect(settings.brand).toMatchObject({ colorSource: 'SETTINGS', primary: '#7c3aed', name: 'Learning Org Academy' });
+    expect(settings.brand.logoUrl).not.toBeNull();
+    settings = (await api(owner).put('/learning/settings', { useBrandColors: true }).expect(200)).body as LearningSettingsView;
+    expect(settings.brand).toMatchObject({ colorSource: 'ORGANIZATION', primary: '#0f766e' });
+    // Executives take courses; they do not change how certificates look.
+    await api(exec).put('/learning/settings', { useBrandColors: false }).expect(403);
   });
 
   it('shows the Super Workspace and the manager the results, with reports and an Excel export', async () => {

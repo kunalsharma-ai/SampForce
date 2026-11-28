@@ -84,6 +84,7 @@ export * from './notification-center';
 export * from './availability';
 export * from './achievements';
 export * from './learning';
+export * from './learning-certificate-design';
 export * from './calls';
 export * from './profile';
 export * from './client-time';

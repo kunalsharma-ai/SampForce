@@ -380,6 +380,8 @@ export const learningSettingsSchema = z
     signatoryTitle: z.string().trim().max(120).optional(),
     template: z.enum(CERTIFICATE_TEMPLATES).optional(),
     accentColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Use a colour like #2563eb').optional(),
+    /** Certificates use My Organization's brand colours (on) or accentColor (off). */
+    useBrandColors: z.boolean().optional(),
     defaultPassingScore: z.number().int().min(1).max(100).optional(),
     defaultMaxAttempts: z.number().int().min(1).max(20).optional(),
     reminderDaysBefore: z.array(z.number().int().min(1).max(60)).max(5).optional(),
@@ -781,8 +783,29 @@ export interface CertificateRow {
   revoked: boolean;
 }
 
+/**
+ * The organisation's branding on its certificates (ADR 0103): name, tagline and logo from My Organization, colours from
+ * its brand colours (or the learning settings' accent colour).
+ */
+export interface LearningBrand {
+  name: string;
+  tagline: string | null;
+  /** Where the app loads the logo from (PNG), or null when the organisation has none. */
+  logoUrl: string | null;
+  /** Width / height of the logo. */
+  logoRatio: number | null;
+  primary: string;
+  secondary: string;
+  /** Where the colours came from: My Organization's brand colours or the learning settings. */
+  colorSource: 'ORGANIZATION' | 'SETTINGS';
+  /** My Organization's brand colours (empty when it has none). */
+  brandColors: string[];
+}
+
 export interface CertificateVerification {
   valid: boolean;
+  /** Only for a valid code: the issuing organisation's branding, for the check page. */
+  brand?: LearningBrand;
   /** Only for a valid code: enough to confirm the certificate, nothing more. */
   number?: string;
   recipientName?: string;
@@ -857,6 +880,9 @@ export interface LearningSettingsView {
   signatoryTitle: string | null;
   template: CertificateTemplate;
   accentColor: string;
+  useBrandColors: boolean;
+  /** How certificates look right now, with these settings. */
+  brand: LearningBrand;
   defaultPassingScore: number;
   defaultMaxAttempts: number;
   reminderDaysBefore: number[];
