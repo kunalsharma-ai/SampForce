@@ -226,3 +226,103 @@ test('calls an employee from the company page through a dialer from the gallery,
     await shot(page, '10-calls-history-dark', true);
   }
 });
+
+test('clicking a phone number anywhere in Calls puts it in the dialer, ready to call', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.addInitScript(() => {
+    (window as unknown as { __dialled: string[] }).__dialled = [];
+    window.open = ((url?: string | URL) => {
+      (window as unknown as { __dialled: string[] }).__dialled.push(String(url));
+      return null;
+    }) as typeof window.open;
+    // The phone app opens through a hidden tel: link; keep it here instead.
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      if (/^tel:/i.test(this.href)) (window as unknown as { __dialled: string[] }).__dialled.push(this.href);
+      else click.call(this);
+    };
+  });
+  await signUp(page, 'Calls Click To Dial');
+  const lead = await post(page, '/company-leads', {
+    company: { name: 'Acme Panels', country: 'IN', city: 'Mumbai', timezone: 'Asia/Kolkata', primaryPhone: '+91 (22) 4000-1000' },
+    employees: [{ firstName: 'Priya', lastName: 'Nair', jobTitle: 'Procurement Lead', email: 'priya@acmepanels.example', phone: '+91 98200 12345' }],
+  });
+  const companyId: string = lead.company.id;
+  await page.goto(`/app/calls?company=${companyId}&contact=${lead.employeeIds[0]}`);
+  const card = page.getByTestId('call-card');
+  const field = page.getByTestId('dialer-number');
+  await expect(card.getByRole('heading', { name: 'Priya Nair' })).toBeVisible();
+  await expect(field).toHaveValue('');
+
+  // The employee's number on the call card: into the dialer as written, kept on Priya.
+  const priyaNumber = card.getByRole('button', { name: 'Put +91 98200 12345 in the dialer' });
+  await priyaNumber.click();
+  await expect(field).toHaveValue('+91 98200 12345');
+  await expect(field).toBeFocused();
+  await expect(page.getByTestId('dialer-linked')).toHaveText(/For Priya Nair · Acme Panels/);
+  // Clicking it again does not add the digits twice.
+  await priyaNumber.click();
+  await expect(field).toHaveValue('+91 98200 12345');
+  await shot(page, '11-number-in-the-dialer');
+
+  // Calling from the dialer: straight away, on Priya's record.
+  await page.getByRole('button', { name: 'Call this number' }).click();
+  const active = page.getByTestId('active-call');
+  await expect(active.getByRole('heading', { name: 'Call with Priya Nair' })).toBeVisible();
+  const dialled = await page.evaluate(() => (window as unknown as { __dialled: string[] }).__dialled);
+  expect(dialled.at(-1)).toContain('+919820012345');
+  await expect(field).toHaveValue('');
+  await active.locator('[data-outcome="NO_ANSWER"]').click();
+  await active.getByRole('button', { name: 'Save call' }).click();
+  await expect(active).toBeHidden();
+
+  // Going to another tab and back does not put the old number in again.
+  await page.getByRole('tab', { name: 'Call history' }).click();
+  await page.getByRole('tab', { name: 'Dialer', exact: true }).click();
+  await expect(field).toHaveValue('');
+
+  // A number in the call history: the Dialer tab opens with it.
+  await page.getByRole('tab', { name: 'Call history' }).click();
+  await page.getByTestId('call-row').first().getByTestId('dial-number').click();
+  await expect(page.getByRole('tab', { name: 'Dialer', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(field).toHaveValue('+91 98200 12345');
+  // Changing a digit makes it a new number, no longer Priya's.
+  await expect(page.getByTestId('dialer-linked')).toBeVisible();
+  await page.getByRole('group', { name: 'Keypad' }).getByRole('button', { name: '9', exact: true }).click();
+  await expect(field).toHaveValue('+91 98200 123459');
+  await expect(page.getByTestId('dialer-linked')).toBeHidden();
+
+  // The company number in search results, written with brackets and a hyphen, goes in unchanged.
+  await page.getByLabel('Find who to call').fill('Acme');
+  await page.getByRole('list', { name: 'Search results' }).getByRole('button', { name: 'Put +91 (22) 4000-1000 in the dialer' }).first().click();
+  await expect(field).toHaveValue('+91 (22) 4000-1000');
+  await expect(page.getByTestId('dialer-linked')).toHaveText(/For Acme Panels/);
+  await page.getByRole('button', { name: 'Call this number' }).click();
+  await expect(active.getByRole('heading', { name: 'Call with Acme Panels' })).toBeVisible();
+  await active.locator('[data-outcome="BUSY"]').click();
+  await active.getByRole('button', { name: 'Save call' }).click();
+  await expect(active).toBeHidden();
+
+  // Numbers that arrive later as phone links work too; something that is not a number leaves the dialer alone.
+  await page.getByRole('tab', { name: 'Call history' }).click();
+  await page.evaluate(() => {
+    const panel = document.querySelector('[role="tabpanel"]')!;
+    const a = document.createElement('a');
+    a.href = 'tel:+44%2020%207946%200018';
+    a.textContent = 'Later number';
+    a.id = 'later-number';
+    const bad = document.createElement('span');
+    bad.setAttribute('data-dial-number', '12');
+    bad.textContent = 'Not a number';
+    bad.id = 'not-a-number';
+    panel.prepend(a, bad);
+  });
+  await page.locator('#not-a-number').click();
+  await expect(page.getByRole('tab', { name: 'Call history' })).toHaveAttribute('aria-selected', 'true');
+  await page.locator('#later-number').click();
+  await expect(field).toHaveValue('+44 20 7946 0018');
+  await expect(page.getByTestId('dialer-linked')).toBeHidden();
+  await page.getByRole('button', { name: 'Call this number' }).click();
+  await expect(active.getByRole('heading', { name: 'Call with +44 20 7946 0018' })).toBeVisible();
+  await axe(page);
+});

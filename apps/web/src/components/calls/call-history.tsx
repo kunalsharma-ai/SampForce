@@ -6,6 +6,7 @@ import { ArrowDownLeft, ArrowUpRight, CalendarClock, Disc, Handshake, LayoutList
 import Link from 'next/link';
 import * as React from 'react';
 import { ProviderMark } from '@/components/calls/dialer-settings';
+import { callDialLink, PhoneNumber } from '@/components/calls/phone-number';
 import { OutcomeChip, OutcomeIcon, readableOn, useOutcomeLabel, useOutcomeLookup } from '@/components/calls/outcomes';
 import { formatDateTime } from '@/components/crm/follow-ups';
 import { DeleteAllButton } from '@/components/delete-all-button';
@@ -274,7 +275,7 @@ function HistoryTable({ rows, scope, onLog, onPick, onEdit, onRecording }: RowPr
                 )}
               </td>
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
-                {c.number}
+                <PhoneNumber number={c.number} link={callDialLink(c)} />
                 {c.callerId && <span className="block text-muted-foreground">{t('from {number}', { number: c.callerId })}</span>}
               </td>
               <td className="px-3 py-2 text-xs">{c.by?.name ?? '—'}</td>
@@ -345,7 +346,7 @@ function HistoryActivity({ rows, scope, onLog, onPick, onEdit, onRecording }: Ro
                       </p>
                       <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                         <span>{new Date(c.startedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-                        <span className="font-mono">{c.number}</span>
+                        <PhoneNumber number={c.number} link={callDialLink(c)} className="font-mono" />
                         <span className="inline-flex items-center gap-1">
                           <Timer aria-hidden className="size-3" /> {talkTime(c.durationSec)}
                         </span>
