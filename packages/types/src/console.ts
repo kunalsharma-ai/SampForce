@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ClientSubscriptionState } from './console-subscription';
 import { emailSchema } from './auth';
 import { ENRICH_FIELDS, type EnrichField, type EnrichmentPreview, FIELD_SOURCES } from './company-enrichment';
 import { type ClientHealthSummary, HEALTH_BANDS } from './console-health';
@@ -205,6 +206,11 @@ export interface ConsoleSubscription {
   limits: { managers: number | null; executives: number | null };
   /** True where the limit was set for this client rather than taken from the plan. */
   limitsSetForClient: { managers: boolean; executives: boolean };
+  /** Where the subscription stands (control center K3), derived from the fields above and the client's status. */
+  state: ClientSubscriptionState;
+  trialEndsAt: string | null;
+  /** True when it was cancelled to stop at the end of the term. */
+  cancelAtPeriodEnd: boolean;
 }
 
 /** The client's readable number: 123 becomes "SF-000123". */

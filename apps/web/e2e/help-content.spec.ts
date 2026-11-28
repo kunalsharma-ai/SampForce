@@ -334,6 +334,7 @@ test('Help settings: hidden menu, missing features explained, Help switched off 
   await ops.getByRole('link', { name: 'All clients', exact: true }).click();
   await ops.getByLabel('Search clients').fill(org);
   await ops.locator('[data-console-clients]').getByRole('link', { name: org }).click();
+  await ops.getByRole('tab', { name: 'Workspaces & access' }).click();
   const helpCard = ops.locator('[data-client-help]');
   await expect(helpCard).toContainText('Help icon hidden');
   await helpCard.locator('[data-client-help-enabled]').click(); // saved straight away, then shown

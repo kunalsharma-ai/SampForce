@@ -18,6 +18,14 @@ import {
   type ConsoleRenewInput,
   type ConsoleSubscription,
   type ConsoleSubscriptionInput,
+  type ConsoleSubscriptionCancelInput,
+  type ConsoleSubscriptionEvent,
+  type ConsoleSubscriptionReactivateInput,
+  type ConsoleSubscriptionTrialInput,
+  SUBSCRIPTION_EVENT_KINDS,
+  SUBSCRIPTION_STATES,
+  type SubscriptionEventKind,
+  type ClientSubscriptionState,
   CUSTOM_PLAN_PREFIX,
   customerIdOf,
   DEFAULT_WORKSPACE_DESIGNATION,
@@ -45,6 +53,7 @@ import { levelOf, nameKeyOf } from '../workspaces/access';
 import { assertSuperAllowedForEmail } from '../workspaces/super-rule';
 import type { OperatorContext } from './operator-auth';
 import { changedFields, writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
+import { planMoveKind, recordSubscriptionEvent, stateOfSubscription } from './subscription-events';
 
 const DAY = 86_400_000;
 type ClientCreate = z.output<typeof consoleClientCreateWithDetailsSchema>;
@@ -54,6 +63,7 @@ type PlanRow = { code: string; name: string; custom: boolean; terms: unknown; en
 const HISTORY_ACTIONS = [
   'client.created', 'client.subscription_changed', 'client.renewed', 'client.state_changed', 'client.authority_changed',
   'client.administrator_invited', 'tenant.plan_overridden', 'tenant.features_overridden', 'tenant.suspended', 'tenant.reactivated', 'tenant.offline_payment_recorded',
+  'client.subscription_cancelled', 'client.subscription_reactivated', 'client.trial_changed',
 ];
 
 const NOT_FOUND = { code: 'NOT_FOUND', message: 'Client organisation not found.' };
@@ -222,6 +232,7 @@ export class ConsoleService {
     sub: Prisma.SubscriptionGetPayload<object>,
     plans: Map<string, PlanRow>,
     defs: Record<string, PlanEntitlements>,
+    tenantStatus: string,
   ): ConsoleSubscription {
     const plan = plans.get(sub.planCode);
     const def = defs[sub.planCode] ?? defs.free!;
@@ -241,6 +252,9 @@ export class ConsoleService {
       paymentStatus: PAYMENT_STATUSES.includes(sub.paymentStatus as PaymentStatus) ? (sub.paymentStatus as PaymentStatus) : null,
       autoRenew: sub.autoRenew,
       limits: { managers: sub.maxManagerWorkspaces ?? def.maxManagerWorkspaces, executives: sub.maxExecutiveWorkspaces ?? def.maxExecutiveWorkspaces },
+      state: stateOfSubscription(tenantStatus, sub),
+      trialEndsAt: sub.trialEndsAt ? sub.trialEndsAt.toISOString() : null,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       limitsSetForClient: { managers: sub.maxManagerWorkspaces !== null, executives: sub.maxExecutiveWorkspaces !== null },
     };
   }
@@ -287,7 +301,7 @@ export class ConsoleService {
       return tenants.map((t) => ({
         id: t.id, name: t.name, customerId: customerIdOf(t.customerNumber), countryCode: t.countryCode, city: t.city, logoUrl: clientLogoUrl(t.id, logoAt.get(t.id)),
         state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
-        subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs) : null,
+        subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs, t.status) : null,
         usage: { managers: count(t.id, 'MANAGER'), executives: count(t.id, 'EXECUTIVE') },
         awaitingAdministrator: !staffed.has(t.id),
         closure:
@@ -465,6 +479,7 @@ export class ConsoleService {
           designation: input.administrator.designation ?? DEFAULT_WORKSPACE_DESIGNATION.SUPER, features: [], actions: null as never, canCreateExecutives: input.superCanCreateExecutives,
         },
       });
+      await recordSubscriptionEvent(tx, { tenantId, kind: 'CREATED', toPlan: plan.code, changes: changes.filter((c) => /^(Plan|Term|Price|Payment):/.test(c)), reason: input.reason ?? 'New client', operator: op });
       await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'tenant.created', entityType: 'tenant', entityId: tenantId, metadata: { name: input.organisation.name, plan: plan.code, operator: op.email, changes } });
       return this.inviteAdministrator(tx, op, tenantId, input.administrator.email, owns.length > 0);
     });
@@ -562,6 +577,16 @@ export class ConsoleService {
       const rest = changes.filter((c) => !limits.includes(c));
       if (rest.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: rest } });
       if (limits.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.limits_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: limits } });
+      if (rest.length) {
+        const status = (await tx.tenant.findUniqueOrThrow({ where: { id }, select: { status: true } })).status;
+        const after = await tx.subscription.findUniqueOrThrow({ where: { tenantId: id } });
+        const moved = data.planCode ? await this.planMove(before.planCode, plan!.row.code) : null;
+        const kind = moved ?? (rest.every((c) => c.startsWith('Payment:')) ? 'PAYMENT_CHANGED' : 'TERMS_CHANGED');
+        await recordSubscriptionEvent(tx, {
+          tenantId: id, kind, fromPlan: moved ? before.planCode : null, toPlan: moved ? after.planCode : null,
+          fromState: stateOfSubscription(status, before), toState: stateOfSubscription(status, after), changes: rest, reason: input.reason, operator: op,
+        });
+      }
     });
     if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
@@ -577,7 +602,9 @@ export class ConsoleService {
       const plan = await this.planFor(input.planCode ?? before.planCode);
       const months = input.months ?? before.durationMonths ?? plan.terms.durationMonths;
       const now = new Date();
-      const from = before.currentPeriodEnd && before.currentPeriodEnd > now ? before.currentPeriodEnd : now;
+      // A trial or a cancelled subscription has no paid term to add to: the new term starts today.
+      const fromTerm = before.status !== 'TRIALING' && before.status !== 'CANCELED' && before.currentPeriodEnd && before.currentPeriodEnd > now;
+      const from = fromTerm ? before.currentPeriodEnd! : now;
       const end = addMonths(from, months);
       changes.push(`Renewed for ${months} months: ${day(from)} to ${day(end)}`);
       if (plan.row.code !== before.planCode) changes.push(`Plan: ${(await this.planRows()).find((r) => r.code === before.planCode)?.name ?? before.planCode} → ${plan.row.name}`);
@@ -589,6 +616,12 @@ export class ConsoleService {
           planCode: plan.row.code, status: 'ACTIVE', currentPeriodStart: from, currentPeriodEnd: end, durationMonths: months, pastDueSince: null, cancelAtPeriodEnd: false,
           ...(input.paymentStatus ? { paymentStatus: input.paymentStatus } : {}),
         },
+      });
+      const status = (await tx.tenant.findUniqueOrThrow({ where: { id }, select: { status: true } })).status;
+      const after = await tx.subscription.findUniqueOrThrow({ where: { tenantId: id } });
+      await recordSubscriptionEvent(tx, {
+        tenantId: id, kind: plan.row.code !== before.planCode ? await this.planMove(before.planCode, plan.row.code) : 'RENEWED', fromPlan: before.planCode, toPlan: plan.row.code,
+        fromState: stateOfSubscription(status, before), toState: stateOfSubscription(status, after), changes, reason: input.reason, operator: op,
       });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_renewed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });
     });
@@ -615,6 +648,13 @@ export class ConsoleService {
       if (t.subscription) {
         if (state === 'DEACTIVATED') await tx.subscription.update({ where: { tenantId: id }, data: { status: 'CANCELED' } });
         else if (state === 'ACTIVE' && t.subscription.status === 'CANCELED') await tx.subscription.update({ where: { tenantId: id }, data: { status: 'ACTIVE', pastDueSince: null } });
+      }
+      if (t.subscription) {
+        const after = await tx.subscription.findUniqueOrThrow({ where: { tenantId: id } });
+        const kind = state === 'SUSPENDED' ? 'SUSPENDED' : state === 'DEACTIVATED' ? 'CANCELLED' : t.subscription.status === 'CANCELED' ? 'REACTIVATED' : 'RESUMED';
+        await recordSubscriptionEvent(tx, {
+          tenantId: id, kind, fromState: stateOfSubscription(t.status, t.subscription), toState: stateOfSubscription(state === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED', after), changes, reason, operator: op,
+        });
       }
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: `tenant.${state.toLowerCase()}`, entityType: 'tenant', entityId: id, metadata: { operator: op.email, reason, changes } });
     });
@@ -654,6 +694,126 @@ export class ConsoleService {
     });
     if (changes.length) await this.log(op.id, 'client.authority_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
+  }
+
+  /** Upgrade, downgrade or a plain plan change, by the two plans' prices. */
+  private async planMove(fromCode: string, toCode: string): Promise<SubscriptionEventKind> {
+    const rows = await this.planRows();
+    const terms = (code: string) => {
+      const r = rows.find((x) => x.code === code);
+      const t = r ? this.termsOf(r) : null;
+      return { priceCents: t?.priceCents ?? null, yearly: t?.billingFrequency === 'YEAR' };
+    };
+    return planMoveKind(terms(fromCode), terms(toCode));
+  }
+
+  /** The client's subscription history, newest first (control center K3). */
+  async subscriptionEvents(id: string, limit = 100): Promise<ConsoleSubscriptionEvent[]> {
+    const rows = await this.prisma.run({ tenantId: id }, async (tx) => {
+      if (!(await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } }))) throw new NotFoundException(NOT_FOUND);
+      return tx.subscriptionEvent.findMany({ where: { tenantId: id }, orderBy: { createdAt: 'desc' }, take: limit });
+    });
+    const names = new Map((await this.planRows()).map((r) => [r.code, PLAN_CATALOG.find((p) => p.code === r.code)?.name ?? r.name]));
+    const state = (v: string | null) => (SUBSCRIPTION_STATES.includes(v as ClientSubscriptionState) ? (v as ClientSubscriptionState) : null);
+    return rows.map((r) => ({
+      id: r.id, at: r.createdAt.toISOString(),
+      kind: (SUBSCRIPTION_EVENT_KINDS.includes(r.kind as SubscriptionEventKind) ? r.kind : 'TERMS_CHANGED') as SubscriptionEventKind,
+      fromPlan: r.fromPlan ? (names.get(r.fromPlan) ?? r.fromPlan) : null, toPlan: r.toPlan ? (names.get(r.toPlan) ?? r.toPlan) : null,
+      fromState: state(r.fromState), toState: state(r.toState), changes: r.changes, reason: r.reason, by: r.operatorEmail,
+    }));
+  }
+
+  /**
+   * Runs one change to the subscription in the client's transaction: `change` returns what to write and the lines that
+   * describe it, or null when there is nothing to do. The event, the client's audit entry and the platform log follow.
+   */
+  private async changeSubscription(
+    op: OperatorContext,
+    id: string,
+    reason: string,
+    ip: string | null,
+    action: string,
+    change: (sub: Prisma.SubscriptionGetPayload<object>, tenantStatus: string) => Promise<{ kind: SubscriptionEventKind; data: Prisma.SubscriptionUncheckedUpdateInput; changes: string[]; plans?: [string, string] } | null>,
+  ): Promise<ConsoleClientDetail> {
+    let logged: { changes: string[]; diff: ReturnType<typeof changedFields> } | null = null;
+    await this.prisma.run({ tenantId: id }, async (tx) => {
+      const t = await tx.tenant.findFirst({ where: { id, deletedAt: null }, include: { subscription: true } });
+      if (!t) throw new NotFoundException(NOT_FOUND);
+      if (!t.subscription) throw new BadRequestException({ code: 'NO_SUBSCRIPTION', message: 'This client has no subscription.' });
+      if (t.status === 'PENDING_DELETION') throw new ForbiddenException({ code: 'PENDING_DELETION', message: 'This client is scheduled for deletion. Reopen the company first.' });
+      const before = t.subscription;
+      const result = await change(before, t.status);
+      if (!result) return;
+      await tx.subscription.update({ where: { tenantId: id }, data: result.data });
+      const after = await tx.subscription.findUniqueOrThrow({ where: { tenantId: id } });
+      await recordSubscriptionEvent(tx, {
+        tenantId: id, kind: result.kind, fromPlan: result.plans?.[0] ?? null, toPlan: result.plans?.[1] ?? null,
+        fromState: stateOfSubscription(t.status, before), toState: stateOfSubscription(t.status, after), changes: result.changes, reason, operator: op,
+      });
+      await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason, changes: result.changes } });
+      logged = { changes: result.changes, diff: changedFields(before as unknown as Record<string, unknown>, result.data as Record<string, unknown>) };
+    });
+    const done = logged as { changes: string[]; diff: ReturnType<typeof changedFields> } | null;
+    if (done) await this.log(op.id, action, id, { reason, changes: done.changes }, ip, done.diff);
+    return this.client(null, id, ip);
+  }
+
+  /** Cancels now (paid features stop today) or at the end of the term. The client and its data stay. */
+  cancelSubscription(op: OperatorContext, id: string, input: ConsoleSubscriptionCancelInput, ip: string | null): Promise<ConsoleClientDetail> {
+    return this.changeSubscription(op, id, input.reason, ip, 'client.subscription_cancelled', async (sub) => {
+      if (sub.status === 'CANCELED') throw new BadRequestException({ code: 'ALREADY_CANCELLED', message: 'This subscription is already cancelled.' });
+      if (input.when === 'PERIOD_END') {
+        if (sub.cancelAtPeriodEnd) return null;
+        if (!sub.currentPeriodEnd || sub.currentPeriodEnd <= new Date())
+          throw new BadRequestException({ code: 'NO_TERM_END', message: 'The term has already ended. Cancel it now instead.' });
+        return { kind: 'CANCEL_SCHEDULED', data: { cancelAtPeriodEnd: true, autoRenew: false }, changes: [`Cancels on ${day(sub.currentPeriodEnd)}`, ...(sub.autoRenew ? ['Renews by itself: yes → no'] : [])] };
+      }
+      return { kind: 'CANCELLED', data: { status: 'CANCELED', cancelAtPeriodEnd: false, autoRenew: false }, changes: [`Status: ${sub.status} → CANCELED`, `Cancelled on ${day(new Date())}`] };
+    });
+  }
+
+  /** A cancelled, expired or cancelling subscription runs again; a term that ended starts afresh today. */
+  reactivateSubscription(op: OperatorContext, id: string, input: ConsoleSubscriptionReactivateInput, ip: string | null): Promise<ConsoleClientDetail> {
+    return this.changeSubscription(op, id, input.reason, ip, 'client.subscription_reactivated', async (sub, tenantStatus) => {
+      const state = stateOfSubscription(tenantStatus, sub);
+      if (!['CANCELLED', 'EXPIRED'].includes(state) && !sub.cancelAtPeriodEnd)
+        throw new BadRequestException({ code: 'NOT_CANCELLED', message: 'Only a cancelled or expired subscription, or one set to cancel, can be reactivated.' });
+      const now = new Date();
+      const ended = (sub.status === 'TRIALING' ? sub.trialEndsAt : sub.currentPeriodEnd) ?? now;
+      const data: Prisma.SubscriptionUncheckedUpdateInput = { status: 'ACTIVE', cancelAtPeriodEnd: false, pastDueSince: null, trialEndsAt: null };
+      const changes = sub.status === 'ACTIVE' ? [] : [`Status: ${sub.status} → ACTIVE`];
+      if (ended <= now || sub.status === 'CANCELED' || sub.status === 'TRIALING') {
+        const plan = await this.planFor(sub.planCode).catch(() => null);
+        const months = input.months ?? sub.durationMonths ?? plan?.terms.durationMonths ?? 1;
+        const end = addMonths(now, months);
+        Object.assign(data, { currentPeriodStart: now, currentPeriodEnd: end, durationMonths: months, autoRenew: plan?.terms.autoRenew ?? true });
+        changes.push(`New term: ${months} months from ${day(now)} to ${day(end)}`);
+      } else if (sub.cancelAtPeriodEnd) {
+        data.autoRenew = true;
+        changes.push('No longer cancels at the end of the term', 'Renews by itself: no → yes');
+      }
+      return { kind: 'REACTIVATED', data, changes };
+    });
+  }
+
+  /** Starts a trial (optionally of another plan) or adds days to the one running. */
+  async startTrial(op: OperatorContext, id: string, input: ConsoleSubscriptionTrialInput, ip: string | null): Promise<ConsoleClientDetail> {
+    const plan = input.planCode ? await this.planFor(input.planCode) : null;
+    return this.changeSubscription(op, id, input.reason, ip, 'client.trial_changed', async (sub) => {
+      const now = new Date();
+      const running = sub.status === 'TRIALING' && sub.trialEndsAt && sub.trialEndsAt > now;
+      if (running && plan && plan.row.code !== sub.planCode)
+        throw new BadRequestException({ code: 'TRIAL_RUNNING', message: 'A trial of another plan is running. Extend it, or let it end first.' });
+      const from = running ? sub.trialEndsAt! : now;
+      const end = new Date(from.getTime() + input.days * 86_400_000);
+      const changes = [`Trial ${running ? 'extended' : 'started'} for ${input.days} days, until ${day(end)}`];
+      const data: Prisma.SubscriptionUncheckedUpdateInput = { status: 'TRIALING', trialEndsAt: end, trialUsedAt: sub.trialUsedAt ?? now, cancelAtPeriodEnd: false, pastDueSince: null };
+      if (plan && plan.row.code !== sub.planCode) {
+        data.planCode = plan.row.code;
+        changes.push(`Plan: ${(await this.planRows()).find((r) => r.code === sub.planCode)?.name ?? sub.planCode} → ${plan.row.name}`);
+      }
+      return { kind: running ? 'TRIAL_EXTENDED' : 'TRIAL_STARTED', data, changes, ...(data.planCode ? { plans: [sub.planCode, plan!.row.code] as [string, string] } : {}) };
+    });
   }
 
   // ───────────── Overview ─────────────

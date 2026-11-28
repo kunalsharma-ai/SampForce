@@ -65,6 +65,7 @@ export * from './workspaces';
 export * from './workspace-rules';
 export * from './field-access';
 export * from './console';
+export * from './console-subscription';
 export * from './console-health';
 export * from './console-overview';
 export * from './console-shell';

@@ -1,8 +1,8 @@
 'use client';
 
 import { Badge } from '@dealflow/ui';
-import type { ClientState, PaymentStatus } from '@dealflow/types';
-import { PAYMENT_STATUS_LABEL } from '@dealflow/types';
+import type { ClientState, ClientSubscriptionState, PaymentStatus } from '@dealflow/types';
+import { PAYMENT_STATUS_LABEL, SUBSCRIPTION_STATE_HINT, SUBSCRIPTION_STATE_LABEL } from '@dealflow/types';
 import { formatMinor } from '@/lib/billing';
 
 /** Shared pieces of the Console Admin screens (ADR 0071). The console is for platform staff and reads in English. */
@@ -68,4 +68,23 @@ export function toCents(value: string): number | null {
 
 export function months(n: number): string {
   return `${n} ${n === 1 ? 'month' : 'months'}`;
+}
+
+const SUB_TONE: Record<ClientSubscriptionState, 'success' | 'warning' | 'critical' | 'neutral' | 'primary'> = {
+  ACTIVE: 'success',
+  TRIAL: 'primary',
+  PENDING: 'warning',
+  EXPIRED: 'neutral',
+  SUSPENDED: 'critical',
+  CANCELLED: 'neutral',
+  PAYMENT_FAILED: 'critical',
+};
+
+/** Where a client's subscription stands (control center K3), with what it means on hover. */
+export function SubscriptionStateBadge({ state }: { state: ClientSubscriptionState }) {
+  return (
+    <Badge tone={SUB_TONE[state]} title={SUBSCRIPTION_STATE_HINT[state]} data-subscription-state={state}>
+      {SUBSCRIPTION_STATE_LABEL[state]}
+    </Badge>
+  );
 }
