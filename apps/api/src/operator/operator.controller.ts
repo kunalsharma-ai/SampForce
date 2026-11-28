@@ -21,6 +21,12 @@ import {
   consoleRenewSchema,
   type ConsoleSubscriptionInput,
   consoleSubscriptionSchema,
+  consoleSubscriptionCancelSchema,
+  type ConsoleSubscriptionCancelInput,
+  consoleSubscriptionReactivateSchema,
+  type ConsoleSubscriptionReactivateInput,
+  consoleSubscriptionTrialSchema,
+  type ConsoleSubscriptionTrialInput,
   emailSchema,
   type OperatorFeatureOverridesInput,
   operatorFeatureOverridesSchema,
@@ -111,6 +117,34 @@ export class OperatorController {
   @OperatorPermission('subscriptions.manage')
   subscription(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleSubscriptionSchema)) body: ConsoleSubscriptionInput, @Req() req: Request) {
     return this.console.setSubscription(op, id, body, ip(req));
+  }
+
+  /** The client's subscription history (control center K3): starts, upgrades, downgrades, renewals, trials, cancellations. */
+  @Get('clients/:id/subscription/events')
+  @OperatorPermission('clients.view')
+  subscriptionEvents(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.console.subscriptionEvents(id);
+  }
+
+  @Post('clients/:id/subscription/cancel')
+  @OperatorPermission('subscriptions.manage')
+  @HttpCode(200)
+  cancelSubscription(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleSubscriptionCancelSchema)) body: ConsoleSubscriptionCancelInput, @Req() req: Request) {
+    return this.console.cancelSubscription(op, id, body, ip(req));
+  }
+
+  @Post('clients/:id/subscription/reactivate')
+  @OperatorPermission('subscriptions.manage')
+  @HttpCode(200)
+  reactivateSubscription(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleSubscriptionReactivateSchema)) body: ConsoleSubscriptionReactivateInput, @Req() req: Request) {
+    return this.console.reactivateSubscription(op, id, body, ip(req));
+  }
+
+  @Post('clients/:id/subscription/trial')
+  @OperatorPermission('subscriptions.manage')
+  @HttpCode(200)
+  trial(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleSubscriptionTrialSchema)) body: ConsoleSubscriptionTrialInput, @Req() req: Request) {
+    return this.console.startTrial(op, id, body, ip(req));
   }
 
   @Post('clients/:id/renew')

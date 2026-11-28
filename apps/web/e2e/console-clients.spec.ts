@@ -80,16 +80,21 @@ test('the Console Admin creates a client on a plan, sets its limits and changes 
 
   await expect(ops.getByRole('heading', { level: 1, name: client })).toBeVisible();
   await expect(ops.locator('[data-usage="Manager Workspaces"]')).toHaveText('0 / 4 used');
+  await ops.getByRole('tab', { name: 'Workspaces & access' }).click();
   await expect(ops.locator('[data-console-workspaces]')).toContainText('Head of Sales Operations');
   await axe(ops);
 
   // Scenario 14: the Console raises the manager limit and the change is in the client's history.
+  await ops.getByRole('tab', { name: 'Subscription' }).click();
   await ops.getByRole('button', { name: 'Change subscription' }).click();
   const sub = ops.getByRole('dialog');
   await sub.getByLabel('Manager Workspaces').fill('5');
   await sub.getByLabel('Reason').fill('Fifth region approved');
   await sub.getByRole('button', { name: 'Save changes' }).click();
+  await expect(sub).toBeHidden();
+  await ops.getByRole('tab', { name: 'Overview' }).click();
   await expect(ops.locator('[data-usage="Manager Workspaces"]')).toHaveText('0 / 5 used');
+  await ops.getByRole('tab', { name: 'Activity & history' }).click();
   await expect(ops.locator('[data-console-history]')).toContainText('Manager Workspaces: plan limit (4) → 5');
   await shot(ops, '07-console-client', true);
 

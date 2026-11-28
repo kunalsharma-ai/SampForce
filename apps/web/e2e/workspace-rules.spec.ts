@@ -90,7 +90,7 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
   await dialog.getByRole('button', { name: 'Close' }).first().click();
 
   // One client is allowed what its plan forbids.
-  await ops.goto(`/operator/clients/${me.tenant.id}`);
+  await ops.goto(`/operator/clients/${me.tenant.id}?tab=workspaces`);
   const rules = ops.locator('[data-client-workspace-rules]');
   await expect(rules).toContainText('Uses its plan’s rules');
   await rules.getByRole('checkbox', { name: 'Manager Workspaces may be given Delete' }).check();

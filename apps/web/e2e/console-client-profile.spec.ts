@@ -98,6 +98,8 @@ test('Console client profile: customer ID, company details, location, logo and t
   await expect(ops.getByText(customerId).first()).toBeVisible();
 
   // ── Company details and location, with the added city offered in the picker ──
+  await ops.getByRole('tab', { name: 'Company' }).click();
+  await expect(ops).toHaveURL(/\?tab=company$/);
   const company = ops.locator('[data-client-company]');
   await company.getByRole('button', { name: 'Edit details' }).click();
   const dlg = ops.getByRole('dialog', { name: 'Company information' });

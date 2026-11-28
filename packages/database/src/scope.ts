@@ -157,10 +157,13 @@ const OPERATOR_READ = new Set([
   'HelpFeedback',
   // Client health (ADR 0074, C5): the score and the figures behind it. Written in the client's own context.
   'ClientHealthDaily',
+  // Subscription history (control center K3): the Console's billing reports count upgrades, downgrades and
+  // cancellations across clients. Written in the client's own context.
+  'SubscriptionEvent',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['TaskEvent', 'PerformancePlanEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['SubscriptionEvent', 'TaskEvent', 'PerformancePlanEvent', 'AvailabilityEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';

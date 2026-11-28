@@ -66,7 +66,7 @@ test('the Console decides which sections and fields an Executive Workspace sees'
   await ops.getByLabel('Password').fill('operator-password-1');
   await ops.getByRole('button', { name: 'Sign in' }).click();
   await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible({ timeout: 15_000 });
-  await ops.goto(`/operator/clients/${me.tenant.id}`);
+  await ops.goto(`/operator/clients/${me.tenant.id}?tab=workspaces`);
   const card = ops.locator('[data-client-workspace-rules]');
   const matrix = card.locator('[data-access-matrix]');
   await expect(matrix).toBeVisible();

@@ -138,6 +138,7 @@ test('Console clients list: filters, sort, bulk actions, export and the client t
   // ── The client's timeline shows the bulk changes ──
   await rows.filter({ hasText: names[0]! }).getByRole('link', { name: names[0]! }).click();
   await expect(ops.getByRole('heading', { level: 1, name: names[0]! })).toBeVisible();
+  await ops.getByRole('tab', { name: 'Activity & history' }).click();
   const timeline = ops.locator('[data-client-timeline]');
   await expect(timeline).toContainText('Lena Lists: Extended a subscription');
   await expect(timeline).toContainText('Lena Lists: Changed a client’s status');
