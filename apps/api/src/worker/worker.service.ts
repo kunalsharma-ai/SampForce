@@ -28,6 +28,7 @@ import { SequenceRunner } from '../sequences/sequence-runner.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
+import { ConsoleSystemService } from '../operator/console-system.service';
 import { MobilePushService } from '../mobile/push/mobile-push.service';
 import { CompanyClosureService } from '../tenants/company-closure.service';
 import { ConsoleNotificationSweep } from '../operator/console-notifications.service';
@@ -126,6 +127,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly overview: ConsoleOverviewService,
     private readonly orgDocuments: OrgExpiryRemindersService,
     private readonly learningReminders: LearningRemindersService,
+    private readonly system: ConsoleSystemService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -152,6 +154,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       );
       await this.running;
       this.lastTickAt = Date.now();
+      // The Console header reads this to tell whether background work is running (control-center K1).
+      await this.system.beat();
       workerLastTick.set(this.lastTickAt / 1000);
       if (!this.stopped) this.timer = setTimeout(loop, this.env.WORKER_POLL_MS);
     };

@@ -61,7 +61,7 @@ test('the Console shell: menu, palettes, sound and global search', async ({ brow
 
   // ── The left menu: grouped, with the current page marked and breadcrumbs above the page ──
   const menu = ops.getByRole('navigation', { name: 'Operator' });
-  for (const group of ['Command', 'Customers', 'Commercial', 'Support', 'Governance', 'Platform'])
+  for (const group of ['Command Center', 'Clients', 'Workspaces', 'Integrations', 'Support', 'Platform Management', 'System'])
     await expect(menu.getByRole('heading', { name: group, exact: true })).toBeVisible();
   await expect(menu.getByRole('link', { name: 'Overview' })).toHaveAttribute(
     'aria-current',
@@ -78,11 +78,31 @@ test('the Console shell: menu, palettes, sound and global search', async ({ brow
   await axe(ops);
   await shot(ops, '01-console-shell-overview');
 
+  // ── The header (control-center K1): platform scope, live system status and quick actions ──
+  await expect(ops.locator('[data-console-scope]')).toContainText('Platform Console');
+  const status = ops.locator('[data-system-status]');
+  await expect(status).not.toHaveAttribute('data-system-status', 'loading');
+  await status.click();
+  await expect(ops.getByRole('dialog').getByText('Background worker')).toBeVisible();
+  await expect(ops.getByRole('dialog').getByText('Database')).toBeVisible();
+  await shot(ops, '05-console-system-status');
+  await ops.keyboard.press('Escape');
+  await ops.locator('[data-quick-actions]').click();
+  await expect(ops.locator('[data-quick-action="client"]')).toBeVisible();
+  await shot(ops, '06-console-quick-actions');
+  await ops.locator('[data-quick-action="client"]').click();
+  await expect(ops).toHaveURL(/\/operator\/clients\?new=1/);
+  await expect(ops.getByRole('dialog')).toBeVisible();
+  await ops.keyboard.press('Escape');
+  await expect(ops.getByRole('dialog')).toBeHidden();
+  await menu.getByRole('link', { name: 'Overview' }).click();
+  await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+
   // ── Collapsing the menu leaves an icon rail, and the choice is saved to the operator ──
   await ops.getByRole('button', { name: 'Collapse the menu' }).click();
   await expect(ops.locator('[data-console-sidebar="collapsed"]')).toBeVisible();
-  await menu.getByRole('link', { name: 'Clients', exact: true }).hover();
-  await expect(ops.getByRole('tooltip')).toHaveText('Clients');
+  await menu.getByRole('link', { name: 'All clients', exact: true }).hover();
+  await expect(ops.getByRole('tooltip')).toHaveText('All clients');
   await shot(ops, '02-console-shell-collapsed');
   await ops.reload();
   await expect(ops.locator('[data-console-sidebar="collapsed"]')).toBeVisible();

@@ -37,6 +37,8 @@ import { UserAvatar } from '@/components/people/user-avatar';
 import { HelpSupportButton } from '@/components/help/help-panel';
 import type { Crumb } from './console-nav';
 import { NotificationBell } from './notifications';
+import { QuickActions } from './quick-actions';
+import { SystemStatus } from './system-status';
 
 const CONSOLE_READER = { audience: 'console' } as const;
 
@@ -189,16 +191,23 @@ export function ConsoleTopBar({
       >
         <Menu aria-hidden />
       </Button>
+      <span
+        className="hidden shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-primary/15 to-accent/15 px-2.5 py-1 text-[11px] font-semibold text-foreground ring-1 ring-primary/20 2xl:flex"
+        data-console-scope
+      >
+        <ShieldCheck className="size-3.5 text-primary" aria-hidden /> Platform Console
+      </span>
       <ConsoleBreadcrumbs crumbs={crumbs} />
       <div className="ms-auto flex items-center gap-1.5">
+        <SystemStatus />
         <button
           type="button"
           onClick={onSearch}
-          className="hidden h-9 w-72 items-center gap-2 rounded-lg border border-border bg-surface/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground md:flex"
+          className="hidden h-9 w-56 items-center 2xl:w-72 gap-2 rounded-lg border border-border bg-surface/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground md:flex"
           data-console-search
         >
           <Search className="size-4" aria-hidden />
-          <span className="flex-1 text-start">Search the Console</span>
+          <span className="flex-1 truncate whitespace-nowrap text-start">Search the Console</span>
           <kbd className="rounded border border-border bg-muted px-1.5 font-mono text-[11px]">
             Ctrl K
           </kbd>
@@ -212,6 +221,7 @@ export function ConsoleTopBar({
         >
           <Search aria-hidden />
         </Button>
+        <QuickActions me={me} />
         <HelpSupportButton reader={CONSOLE_READER} canManage={me.permissions.includes('settings.manage')} />
         <NotificationBell sound={me.preferences.sound} />
         <Button
@@ -236,7 +246,7 @@ export function ConsoleTopBar({
               aria-label={`Account: ${me.name}`}
             >
               <UserAvatar name={me.name || me.email} photoUrl={me.photoUrl ?? null} showMood={false} tone="from-primary to-accent" className="size-8 text-xs ring-0" />
-              <span className="hidden text-start leading-tight xl:block">
+              <span className="hidden text-start leading-tight 2xl:block">
                 <span className="block text-sm font-medium">{me.name}</span>
                 <span className="block text-[11px] text-muted-foreground">
                   {me.roleName}

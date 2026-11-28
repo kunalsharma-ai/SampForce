@@ -118,6 +118,11 @@ function ClientsList() {
   const params = useSearchParams();
   // The Overview's "New client" opens the list with the dialog open.
   const [creating, setCreating] = useState(() => params.get('new') === '1');
+  // The menu's "Create client" adds ?new=1 while the list may already be open.
+  const asked = params.get('new') === '1';
+  useEffect(() => {
+    if (asked) setCreating(true);
+  }, [asked]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<ConsoleBulkAction | null>(null);
   const [exporting, setExporting] = useState(false);

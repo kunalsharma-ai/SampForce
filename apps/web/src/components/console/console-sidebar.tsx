@@ -208,9 +208,17 @@ export function ConsoleSidebarNav({
             className={
               collapsed
                 ? 'sr-only'
-                : 'px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground'
+                : 'flex items-center gap-2 px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground'
             }
           >
+            {!collapsed && (
+              <span
+                className="grid size-5 place-items-center rounded-md bg-gradient-to-br from-primary/20 to-accent/20 text-primary ring-1 ring-primary/20"
+                aria-hidden
+              >
+                <group.icon className="size-3" />
+              </span>
+            )}
             {group.label}
           </h2>
           <ul className="space-y-0.5">
@@ -262,13 +270,20 @@ export function ConsoleSidebar({
       data-console-sidebar={collapsed ? 'collapsed' : 'open'}
     >
       <div
-        className={cn('flex h-16 items-center gap-2.5 px-4', collapsed && 'justify-center px-0')}
+        className={cn(
+          'relative flex h-16 items-center gap-2.5 overflow-hidden px-4',
+          collapsed && 'justify-center px-0',
+        )}
       >
+        <span
+          className="pointer-events-none absolute -start-10 -top-10 size-32 rounded-full bg-primary/15 blur-2xl"
+          aria-hidden
+        />
         <Logo compact animated />
         {!collapsed && (
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold">SampForce Console</p>
-            <p className="text-[11px] text-muted-foreground">Platform control center</p>
+            <p className="relative truncate text-sm font-semibold">SampForce Console</p>
+            <p className="relative text-[11px] text-muted-foreground">Platform control center</p>
           </div>
         )}
       </div>
