@@ -15,9 +15,10 @@ section 29 of the website's go-live documents), and lists exactly what SampForce
    - **API address**: `https://www.frequentresearch.com/api/v1/sampforce`
    - **API key**: the `sfk_` key
    - **Webhook signing secret**: a long random text (`openssl rand -hex 32`), the same one as on the website
-   - **Receiving workspace**: the workspace's web address name, shown on its page under Clients
+   - **Receiving workspace**: pick the workspace from the list (its full name also works if typed through the API)
 
-   Save, then press **Test connection**. Saving switches the Website enquiries feature on for that workspace.
+   Save, then press **Test connection**. Saving switches the Website Enquiry section on for that workspace, and Test
+   connection checks it is still on (and switches it back on if not), so the menu item appears there after a reload.
 3. On the website, for instant delivery: **System > Connections & keys > Sampforce**, set
    `SAMPFORCE_WEBHOOK_URL` to `https://<your SampForce API>/api/v1/hooks/website-enquiries` (shown in the Console with
    the full address) and `SAMPFORCE_WEBHOOK_SECRET` to the same secret. Press **Send a test**: the webhook status in

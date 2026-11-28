@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import type { AiProviderHealth, DeploymentSettingRow, OperatorProviderField, OperatorProviderRow, ProviderSetupGuide, ProviderWebhookStatus } from '@dealflow/types';
+import type { AiProviderHealth, DeploymentSettingRow, OperatorProviderField, OperatorProviderRow, OperatorTenantRow, ProviderSetupGuide, ProviderWebhookStatus } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
@@ -46,6 +46,9 @@ function KeyForm({ p, onDone, onCancel }: { p: OperatorProviderRow; onDone: () =
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, string>>({});
   const [remove, setRemove] = useState<Set<string>>(new Set());
+  // A workspace field (Website enquiries' receiving workspace) is picked from the workspaces, by name.
+  const pickWorkspace = p.env.some((f) => f.input === 'workspace');
+  const workspaces = useQuery({ enabled: pickWorkspace, queryKey: ['operator', 'tenants', ''], queryFn: () => api<OperatorTenantRow[]>('/operator/tenants') });
   const save = useMutation({
     mutationFn: (body: Record<string, string | null>) => api<OperatorProviderRow>(`/operator/providers/${p.key}/keys`, { method: 'POST', json: { values: body } }),
     onSuccess: (row) => {
@@ -92,6 +95,28 @@ function KeyForm({ p, onDone, onCancel }: { p: OperatorProviderRow; onDone: () =
                 <option value="">Keep as it is ({onOff(f.hint) ?? 'Off'})</option>
                 <option value="true">On</option>
                 <option value="false">Off</option>
+              </select>
+            ) : f.input === 'workspace' ? (
+              <select
+                id={id}
+                className="block h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                disabled={remove.has(f.name) || save.isPending || workspaces.isPending}
+                value={values[f.name] ?? ''}
+                aria-invalid={err ? true : undefined}
+                aria-describedby={f.help || err ? `${id}-help` : undefined}
+                onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
+              >
+                <option value="">
+                  {f.set ? `Keep as it is (${workspaces.data?.find((w) => w.slug === f.hint)?.name ?? f.hint})` : workspaces.isPending ? 'Loading workspaces…' : 'Choose a workspace'}
+                </option>
+                {(workspaces.data ?? [])
+                  .filter((w) => w.status !== 'PENDING_DELETION')
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((w) => (
+                    <option key={w.id} value={w.slug}>
+                      {w.name} ({w.slug})
+                    </option>
+                  ))}
               </select>
             ) : (
             <Input

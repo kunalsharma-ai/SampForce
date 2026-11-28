@@ -64,7 +64,7 @@ test('the website is connected in the Console, enquiries arrive, and one is foll
   await form.getByLabel('API address WEBSITE_API_BASE_URL').fill(SITE);
   await form.getByLabel('API key (sfk_...) WEBSITE_API_KEY').fill(KEY);
   await form.getByLabel('Webhook signing secret WEBSITE_WEBHOOK_SECRET').fill(SECRET);
-  await form.getByLabel('Receiving workspace (web address name) WEBSITE_ENQUIRY_WORKSPACE').fill(me.tenant.slug);
+  await form.getByLabel('Receiving workspace WEBSITE_ENQUIRY_WORKSPACE').selectOption(me.tenant.slug);
   await site.getByRole('button', { name: 'Save keys' }).click();
   await expect(site.getByRole('list', { name: 'Website enquiries (company website) keys' })).toContainText('WEBSITE_API_KEYSaved here');
   await expect(ops.locator('body')).not.toContainText(KEY);
