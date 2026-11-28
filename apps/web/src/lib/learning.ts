@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  LearningBrand,
   AnswerInput,
   AssigneeOption,
   AssignmentRow,
@@ -87,6 +88,11 @@ export function useCategories() {
 
 export function useLearningSettings() {
   return useQuery({ queryKey: [...LEARNING_KEY, 'settings'], queryFn: () => api<LearningSettingsView>('/learning/settings') });
+}
+
+/** How the organisation's certificates are branded (logo, name, colours from My Organization). */
+export function useLearningBrand(enabled = true) {
+  return useQuery({ queryKey: [...LEARNING_KEY, 'brand'], queryFn: () => api<LearningBrand>('/learning/brand'), enabled, staleTime: 60_000 });
 }
 
 export function useMarking(enabled = true) {

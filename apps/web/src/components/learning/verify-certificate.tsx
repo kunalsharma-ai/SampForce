@@ -1,6 +1,6 @@
 'use client';
 
-import type { CertificateVerification } from '@dealflow/types';
+import { type CertificateVerification, initialsOf } from '@dealflow/types';
 import { Skeleton } from '@dealflow/ui';
 import { BadgeCheck, ShieldAlert, ShieldOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -30,6 +30,22 @@ export function VerifyCertificate({ code }: { code: string }) {
   const revoked = !!v.revoked;
   return (
     <section className="overflow-hidden rounded-3xl border bg-surface" data-verify={revoked ? 'revoked' : 'valid'}>
+      {v.brand && (
+        <header className="flex items-center gap-4 border-b p-5" data-verify-brand>
+          {v.brand.logoUrl ? (
+            // A white chip, so a dark logo stays visible on the dark theme.
+            // eslint-disable-next-line @next/next/no-img-element -- the issuing organisation's logo, served by the API
+            <span className="grid h-14 max-w-[11rem] shrink-0 place-items-center rounded-xl bg-white px-2 py-1.5 shadow-sm"><img src={v.brand.logoUrl} alt={t('{name} logo', { name: v.brand.name })} className="max-h-full max-w-full object-contain" /></span>
+          ) : (
+            <span className="grid size-12 place-items-center rounded-full text-lg font-bold text-white" style={{ background: v.brand.primary }} aria-hidden>{initialsOf(v.brand.name)}</span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{v.brand.name}</p>
+            {v.brand.tagline && <p className="truncate text-sm text-muted-foreground">{v.brand.tagline}</p>}
+          </div>
+          <span className="ms-auto h-10 w-1.5 shrink-0 rounded-full" style={{ background: `linear-gradient(${v.brand.primary}, ${v.brand.secondary})` }} aria-hidden />
+        </header>
+      )}
       <div className="lrn-hero rounded-none p-8 text-center" data-tone={revoked ? 'fail' : 'pass'}>
         <div className="relative z-10">
           {revoked ? <ShieldOff className="mx-auto size-14" aria-hidden /> : <BadgeCheck className="mx-auto size-14" aria-hidden />}

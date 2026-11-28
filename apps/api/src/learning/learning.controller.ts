@@ -179,6 +179,16 @@ export class LearningController {
     res.send(file.data);
   }
 
+  @Get('brand')
+  brand(@Auth() auth: AuthContext) {
+    return this.certificates.brand(auth);
+  }
+
+  @Get('brand/logo')
+  async brandLogo(@Auth() auth: AuthContext, @Res() res: Response): Promise<void> {
+    sendPng(res, await this.certificates.logo(auth), 'private, max-age=86400');
+  }
+
   @Post('certificates/:id/revoke')
   @HttpCode(200)
   revoke(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(revokeSchema)) body: z.infer<typeof revokeSchema>, @Meta() meta: RequestMeta) {
@@ -478,4 +488,20 @@ export class LearningVerifyController {
   verify(@Param('code') code: string) {
     return this.certificates.verify(String(code).slice(0, 40));
   }
+
+  @Get(':code/logo')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async logo(@Param('code') code: string, @Res() res: Response): Promise<void> {
+    sendPng(res, await this.certificates.verifyLogo(String(code).slice(0, 40)), 'public, max-age=3600');
+  }
+}
+
+/** A logo as PNG: an image only, never run as a page. */
+function sendPng(res: Response, png: Buffer, cache: string): void {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Disposition', 'inline; filename="logo.png"');
+  res.setHeader('Cache-Control', cache);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.send(png);
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import { CERTIFICATE_TEMPLATE_LABEL, CERTIFICATE_TEMPLATES, type CertificateTemplate, type LearningSettingsView } from '@dealflow/types';
+import { CERTIFICATE_TEMPLATE_LABEL, CERTIFICATE_TEMPLATES, type CertificateTemplate, type LearningBrand, type LearningSettingsView, secondaryFor } from '@dealflow/types';
 import { Button, Input, Label, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building2, Check, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useT } from '@/lib/i18n';
@@ -45,11 +45,13 @@ function SettingsForm({ v }: { v: LearningSettingsView }) {
     setError(null);
     try {
       const out = await learningApi.saveSettings({
-        issuerName: f.issuerName.trim(),
+        // Sent only when changed, so the certificates keep following My Organization's name until someone sets one.
+        ...(f.issuerName.trim() !== v.issuerName ? { issuerName: f.issuerName.trim() } : {}),
         signatoryName: f.signatoryName.trim(),
         signatoryTitle: f.signatoryTitle.trim(),
         template: f.template,
         accentColor: f.accentColor,
+        useBrandColors: f.useBrandColors,
         defaultPassingScore: Number(f.defaultPassingScore),
         defaultMaxAttempts: Number(f.defaultMaxAttempts),
         reminderDaysBefore: f.reminders.split(/[,\s]+/).map(Number).filter((n) => n >= 1 && n <= 60).slice(0, 5),
@@ -64,6 +66,16 @@ function SettingsForm({ v }: { v: LearningSettingsView }) {
     } finally {
       setBusy(false);
     }
+  };
+  const orgColors = v.brand.brandColors;
+  const fromOrg = f.useBrandColors && orgColors.length > 0;
+  const primary = fromOrg ? orgColors[0]! : f.accentColor;
+  const brand: LearningBrand = {
+    ...v.brand,
+    name: f.issuerName || v.issuerName,
+    primary,
+    secondary: fromOrg && orgColors[1] && orgColors[1] !== primary ? orgColors[1] : secondaryFor(primary),
+    colorSource: fromOrg ? 'ORGANIZATION' : 'SETTINGS',
   };
   const sample = {
     id: 'preview',
@@ -97,12 +109,19 @@ function SettingsForm({ v }: { v: LearningSettingsView }) {
           </div>
           <div className="space-y-1.5"><Label htmlFor="s-sig">{t('Signed by')}</Label><Input id="s-sig" value={f.signatoryName} onChange={(e) => set('signatoryName', e.target.value)} maxLength={120} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-sigt">{t('Their title')}</Label><Input id="s-sigt" value={f.signatoryTitle} onChange={(e) => set('signatoryTitle', e.target.value)} maxLength={120} /></div>
-          <div className="space-y-1.5"><Label htmlFor="s-color">{t('Accent colour')}</Label>
+        </div>
+        <BrandPanel brand={v.brand} />
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" checked={f.useBrandColors} onChange={(e) => set('useBrandColors', e.target.checked)} className="mt-0.5 size-4" data-use-brand-colors />
+          <span>{t('Use the brand colours from My Organization')}<span className="block text-xs text-muted-foreground">{orgColors.length ? t('Certificates follow your brand: change the colours in My Organization and every certificate shows them.') : t('My Organization has no brand colours yet, so certificates use the accent colour below.')}</span></span>
+        </label>
+        {!fromOrg && (
+          <div className="max-w-xs space-y-1.5"><Label htmlFor="s-color">{t('Accent colour')}</Label>
             <div className="flex gap-2"><input id="s-color" type="color" value={f.accentColor} onChange={(e) => set('accentColor', e.target.value)} className="h-10 w-14 rounded-md border" /><Input value={f.accentColor} onChange={(e) => set('accentColor', e.target.value)} aria-label={t('Accent colour')} pattern="^#[0-9a-fA-F]{6}$" /></div>
           </div>
-        </div>
-        <CertificateView c={sample} />
-        <p className="text-xs text-muted-foreground">{t('The PDF adds your company logo from the quote settings and a QR code that opens the verification page.')}</p>
+        )}
+        <CertificateView c={sample} brand={brand} />
+        <p className="text-xs text-muted-foreground">{t('This is the certificate people download: your logo, name and colours, the module, the score and a QR code that opens the verification page.')}</p>
       </section>
       <section className="lrn-tile space-y-4">
         <h3 className="font-semibold">{t('Defaults for new modules')}</h3>
@@ -121,6 +140,33 @@ function SettingsForm({ v }: { v: LearningSettingsView }) {
         <Button type="submit" disabled={busy}><Save className="size-4" aria-hidden />{t('Save settings')}</Button>
       </div>
     </form>
+  );
+}
+
+/** Where the certificate's branding comes from, with a way to change it in My Organization. */
+function BrandPanel({ brand }: { brand: LearningBrand }) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-muted/40 p-3" data-brand-panel>
+      <div className="grid h-14 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border bg-white p-1.5">
+        {brand.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the organisation's own logo, served by the API
+          <img src={brand.logoUrl} alt={t('{name} logo', { name: brand.name })} className="max-h-full max-w-full object-contain" />
+        ) : (
+          <Building2 className="size-6 text-muted-foreground" aria-hidden />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{t('Branding from My Organization')}</p>
+        <p className="text-xs text-muted-foreground">{brand.logoUrl ? t('Your logo, name, tagline and brand colours go on every certificate.') : t('Add your logo in My Organization and it goes on every certificate.')}</p>
+        {brand.brandColors.length > 0 && (
+          <div className="mt-1.5 flex gap-1.5" aria-label={t('Brand colours')}>
+            {brand.brandColors.slice(0, 6).map((c) => <span key={c} className="size-5 rounded-full border" style={{ background: c }} title={c} />)}
+          </div>
+        )}
+      </div>
+      <Button asChild variant="outline" size="sm"><Link href="/app/my-organization"><ExternalLink className="size-4" aria-hidden />{t('Edit in My Organization')}</Link></Button>
+    </div>
   );
 }
 

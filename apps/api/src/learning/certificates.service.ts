@@ -1,14 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { nextSequenceValue, type TenantTx } from '@dealflow/database';
-import type { CertificateRow, CertificateVerification } from '@dealflow/types';
+import { CERTIFICATE_TEMPLATES, type CertificateRow, type CertificateTemplate, type CertificateVerification, type LearningBrand } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertManager, inScope, learningCaller } from './access';
-import { renderCertificatePdf } from './certificate-pdf';
+import { LEARNING_LOGO_URL, learningBrand, type ResolvedBrand, VERIFY_LOGO_URL } from './branding';
+import { type CertificatePdfData, renderCertificatePdf } from './certificate-pdf';
 import { settingsView } from './modules.service';
 import { type AssignmentRec, certificateRow, type ModuleRec } from './views';
 
@@ -107,30 +108,45 @@ export class LearningCertificatesService {
   }
 
   async pdf(auth: AuthContext, id: string): Promise<{ name: string; data: Buffer }> {
-    const { cert, logo } = await this.prisma.run(auth, async (tx) => {
+    const { cert, brand } = await this.prisma.run(auth, async (tx) => {
       const cert = await this.visible(tx, auth, id);
-      const commercial = await tx.commercialSettings.findUnique({ where: { tenantId: auth.tenantId }, select: { logoDataUrl: true } });
-      return { cert, logo: commercial?.logoDataUrl ?? null };
+      return { cert, brand: await learningBrand(tx, auth.tenantId, LEARNING_LOGO_URL) };
     });
-    const data = await renderCertificatePdf({
-      number: cert.number,
-      code: cert.code,
-      recipientName: cert.recipientName,
-      moduleTitle: cert.moduleTitle,
-      category: cert.category ?? null,
-      score: cert.score,
-      completedAt: cert.completedAt,
-      issuedAt: cert.issuedAt,
-      issuerName: cert.issuerName,
-      signatoryName: cert.signatoryName ?? null,
-      signatoryTitle: cert.signatoryTitle ?? null,
-      template: cert.template as 'CLASSIC',
-      accentColor: cert.accentColor,
-      logoDataUrl: logo,
-      verifyUrl: this.verifyUrl(cert.code),
-      revoked: !!cert.revokedAt,
-    });
+    const data = await renderCertificatePdf(pdfData(cert, brand, this.verifyUrl(cert.code)));
     return { name: `${cert.number} ${cert.moduleTitle}.pdf`.replace(/[\\/:*?"<>|]+/g, ' '), data };
+  }
+
+  /** How the organisation's certificates are branded, for the app's on-screen certificate. */
+  brand(auth: AuthContext): Promise<LearningBrand> {
+    return this.prisma.run(auth, async (tx) => {
+      await learningCaller(tx, auth);
+      return (await learningBrand(tx, auth.tenantId, LEARNING_LOGO_URL)).brand;
+    });
+  }
+
+  /** The logo on the organisation's certificates, as PNG. */
+  logo(auth: AuthContext): Promise<Buffer> {
+    return this.prisma.run(auth, async (tx) => {
+      await learningCaller(tx, auth);
+      const { logoPng } = await learningBrand(tx, auth.tenantId, LEARNING_LOGO_URL);
+      if (!logoPng) throw new NotFoundException({ code: 'NOT_FOUND', message: 'No logo yet.' });
+      return logoPng;
+    });
+  }
+
+  /** The logo of the organisation that issued a certificate, for its public check page. */
+  async verifyLogo(code: string): Promise<Buffer> {
+    const cert = await this.byCode(code);
+    if (!cert) throw new NotFoundException({ code: 'NOT_FOUND', message: 'No logo yet.' });
+    const { logoPng } = await this.prisma.run({ tenantId: cert.tenantId }, (tx) => learningBrand(tx, cert.tenantId, VERIFY_LOGO_URL(cert.code)));
+    if (!logoPng) throw new NotFoundException({ code: 'NOT_FOUND', message: 'No logo yet.' });
+    return logoPng;
+  }
+
+  private async byCode(code: string) {
+    const clean = code.trim().toUpperCase();
+    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(clean)) return null;
+    return this.prisma.run({ lookup: { LearningCertificate: { code: clean } } }, (tx) => tx.learningCertificate.findUnique({ where: { code: clean } }));
   }
 
   /** Certificates of the people the caller manages (the Super Workspace: everyone). */
@@ -158,14 +174,14 @@ export class LearningCertificatesService {
     });
   }
 
-  /** The public check of a certificate code: valid or not, and the few facts printed on it. */
+  /** The public check of a certificate code: valid or not, the few facts printed on it and the issuer's branding. */
   async verify(code: string): Promise<CertificateVerification> {
-    const clean = code.trim().toUpperCase();
-    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(clean)) return { valid: false };
-    const cert = await this.prisma.run({ lookup: { LearningCertificate: { code: clean } } }, (tx) => tx.learningCertificate.findUnique({ where: { code: clean } }));
+    const cert = await this.byCode(code);
     if (!cert) return { valid: false };
+    const { brand } = await this.prisma.run({ tenantId: cert.tenantId }, (tx) => learningBrand(tx, cert.tenantId, VERIFY_LOGO_URL(cert.code)));
     return {
       valid: !cert.revokedAt,
+      brand,
       number: cert.number,
       recipientName: cert.recipientName,
       moduleTitle: cert.moduleTitle,
@@ -175,4 +191,31 @@ export class LearningCertificatesService {
       revoked: !!cert.revokedAt,
     };
   }
+}
+
+type CertRec = NonNullable<Awaited<ReturnType<TenantTx['learningCertificate']['findUnique']>>>;
+
+/** What the PDF needs: the certificate as issued, drawn in the organisation's branding as it is today. */
+export function pdfData(cert: CertRec, { brand, logoPng }: ResolvedBrand, verifyUrl: string): CertificatePdfData {
+  return {
+    number: cert.number,
+    code: cert.code,
+    recipientName: cert.recipientName,
+    moduleTitle: cert.moduleTitle,
+    category: cert.category ?? null,
+    score: cert.score,
+    completedAt: cert.completedAt,
+    issuedAt: cert.issuedAt,
+    issuerName: cert.issuerName,
+    tagline: brand.tagline,
+    signatoryName: cert.signatoryName ?? null,
+    signatoryTitle: cert.signatoryTitle ?? null,
+    template: (CERTIFICATE_TEMPLATES as readonly string[]).includes(cert.template) ? (cert.template as CertificateTemplate) : 'CLASSIC',
+    primary: brand.primary,
+    secondary: brand.secondary,
+    logoPng,
+    logoRatio: brand.logoRatio,
+    verifyUrl,
+    revoked: !!cert.revokedAt,
+  };
 }

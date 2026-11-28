@@ -1,6 +1,6 @@
 'use client';
 
-import type { CertificateRow } from '@dealflow/types';
+import type { CertificateRow, LearningBrand } from '@dealflow/types';
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Award, Copy, Download, ExternalLink, Medal, Printer, ShieldCheck, ShieldOff } from 'lucide-react';
@@ -8,8 +8,9 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n';
-import { certificatePdfUrl, LEARNING_KEY, learningApi, useManage, useMyLearning, useTeamCertificates } from '@/lib/learning';
+import { certificatePdfUrl, LEARNING_KEY, learningApi, useLearningBrand, useManage, useMyLearning, useTeamCertificates } from '@/lib/learning';
 import { dateText, EmptyState, ErrorLine, pct } from './bits';
+import { CertificateArt } from './certificate-art';
 
 /** The person's certificates, and for managers the certificates of their people. */
 export function CertificatesPage() {
@@ -108,32 +109,14 @@ function CertificateTile({ c, onOpen }: { c: CertificateRow; onOpen: () => void 
   );
 }
 
-/** The certificate as it looks on paper, with download, print and the verification link. */
-export function CertificateView({ c }: { c: CertificateRow }) {
-  const t = useT();
+/** The certificate as it looks on paper, in the organisation's branding: the same design as the PDF. */
+export function CertificateView({ c, brand, verifyUrl }: { c: CertificateRow; brand?: LearningBrand; verifyUrl?: string | null }) {
+  const loaded = useLearningBrand(!brand);
+  const b = brand ?? loaded.data;
+  if (!b) return loaded.error ? <ErrorLine error={loaded.error} /> : <Skeleton className="aspect-[1.414] w-full rounded-xl" />;
   return (
-    <div className="lrn-cert lrn-print relative aspect-[1.414] w-full overflow-hidden p-[5%] text-center" data-template={c.template} style={{ ['--lrn-cert' as string]: c.accentColor }}>
-      {c.revoked && <div className="pointer-events-none absolute inset-0 grid place-items-center"><span className="-rotate-12 rounded-lg border-4 border-rose-500 px-6 py-2 text-4xl font-black uppercase tracking-widest text-rose-500/70">{t('Revoked')}</span></div>}
-      <p className="text-[clamp(0.6rem,1.4vw,0.85rem)] font-semibold uppercase tracking-[0.3em]" style={{ color: c.template === 'EXECUTIVE' ? '#c9a227' : c.accentColor }}>{c.issuerName}</p>
-      <h3 className="mt-[3%] font-serif text-[clamp(1.1rem,3.6vw,2.4rem)] font-bold">{t('Certificate of Completion')}</h3>
-      <p className="mt-[3%] text-[clamp(0.6rem,1.3vw,0.9rem)] opacity-75">{t('This certifies that')}</p>
-      <p className="mt-[1.5%] font-serif text-[clamp(1rem,3.2vw,2.1rem)] font-semibold italic">{c.recipientName}</p>
-      <p className="mt-[1.5%] text-[clamp(0.6rem,1.3vw,0.9rem)] opacity-75">{t('has successfully completed')}</p>
-      <p className="mt-[1%] text-[clamp(0.8rem,2vw,1.3rem)] font-bold">{c.moduleTitle}</p>
-      <p className="mt-[1.5%] text-[clamp(0.6rem,1.3vw,0.9rem)]">{t('with a score of {score} on {date}', { score: pct(c.score), date: dateText(c.completedAt) })}</p>
-      <div className="absolute inset-x-[6%] bottom-[7%] grid grid-cols-[1fr_auto_1fr] items-end gap-3 text-[clamp(0.5rem,1.1vw,0.75rem)]">
-        <div className="text-start">
-          <p className="font-mono">{c.number}</p>
-          <p className="font-mono opacity-70">{t('Code {code}', { code: c.code })}</p>
-        </div>
-        <div className="grid size-[clamp(2.5rem,7vw,4.5rem)] place-items-center rounded-full text-white shadow" style={{ background: `radial-gradient(circle at 30% 30%, #fde68a, ${c.template === 'EXECUTIVE' ? '#c9a227' : c.accentColor})` }}>
-          <Award className="size-1/2" aria-hidden />
-        </div>
-        <div className="text-end">
-          {c.signatoryName && <p className="border-t border-current pt-1 font-semibold">{c.signatoryName}</p>}
-          {c.signatoryTitle && <p className="opacity-70">{c.signatoryTitle}</p>}
-        </div>
-      </div>
+    <div className="lrn-cert lrn-print" data-template={c.template}>
+      <CertificateArt c={c} brand={b} verifyUrl={verifyUrl} />
     </div>
   );
 }
@@ -172,7 +155,7 @@ function CertificateDialog({ c, canRevoke, onClose, onChanged }: { c: Certificat
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogTitle className="text-lg font-semibold">{c.moduleTitle}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">{t('Certificate {number} for {name}', { number: c.number, name: c.recipientName })}</DialogDescription>
-        <div className="my-4"><CertificateView c={c} /></div>
+        <div className="my-4"><CertificateView c={c} verifyUrl={verifyUrl} /></div>
         <div className="flex flex-wrap gap-2">
           <Button asChild><a href={certificatePdfUrl(c.id, true)} data-download-certificate><Download className="size-4" aria-hidden />{t('Download PDF')}</a></Button>
           <Button asChild variant="outline"><a href={certificatePdfUrl(c.id)} target="_blank" rel="noreferrer"><ExternalLink className="size-4" aria-hidden />{t('Open PDF')}</a></Button>
