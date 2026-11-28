@@ -30,6 +30,7 @@ function testsOptedOut(): boolean {
 const ORDER: AchievementRow['kind'][] = [
   'DEAL_CONVERTED', 'PROSPECT_CONVERTED', 'RFQ_SUBMITTED', 'TASK_IMPORTANT', 'TASK_PLAN_HALF', 'LEAD_MILESTONE', 'ALL_TASKS_DONE', 'TASK_PLAN_DONE',
   'LEAD_TARGET', 'CONSISTENCY', 'SALES_TARGET', 'DEALS_WON_MILESTONE', 'MAJOR_DEAL',
+  'PIP_COMPLETED', 'RECOGNITION_ELIGIBLE', 'EMPLOYEE_OF_THE_MONTH',
 ];
 const rank = (a: AchievementRow) => ORDER.indexOf(a.kind);
 

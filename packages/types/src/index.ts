@@ -88,3 +88,4 @@ export * from './profile';
 export * from './client-time';
 export * from './task-plans';
 export * from './performance';
+export * from './recognition';

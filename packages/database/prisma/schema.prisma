@@ -936,6 +936,171 @@ model PerformanceSettings {
   @@map("performance_settings")
 }
 
+/// Employee of the Month and improvement-plan rules of an organisation (ADR 0102), set by the Super Workspace.
+model RecognitionPolicy {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @unique @map("tenant_id")
+  /// RecognitionPolicy in packages/types/src/recognition.ts.
+  policy      Json     @default("{}")
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("recognition_policies")
+}
+
+/// One person's Employee of the Month target for one month (ADR 0102): goals counted from the records, the rule that
+/// makes them eligible, and every change made to it.
+model RecognitionTarget {
+  id                    String    @id @default(uuid()) @map("_id")
+  tenantId              String    @map("tenant_id")
+  userId                String    @map("user_id")
+  /// YYYY-MM.
+  month                 String
+  name                  String
+  /// First and last day (both included) in the organisation's time zone, and the instants they cover ([start, end)).
+  startsOn              String    @map("starts_on")
+  endsOn                String    @map("ends_on")
+  startsAt              DateTime  @map("starts_at")
+  endsAt                DateTime  @map("ends_at")
+  /// [{ id, measure, amount, per, label }]
+  goals                 Json
+  /// EVERY_GOAL or OVERALL.
+  eligibility           String    @default("EVERY_GOAL")
+  minAchievementPercent Float     @default(100) @map("min_achievement_percent")
+  minScore              Float?    @map("min_score")
+  conditions            String?
+  description           String?
+  reward                String?
+  /// ACTIVE, ELIGIBLE, AWARDED, NOT_SELECTED, CLOSED or CANCELLED, kept up to date as it is counted.
+  status                String    @default("ACTIVE")
+  achievementPercent    Float     @default(0) @map("achievement_percent")
+  score                 Float     @default(0)
+  eligibleAt            DateTime? @map("eligible_at")
+  /// Notifications already sent (m50, m75, eligible...) so none is sent twice.
+  notified              String[]
+  setById               String    @map("set_by_id")
+  /// SUPER or MANAGER.
+  setByLevel            String    @map("set_by_level")
+  cancelledAt           DateTime? @map("cancelled_at")
+  /// [{ at, byId, changes: string[] }], newest last.
+  revisions             Json      @default("[]")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, month])
+  @@index([tenantId, userId, month])
+  @@index([tenantId, status])
+  @@map("recognition_targets")
+}
+
+/// An Employee of the Month award (ADR 0102): for the organisation or one manager's team, with the figures it was
+/// decided on. A revoked award stays for the record.
+model RecognitionAward {
+  id                 String    @id @default(uuid()) @map("_id")
+  tenantId           String    @map("tenant_id")
+  month              String
+  /// ORGANISATION or TEAM.
+  scope              String
+  teamNodeId         String?   @map("team_node_id")
+  /// "<month>|<scope key>" while the award stands, "revoked:<id>" after: one standing award per month and scope.
+  liveKey            String    @map("live_key")
+  userId             String    @map("user_id")
+  targetId           String    @map("target_id")
+  /// AUTOMATIC or MANUAL.
+  method             String
+  achievementPercent Float     @map("achievement_percent")
+  score              Float
+  /// [{ label, required, done, unit }] as they stood when awarded.
+  goals              Json
+  criteria           String
+  reward             String?
+  note               String?
+  selectedById       String?   @map("selected_by_id")
+  awardedAt          DateTime  @default(now()) @map("awarded_at")
+  revokedAt          DateTime? @map("revoked_at")
+  revokedById        String?   @map("revoked_by_id")
+  revokeReason       String?   @map("revoke_reason")
+
+  @@unique([tenantId, liveKey])
+  @@index([tenantId, month])
+  @@index([tenantId, userId, awardedAt(sort: Desc)])
+  @@map("recognition_awards")
+}
+
+/// A Performance Improvement Plan (ADR 0102): why, what to improve, goals counted from records (or evaluated by the
+/// manager), dates, reviews and the decision that closes it.
+model PerformancePlan {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  /// PIP-0001, PIP-0002... per organisation.
+  number          String
+  title           String
+  userId          String    @map("user_id")
+  employeeCode    String?   @map("employee_code")
+  reason          String
+  areas           String[]
+  currentLevel    String?   @map("current_level")
+  requiredLevel   String?   @map("required_level")
+  /// [{ id, measure, amount, per, label }]
+  goals           Json
+  /// [{ id, goalId, score, comments, evaluatorId, at }], newest last.
+  evaluations     Json      @default("[]")
+  requiredPercent Float     @default(100) @map("required_percent")
+  startsOn        String    @map("starts_on")
+  endsOn          String    @map("ends_on")
+  originalEndsOn  String    @map("original_ends_on")
+  startsAt        DateTime  @map("starts_at")
+  endsAt          DateTime  @map("ends_at")
+  /// WEEKLY, FORTNIGHTLY, MONTHLY or CUSTOM.
+  reviewFrequency String    @map("review_frequency")
+  reviewDates     String[]  @map("review_dates")
+  /// PIP_STATUSES in packages/types/src/recognition.ts.
+  status          String    @default("ACTIVE")
+  percent         Float     @default(0)
+  goalsMet        Int       @default(0) @map("goals_met")
+  notified        String[]
+  managerComments String?   @map("manager_comments")
+  documents       Json      @default("[]")
+  assignedById    String    @map("assigned_by_id")
+  /// SUPER or MANAGER.
+  assignedByLevel String    @map("assigned_by_level")
+  activatedAt     DateTime? @map("activated_at")
+  acknowledgedAt  DateTime? @map("acknowledged_at")
+  readyAt         DateTime? @map("ready_at")
+  completedAt     DateTime? @map("completed_at")
+  closedAt        DateTime? @map("closed_at")
+  closedById      String?   @map("closed_by_id")
+  closingComment  String?   @map("closing_comment")
+  /// When the person closed the "plan completed" message on their dashboard.
+  completionSeenAt DateTime? @map("completion_seen_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, number])
+  @@index([tenantId, userId, status])
+  @@index([tenantId, status])
+  @@map("performance_plans")
+}
+
+/// The history of a plan (ADR 0102): every change, comment, evaluation, review and decision. Never edited.
+model PerformancePlanEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  planId    String   @map("plan_id")
+  kind      String
+  actorId   String?  @map("actor_id")
+  /// EMPLOYEE, MANAGER or SYSTEM.
+  actorRole String   @map("actor_role")
+  body      String?
+  changes   String[]
+  documents Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, planId, createdAt])
+  @@map("performance_plan_events")
+}
+
 model Team {
   id          String   @id @default(uuid()) @map("_id")
   tenantId    String   @map("tenant_id")
